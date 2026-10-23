@@ -90,6 +90,11 @@ while a step finishes. B is released for dialogue, menus, and battles. Movement
 finishes one step before the next direction is chosen.
 Steering stays held through turn animations so Cycling Road's automatic
 downhill movement cannot cancel a turn.
+Door approaches keep replanning across adjacent overworld headers. Failed-edge
+memory resets on a change of height layer, so bridge railings do not block the
+ground route underneath; small model offsets on the same floor preserve that
+memory. Route 215 uses an explicit waypoint to approach beneath its western
+bridge.
 
 Ordinary dialogue advances automatically. Menu policies handle supplied rival
 names, declining nicknames, story confirmations, and saving. Battle choices
@@ -144,7 +149,8 @@ python3 tools/autoplay/interactions.py --build build_linux \
 ```
 
 In addition to the story checkpoints, this scenario accepts `relic-badge`,
-`menus`, `supplies`, `wild`, `pc`, `solaceon`, `route215`, and `veilstone`. Each checkpoint is an ordinary
+`menus`, `supplies`, `wild`, `pc`, `solaceon`, `route215`, `route215-west`,
+`route215-central`, and `veilstone`. Each checkpoint is an ordinary
 save. `report.json` includes a `checks` object with evidence for each interaction
 executed in that run. Checks before a resumed milestone are skipped, so use the
 Relic Badge checkpoint when validating the entire interaction scenario.
