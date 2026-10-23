@@ -1,4 +1,5 @@
 #include "system.h"
+#include "port/autoplay_test.h"
 
 #include "nitro/pad/common/pad.h"
 #include <string.h>
@@ -312,7 +313,7 @@ void ReadKeypadAndTouchpad(void)
         return;
     }
 
-    padRead = PAD_Read();
+    padRead = AutoplayTest_ReadPad(PAD_Read());
 
     gSystem.pressedKeysRaw = padRead & (padRead ^ gSystem.heldKeysRaw);
     gSystem.pressedKeysRepeatableRaw = gSystem.pressedKeysRaw;
@@ -342,6 +343,7 @@ void ReadKeypadAndTouchpad(void)
     }
 
     TP_GetCalibratedPoint(&tp, &tpRaw);
+    AutoplayTest_Touch(&tp);
 
     if (tp.validity == TP_VALIDITY_VALID) {
         gSystem.touchX = tp.x;

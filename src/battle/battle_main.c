@@ -1,4 +1,5 @@
 #include "battle/battle_main.h"
+#include "port/autoplay_test.h"
 
 #ifdef SDK_PORT
 #include <simulator/sim.h>
@@ -917,6 +918,7 @@ static void BattleMain_CopyBattleSysToDTOAndFree(ApplicationManager *appMan)
     dto->captureAttempt = battleSys->captureAttempt;
     dto->countSafariBalls = battleSys->safariBalls;
     dto->resultMask = battleSys->resultMask & (0xC0 ^ 0xFF);
+    AutoplayTest_Result(dto->resultMask, dto->battleType);
     dto->caughtBattlerIdx = battleSys->caughtBattlerIdx;
     dto->leveledUpMonsMask = BattleContext_Get(battleSys, battleSys->battleCtx, BATTLECTX_LEVEL_UP_MONS, 0);
     dto->battleRecords.totalTurns += BattleContext_Get(battleSys, battleSys->battleCtx, BATTLECTX_TOTAL_TURNS, 0);

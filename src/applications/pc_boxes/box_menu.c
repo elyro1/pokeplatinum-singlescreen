@@ -1,4 +1,5 @@
 #include "applications/pc_boxes/box_menu.h"
+#include "port/autoplay_test.h"
 
 #include <nitro.h>
 
@@ -248,6 +249,7 @@ static void BoxMenu_AddMenuItem(BoxMenu *menu, enum BoxMenuItem menuItem)
 enum BoxMenuItem BoxMenu_GetMenuNavigation(BoxApplication *boxApp)
 {
     BoxMenu *menu = &(boxApp->boxMenu);
+    AutoplayTest_UI("storage_menu", menu->selectedMenuItemIndex, menu->totalMenuItems, menu->menuItems[menu->selectedMenuItemIndex]);
 
     if (JOY_NEW(PAD_KEY_UP)) {
         if (menu->selectedMenuItemIndex) {

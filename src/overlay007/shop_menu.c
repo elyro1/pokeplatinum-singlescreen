@@ -14,6 +14,7 @@
 #include "overlay005/fieldmap.h"
 #include "overlay005/sprite_resource_manager.h"
 #include "port/gameplay_config.h"
+#include "port/autoplay_test.h"
 
 #include "bag.h"
 #include "bag_context.h"
@@ -290,6 +291,8 @@ BOOL FieldTask_InitShop(FieldTask *task)
 {
     FieldSystem *fieldSystem = FieldTask_GetFieldSystem(task);
     ShopMenu *shopMenu = FieldTask_GetEnv(task);
+
+    AutoplayTest_UI("shop", shopMenu->state, shopMenu->itemAmount, shopMenu->itemId);
 
     switch (shopMenu->state) {
     case SHOP_STATE_SHOW_CONTEXT_MENU:

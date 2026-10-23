@@ -39,6 +39,7 @@
 #include "game_overlay.h"
 #include "graphics.h"
 #include "grid_menu_cursor_position.h"
+#include "port/autoplay_test.h"
 #include "gx_layers.h"
 #include "heap.h"
 #include "height_weight_data.h"
@@ -363,6 +364,7 @@ static BOOL PartyMenu_Init(ApplicationManager *appMan, int *state)
 static BOOL PartyMenu_Main(ApplicationManager *appMan, int *state)
 {
     PartyMenuApplication *partyMenu = ApplicationManager_Data(appMan);
+    AutoplayTest_UI("party", *state, partyMenu->currPartySlot, partyMenu->partyMenu->mode);
 
     switch (*state) {
     case PARTY_MENU_STATE_START:

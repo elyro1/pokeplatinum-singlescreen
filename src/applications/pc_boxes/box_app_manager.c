@@ -43,6 +43,7 @@
 #include "overlay_manager.h"
 #include "party.h"
 #include "pc_boxes.h"
+#include "port/autoplay_test.h"
 #include "pokemon.h"
 #include "ribbon_save_data.h"
 #include "save_player.h"
@@ -240,6 +241,9 @@ BOOL BoxAppMan_Init(ApplicationManager *appMan, int *state)
 BOOL BoxAppMan_Main(ApplicationManager *appMan, int *state)
 {
     BoxApplicationManager *boxAppMan = ApplicationManager_Data(appMan);
+    BoxCursor *cursor = &boxAppMan->boxApp.cursor;
+    AutoplayTest_UI("storage", boxAppMan->boxApplicationAction ? 100 + boxAppMan->boxApplicationActionState : boxAppMan->cursorLocationHandlerState,
+        cursor->cursorLocation == CURSOR_IN_PARTY ? cursor->posInParty : cursor->posInBox, cursor->cursorLocation);
 
     if (boxAppMan->boxApplicationAction != NULL) {
         boxAppMan->boxApplicationAction(boxAppMan, &boxAppMan->boxApplicationActionState);
@@ -2896,6 +2900,7 @@ static void BoxSelectorPopup_Reset(BoxApplicationManager *boxAppMan)
 static BOOL BoxAppMan_TrySelectBoxFromPopup(BoxApplicationManager *boxAppMan)
 {
     BoxSelectorPopup *boxSelector = &boxAppMan->boxSelector;
+    AutoplayTest_UI("storage_box", boxSelector->state, boxSelector->boxID, 0);
 
     switch (boxSelector->state) {
     case BOX_SELECTOR_START:

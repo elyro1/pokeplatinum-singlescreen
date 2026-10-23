@@ -1,4 +1,5 @@
 #include "text.h"
+#include "port/autoplay_test.h"
 
 #include <nitro.h>
 #include <string.h>
@@ -178,6 +179,7 @@ u8 Text_AddPrinterWithParamsColorAndSpacing(Window *window, u32 fontID, const St
 
 u8 Text_AddPrinter(const TextPrinterTemplate *template, u32 renderDelay, TextPrinterCallback callback)
 {
+    AutoplayTest_Text(template->toPrint.string);
     if (sFontAttributesPtr == NULL) {
         return 0xFF;
     }

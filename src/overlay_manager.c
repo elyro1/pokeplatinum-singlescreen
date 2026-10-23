@@ -1,4 +1,5 @@
 #include "overlay_manager.h"
+#include "port/autoplay_test.h"
 
 #include <nitro.h>
 #include <string.h>
@@ -62,6 +63,7 @@ enum OverlayExecState {
 
 BOOL ApplicationManager_Exec(ApplicationManager *appMan)
 {
+    AutoplayTest_App(appMan);
     switch (appMan->execState) {
     case OVERLAY_EXEC_LOAD:
         if (appMan->template.overlayID != FS_OVERLAY_ID_NONE) {

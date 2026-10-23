@@ -13,6 +13,7 @@
 #include "battle_sub_menus/battle_bag_utils.h"
 #include "battle_sub_menus/battle_sub_menu_cursor.h"
 #include "port/gameplay_config.h"
+#include "port/autoplay_test.h"
 
 #include "bag.h"
 #include "bg_window.h"
@@ -154,6 +155,7 @@ void BattleBagTask_Start(BattleBagContext *context)
 static void BattleBagTask_Tick(SysTask *task, void *taskParam)
 {
     BattleBag *battleBag = taskParam;
+    AutoplayTest_UI("battle_bag", battleBag->currentState, battleBag->currentScreen, battleBag->currentBattlePocket);
 
     switch (battleBag->currentState) {
     case TASK_STATE_INITIALIZE:
