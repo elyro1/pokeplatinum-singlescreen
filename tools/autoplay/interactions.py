@@ -10,7 +10,7 @@ class Controller(ThirdGymController):
     final_checkpoint = 'interactions'
     max_frames = 700000
     timeout = 7200
-    checkpoints = ThirdGymController.checkpoints + ['relic-badge', 'menus', 'supplies', 'wild', 'pc', 'solaceon', 'route215', 'veilstone']
+    checkpoints = ThirdGymController.checkpoints + ['relic-badge', 'menus', 'supplies', 'wild', 'pc', 'solaceon', 'route215', 'route215-west', 'route215-central', 'veilstone']
 
     def __init__(self, build, start_at=None):
         super().__init__(build, start_at)
@@ -25,6 +25,8 @@ class Controller(ThirdGymController):
                                      ('pc', self.pc_checks),
                                      ('solaceon', self.reach_solaceon),
                                      ('route215', self.reach_route215),
+                                     ('route215-west', self.cross_western_bridge),
+                                     ('route215-central', self.cross_central_bridge),
                                      ('veilstone', self.reach_veilstone),
                                      ('interactions', self.mall_checks)]
 
@@ -349,11 +351,22 @@ class Controller(ThirdGymController):
         yield from self.travel(608, 600, 'take Route 215 east', arrival_map='ROUTE_215')
         yield from self.save('route215')
 
-    def reach_veilstone(self):
+    def cross_western_bridge(self):
         # Leave the raised western path by its stairs, then cross beneath the
         # north/south bridge. The flat grid alone cannot distinguish its levels.
         for x, z in ((587, 590), (600, 590)):
             yield from self.travel(x, z, 'cross beneath Route 215 western bridge')
+        yield from self.save('route215-west')
+
+    def cross_central_bridge(self):
+        # The central route first goes over the north/south bridge, back west
+        # over the upper bridge, down its stairs, then east underneath both.
+        for x, z in ((611, 599), (614, 583), (601, 583),
+                     (604, 578), (608, 584), (619, 590)):
+            yield from self.travel(x, z, f'cross Route 215 central bridges via {x},{z}')
+        yield from self.save('route215-central')
+
+    def reach_veilstone(self):
         yield from self.warp('ROUTE_215_GATE_TO_VEILSTONE_CITY')
         yield from self.warp('VEILSTONE_CITY')
         yield from self.save('veilstone')
