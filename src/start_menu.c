@@ -1,4 +1,5 @@
 #include "start_menu.h"
+#include "port/autoplay_test.h"
 
 #include <nitro.h>
 #ifdef SDK_PORT
@@ -983,6 +984,7 @@ static BOOL StartMenu_SelectPoketch(FieldTask *fieldTask)
 static void StartMenu_Poketch(FieldTask *fieldTask)
 {
     StartMenu *menu = FieldTask_GetEnv(fieldTask);
+    AutoplayTest_UI("poketch", menu->state, 0, 0);
     PoketchSystem *poketchSys = FieldSystem_GetPoketchSystem();
 
     if (poketchSys != NULL) {

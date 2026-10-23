@@ -1030,6 +1030,9 @@ pokeplatinum_c = files(
 )
 
 if(build_target != 'arm')
+if get_option('autoplay_tests')
+pokeplatinum_c += files('port/autoplay_test.c')
+endif
 pokeplatinum_c += files(
     'port/autosave.c',
     'port/battle_smoothing.c',

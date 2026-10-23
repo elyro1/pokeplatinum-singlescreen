@@ -1,4 +1,5 @@
 #include "battle_sub_menus/battle_party.h"
+#include "port/autoplay_test.h"
 
 #include "constants/contests.h"
 #include "constants/moves.h"
@@ -250,6 +251,8 @@ void BattlePartyTask_Start(BattlePartyContext *context)
 static void BattlePartyTask_Tick(SysTask *task, void *taskParam)
 {
     BattleParty *battleParty = taskParam;
+    AutoplayTest_UI("battle_party", battleParty->currentState, battleParty->currentScreen, battleParty->context->selectedPartyIndex);
+    AutoplayTest_PartyOrder(battleParty->context->pokemonPartySlots);
 
     switch (battleParty->currentState) {
     case TASK_STATE_INITIALIZE:

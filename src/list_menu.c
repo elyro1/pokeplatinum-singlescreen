@@ -1,4 +1,5 @@
 #include "list_menu.h"
+#include "port/autoplay_test.h"
 
 #include <nitro.h>
 #include <nnsys.h>
@@ -53,11 +54,14 @@ ListMenu *ListMenu_New(const ListMenuTemplate *template, u16 startListPos, u16 s
     InvokeCursorCallback(menu, TRUE);
     Window_CopyToVRAM(template->window);
 
+    AutoplayTest_Menu(2, menu->listPos + menu->cursorPos, menu->template.count, menu->template.choices);
+
     return menu;
 }
 
 list_index_t ListMenu_ProcessInput(ListMenu *menu)
 {
+    AutoplayTest_Menu(2, menu->listPos + menu->cursorPos, menu->template.count, menu->template.choices);
     menu->lastAction = LIST_MENU_ACTION_NONE;
 
     if (JOY_NEW(PAD_BUTTON_A)) {

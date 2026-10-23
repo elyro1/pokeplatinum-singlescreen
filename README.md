@@ -184,6 +184,11 @@ Works with both Platinum and BW2 visuals. More in [battle speed settings](docs/b
 - [Building from source](BUILD.MD)
 - [Windows executable, built on Linux (MinGW)](docs/build_mingw.md)
 
+### Development notes
+
+- The opt-in Linux [gym autoplay tests](docs/autoplay_testing.md) play a fresh game through Roark, Gardenia, or Fantina, then save and reload to verify the earned badges. It uses isolated saves and a separate controller; the existing simulator autopilot remains available for bug reproduction.
+- A separate [interaction scenario](docs/autoplay_testing.md#general-interaction-scenario) exercises the start menu, wild battles, switching, item rules, catching, PC deposit/withdrawal, and department-store purchases after Fantina.
+
 ## Credits
 
 | Project | Role |

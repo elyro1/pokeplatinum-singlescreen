@@ -1,4 +1,5 @@
 #include "menu.h"
+#include "port/autoplay_test.h"
 
 #include "bg_window.h"
 #include "colored_arrow.h"
@@ -38,6 +39,8 @@ Menu *Menu_New(const MenuTemplate *template, u8 xOffset, u8 yOffset, u8 cursorSt
     DrawWholeMenu(menu);
     DrawCursor(menu);
 
+    AutoplayTest_Menu(1, menu->cursorPos, menu->template.xSize * menu->template.ySize, menu->template.choices);
+
     return menu;
 }
 
@@ -66,6 +69,7 @@ void Menu_Free(Menu *menu, u8 *outCursorPos)
 
 menu_selection_t Menu_ProcessInput(Menu *menu)
 {
+    AutoplayTest_Menu(1, menu->cursorPos, menu->template.xSize * menu->template.ySize, menu->template.choices);
     menu->lastAction = MENU_ACTION_NONE;
 
     if (JOY_NEW(PAD_BUTTON_A)) {
@@ -115,6 +119,7 @@ menu_selection_t Menu_ProcessInput(Menu *menu)
 
 menu_selection_t Menu_ProcessInputWithSound(Menu *menu, u16 sdatID)
 {
+    AutoplayTest_Menu(1, menu->cursorPos, menu->template.xSize * menu->template.ySize, menu->template.choices);
     menu->lastAction = MENU_ACTION_NONE;
 
     if (JOY_NEW(PAD_BUTTON_A)) {

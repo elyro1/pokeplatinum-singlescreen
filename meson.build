@@ -121,6 +121,17 @@ pokeplatinum_args = [
     '-DGAME_LANGUAGE=LANGUAGE_ENGLISH'
 ]
 
+if get_option('autoplay_tests')
+    if build_target != 'linux'
+        error('autoplay_tests currently requires the Linux PC target')
+    endif
+    pokeplatinum_args += '-DPLATINUM_AUTOPLAY_TEST'
+    test('Autoplay controller', find_program('python3', native: true),
+        args: ['-m', 'unittest', 'discover',
+               '-s', meson.project_source_root() / 'tools/autoplay', '-p', 'test_*.py'],
+        suite: 'autoplay')
+endif
+
 if(build_target != 'arm')
     pokeplatinum_args += [
         '-std=c99',

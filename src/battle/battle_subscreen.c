@@ -1,4 +1,5 @@
 #include "battle/battle_subscreen.h"
+#include "port/autoplay_test.h"
 
 #ifdef SDK_PORT
 #include "bwbattle/bw_adapter.h"
@@ -1345,6 +1346,8 @@ int BattleSystem_MenuInput(BattleSubscreen *btlSubscreen)
     if (!battleMenuConfig->touchScreenRects || btlSubscreen->isPanelSliding == TRUE) {
         return 0xffffffff;
     }
+
+    AutoplayTest_Battle(btlSubscreen);
 
     GF_ASSERT(battleMenuConfig->buttonResults);
 
