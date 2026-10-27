@@ -7,12 +7,19 @@ The focus here is a widescreen, single-screen experience, with adapted interface
 **You must provide your own dumped US Pokémon Platinum ROM (CPUE01).** Game assets are extracted from that ROM on first launch. For the full experience, you also need a BW2 ROM.
 
 ## Setup Guide
-To run the [pre-built binaries found in the releases tab](https://github.com/cybervisi0n/pokeplatinum/releases), **you MUST dump and provide your own US ROM of Pokémon Platinum (CPUE01).** On first launch, you will be prompted to select your .nds ROM file as seen in the images below:
+To run the [pre-built binaries found in the releases tab](https://github.com/elyro1/pokeplatinum-singlescreen/releases/), **you MUST dump and provide your own US ROM of Pokémon Platinum (CPUE01).** 
+
+1. Open the project's GitHub Releases page and download the ZIP archive compatible with your operating system (Windows or Linux).
+2. Extract the downloaded ZIP archive into a new folder.
+3. Copy the US ROM of Pokémon Platinum into the same folder as the extracted files. Ensure it is placed directly alongside the main executable, not inside a subfolder.
+4. (Optional) Copy the US ROM of Pokémon B2/W2 into the same folder as the extracted files. 
+5. Launch the game by running main.exe
+
+If there is no ROM , you will be prompted to select your .nds ROM file as seen in the images below:
 
 ![ROM extraction dialog](images/RomExtraction.png)
 
-* After this has been completed once, you can launch the game simply by running main.exe.
-* Access in-game settings and debug tools by pressing the grave accent/tilde key
+* Access in-game settings and debug tools by pressing TAB key
 
 ## Features
 
