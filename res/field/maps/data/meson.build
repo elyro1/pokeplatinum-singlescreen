@@ -158,7 +158,6 @@ map_data_files = copy_gen.process(files(
     'map_data_167.bin',
     'map_data_168.bin',
     'map_data_169.bin',
-    'map_data_170.bin',
     'map_data_171.bin',
     'map_data_172.bin',
     'map_data_173.bin',
@@ -772,6 +771,20 @@ if build_target != 'arm'
     )
 endif
 map_data_files = [map_data_files, copy_gen.process(route_214_source)]
+
+route_227_source = files('map_data_170.bin')
+if build_target != 'arm'
+    route_227_source = custom_target('route_227_cliff_corners',
+        input: route_227_source,
+        output: 'map_data_170.bin',
+        depend_files: files('../../../../tools/scripts/map_scenery.py'),
+        command: [
+            find_program('../../../../tools/scripts/extend_route_227.py', native: true),
+            '@INPUT@', '@OUTPUT@',
+        ],
+    )
+endif
+map_data_files = [map_data_files, copy_gen.process(route_227_source)]
 
 map_data_narc = custom_target('land_data.narc',
     output: [
