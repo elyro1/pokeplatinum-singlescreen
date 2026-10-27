@@ -1086,7 +1086,7 @@ static void ov5_021D6690(UnkStruct_ov5_021D6594 *param0, int param1, UnkStruct_o
     if (param1 != 0xffff) {
         if (param2->unk_00[0]) {
 #ifdef SDK_PORT
-            if (param1 == 3 || param1 == 1 || param1 == 2 || param1 == 6 || param1 == 9) {
+            if (param1 == 0 || param1 == 1 || param1 == 2 || param1 == 3 || param1 == 5 || param1 == 6 || param1 == 9) {
                 const NNSG2dImageProxy *proxy = SpriteTransfer_GetImageProxy(param2->unk_00[0]);
                 SIM_SetFieldTiledSpriteRange(NNS_G2dGetImageLocation(proxy, NNS_G2D_VRAM_TYPE_2DMAIN), 0, FALSE);
             }
@@ -1456,8 +1456,8 @@ static void ov5_021D6C64(UnkStruct_ov5_021D6594 *param0, int param1, UnkStruct_o
 
         SpriteTransfer_RequestCharAtEnd(param2->unk_00[0]);
 #ifdef SDK_PORT
-        // Snow, sand, ash and blizzard particles repeat independently of UI sprites.
-        if (param1 == 3 || param1 == 1 || param1 == 2 || param1 == 6 || param1 == 9) {
+        // Rain, snow, sand, ash and blizzard particles repeat independently of UI sprites.
+        if (param1 == 0 || param1 == 1 || param1 == 2 || param1 == 3 || param1 == 5 || param1 == 6 || param1 == 9) {
             const NNSG2dImageProxy *proxy = SpriteTransfer_GetImageProxy(param2->unk_00[0]);
             SIM_SetFieldTiledSpriteRange(NNS_G2dGetImageLocation(proxy, NNS_G2D_VRAM_TYPE_2DMAIN),
                 SpriteResource_GetTileData(param2->unk_00[0])->szByte, TRUE);
