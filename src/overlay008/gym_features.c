@@ -7,6 +7,7 @@
 #include "constants/field/field_effect_renderer.h"
 #include "constants/field/map.h"
 #include "constants/graphics.h"
+#include "constants/quadrant.h"
 #include "constants/scrcmd.h"
 #include "constants/sunyshore_gym_buttons.h"
 #include "generated/movement_actions.h"
@@ -30,7 +31,6 @@
 #include "overlay005/ov5_021F5A10.h"
 #include "overlay005/veilstone_gym_object_renderer.h"
 
-#include "badges.h"
 #include "bg_window.h"
 #include "camera.h"
 #include "coordinates.h"
@@ -60,7 +60,6 @@
 #include "system_vars.h"
 #include "terrain_collision_manager.h"
 #include "trainer_encounter.h"
-#include "trainer_info.h"
 #include "trainer_types.h"
 #include "unk_020655F4.h"
 #include "vars_flags.h"
@@ -3887,17 +3886,27 @@ static void HearthomeGym_InitFog(HearthomeGymSystem *gymSystem)
     fog->fogB = 0;
     fog->fogAlpha = 1;
 
-    // Hide puzzle markings outside the fog-free flashlight beams. Keep this
-    // local to the gym: route weather uses the same renderer and fog manager.
-    char fogDensity = 127;
-    if (TrainerInfo_HasBadge(SaveData_GetTrainerInfo(gymSystem->fieldSystem->saveData), BADGE_ID_RELIC) == TRUE) {
-        fogDensity = 91;
-        fog->fogR = 1;
-        fog->fogG = 1;
-        fog->fogB = 1;
+    // Keep a little ambient visibility, including on return visits after the badge.
+    // The single-map rooms are fully loaded before dynamic features initialize.
+    // Darken the scenery but preserve the statues' self-lit eyes. Actors and
+    // flashlight reveal polygons retain their own fog settings.
+    LandDataManager *landDataMan = gymSystem->fieldSystem->landDataMan;
+    for (int i = 0; i < QUADRANT_COUNT; i++) {
+        NNSG3dResMdl *model = LandDataManager_GetLoadedMapModel(i, landDataMan);
+        if (model == NULL) {
+            continue;
+        }
+
+        NNS_G3dMdlSetMdlFogEnableFlagAll(model, TRUE);
+        NNSG3dResMat *materials = NNS_G3dGetMat(model);
+        for (int j = 0; j < model->info.numMat; j++) {
+            if (strcmp(NNS_G3dGetMatNameByIdx(materials, j)->name, "yomawaru_eye") == 0) {
+                NNS_G3dMdlSetMdlFogEnableFlag(model, j, FALSE);
+            }
+        }
     }
 
-    memset(fog->fogDensity, fogDensity, sizeof(fog->fogDensity));
+    memset(fog->fogDensity, 126, sizeof(fog->fogDensity));
 
     FogManager_ApplyParameters(fogMan, FOG_PARAMETER_ALL, TRUE, GX_FOGBLEND_COLOR_ALPHA, fog->fogSlope, 0);
     FogManager_ApplyColor(fogMan, FOG_PARAMETER_ALL, GX_RGB(fog->fogR, fog->fogG, fog->fogB), fog->fogAlpha);

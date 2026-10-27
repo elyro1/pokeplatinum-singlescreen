@@ -31,6 +31,7 @@ BOOL LandDataManager_HasEnded(const LandDataManager *landDataMan);
 void LandDataManager_TrackTarget(VecFx32 const *position, LandDataManager *landDataMan);
 void LandDataManager_ForgetTrackedTarget(LandDataManager *landDataMan);
 void LandDataManager_GetLoadedMapPropManager(const u8 index, const LandDataManager *landDataMan, MapPropManager **mapPropMan);
+NNSG3dResMdl *LandDataManager_GetLoadedMapModel(const u8 index, const LandDataManager *landDataMan);
 u8 LandDataManager_GetTrackedTargetLoadedMapsQuadrant(const LandDataManager *landDataMan);
 u8 LandDataManager_CalculateMapQuadrantOfTile(const u32 tileIndex, const int mapMatrixWidthTiles);
 u8 LandDataManager_GetRelativeLoadedMapsQuadrant(const int mapMatrixIndex, const u8 unused1, const LandDataManager *landDataMan);

@@ -5,6 +5,7 @@
 
 #include "pc_frame_profile.h"
 #ifdef SDK_PORT
+#include <simulator/g3_draw.h>
 #include <simulator/sim.h>
 #include "port/field_visuals.h"
 #include "overlay005/model_attributes.h"
@@ -866,6 +867,14 @@ static void ov5_021D15F4(FieldSystem *fieldSystem)
     MapPropManager_Render2(fieldSystem->mapPropManager, fieldSystem->areaDataManager);
 #ifdef SDK_PORT
     SIM_SetFieldSurface(FALSE);
+    if (fieldSystem->location->mapHeaderID == MAP_HEADER_HEARTHOME_CITY_GYM_TRAINER_ROOM_1
+        || fieldSystem->location->mapHeaderID == MAP_HEADER_HEARTHOME_CITY_GYM_TRAINER_ROOM_2) {
+        // Finish translucent scenery before the flashlight/player pass uses
+        // its shifted projection. Otherwise scenery can overwrite their fog.
+        NNS_G3dGeFlushBuffer();
+        G3SIM_FlushArray();
+        G3SIM_DrawItems();
+    }
 #endif
 
     {

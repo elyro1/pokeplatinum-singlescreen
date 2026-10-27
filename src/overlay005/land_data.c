@@ -2343,6 +2343,12 @@ void LandDataManager_GetLoadedMapPropManager(const u8 index, const LandDataManag
     *mapPropMan = landDataMan->loadedMaps[index]->mapPropManager;
 }
 
+NNSG3dResMdl *LandDataManager_GetLoadedMapModel(const u8 index, const LandDataManager *landDataMan)
+{
+    const LoadedMap *map = landDataMan->loadedMaps[index];
+    return map->valid && map->mapMatrixIndex != INVALID_MAP_MATRIX_INDEX ? map->mapRenderObj.resMdl : NULL;
+}
+
 u8 LandDataManager_GetTrackedTargetLoadedMapsQuadrant(const LandDataManager *landDataMan)
 {
     return landDataMan->trackedTargetLoadedMapsQuadrant;
