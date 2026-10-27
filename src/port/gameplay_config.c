@@ -13,7 +13,7 @@ static GameplayConfig sGameplayConfig;
 
 void GameplayConfig_LoadDefaults(GameplayConfig *config)
 {
-    // Match original Platinum gameplay; modifiers are opt-in through gameplay_config.ini.
+    // Set a ROM hack's built-in gameplay defaults here.
     // Block player medicine and battle items, while allowing captures and held-item effects.
     config->prohibitBattleItems = FALSE;
 
@@ -193,7 +193,7 @@ static int GameplayConfig_IniHandler(void *user, const char *section, const char
     return 1; // Unknown keys are ignored for compatibility with newer configurations.
 }
 
-BOOL GameplayConfig_GenerateFile(void)
+static BOOL GameplayConfig_GenerateFile(void)
 {
     // Exclusive creation preserves a player's existing overrides.
     FILE *file = fopen(GAMEPLAY_CONFIG_FILE_PATH, "wx");
@@ -204,7 +204,7 @@ BOOL GameplayConfig_GenerateFile(void)
     GameplayConfig defaults;
     GameplayConfig_LoadDefaults(&defaults);
     fprintf(file, "; Gameplay overrides. Edit this file and restart the game to apply changes.\n"
-                  "; Delete this file to restore built-in defaults. Missing/invalid values keep their defaults.\n"
+                  "; Delete this file and restart to regenerate built-in defaults. Missing/invalid values keep their defaults.\n"
                   "; Booleans accept true/false or 1/0. Numeric values must be non-negative integers.\n\n"
                   "[Gameplay]\n");
     for (size_t i = 0; i < sizeof(sConfigFields) / sizeof(sConfigFields[0]); i++) {
@@ -233,14 +233,24 @@ BOOL GameplayConfig_GenerateFile(void)
     return success;
 }
 
-void GameplayConfig_Init(void)
+static void GameplayConfig_LoadFile(void)
 {
-    GameplayConfig_LoadDefaults(&sGameplayConfig);
+    // Create the defaults template on first start; existing files are never overwritten.
+    GameplayConfig_GenerateFile();
     GameplayConfig overrides = sGameplayConfig;
     // A malformed/unreadable file falls back to defaults, never a partially parsed config.
     if (ini_parse(GAMEPLAY_CONFIG_FILE_PATH, GameplayConfig_IniHandler, &overrides) == 0) {
         sGameplayConfig = overrides;
     }
+}
+
+void GameplayConfig_Init(void)
+{
+    GameplayConfig_LoadDefaults(&sGameplayConfig);
+
+    // Comment out this call to use only the defaults above: no file is generated or read,
+    // and even an existing gameplay_config.ini cannot override a ROM hack's settings.
+    GameplayConfig_LoadFile();
 }
 
 GameplayConfig *GameplayConfig_Get(void)

@@ -1,16 +1,16 @@
 # Gameplay configuration
 
-The PC port reads optional gameplay overrides from `gameplay_config.ini` at startup. Built-in defaults preserve original Platinum gameplay: every boolean modifier is off, BP prices are unchanged, and all multipliers are 1. You do not need to rebuild the game to change these settings.
+The PC port creates `gameplay_config.ini` with its built-in defaults on first start, then reads gameplay overrides from it at startup. Existing files are never overwritten. Built-in defaults preserve original Platinum gameplay: every boolean modifier is off, BP prices are unchanged, and all multipliers are 1. You do not need to rebuild the game to change these settings.
 
 ## Create and use a config
 
-1. Copy [`gameplay_config.example.ini`](../gameplay_config.example.ini) to `gameplay_config.ini` in the game's **working directory**, alongside `sim_config_prj.ini` and your saves. This is normally the game folder. If you launch from a terminal, it is the directory you launch from, which can differ from the executable's directory.
-2. Edit the copied file in a text editor. Keep the `[Gameplay]` section and spell option names exactly as shown.
+1. Start the game once to generate `gameplay_config.ini` in the game's **working directory**, alongside `sim_config_prj.ini` and your saves. This is normally the game folder. If you launch from a terminal, it is the directory you launch from, which can differ from the executable's directory.
+2. Edit the generated file in a text editor. Keep the `[Gameplay]` section and spell option names exactly as shown.
 3. Restart the game to apply changes.
 
-Alternatively, press **Tab → libntr → Application → Config → Gameplay → Generate gameplay config** to create a commented template with all current defaults. The button never overwrites an existing file. The game does not generate this file automatically.
+The generated file includes comments explaining every option. If the working directory is not writable, the game still starts with its built-in defaults.
 
-The repository example is a ROM hack-style quality-of-life preset, rather than a defaults template. It enables reusable TMs, compatible-party HM use, free move relearning and shard tutors, earlier tutor access, easier evolutions, unlimited Great Marsh steps, instant Honey Trees and Spiritomb, vitamins past 100 EVs, and no walking poison damage. It also halves ordinary BP prices, prices Rare Candy at 1 BP, doubles friendship gains, and speeds up hatch checks by 5× while retaining normal egg cycles. Battle items, the saved battle style, and catch/shiny rates retain their original behavior.
+You can also copy [`gameplay_config.example.ini`](../gameplay_config.example.ini) over the generated file. The repository example is a ROM hack-style quality-of-life preset, rather than a defaults template. It enables reusable TMs, compatible-party HM use, free move relearning and shard tutors, earlier tutor access, easier evolutions, unlimited Great Marsh steps, instant Honey Trees and Spiritomb, vitamins past 100 EVs, and no walking poison damage. It also halves ordinary BP prices, prices Rare Candy at 1 BP, doubles friendship gains, and speeds up hatch checks by 5× while retaining normal egg cycles. Battle items, the saved battle style, and catch/shiny rates retain their original behavior.
 
 The tables below describe the built-in defaults, not the preset values. For a smaller quality-of-life setup, you can instead create this partial file:
 
@@ -23,7 +23,17 @@ infiniteTMs=true
 tradeEvolutionLevel=40
 ```
 
-Every omitted option retains its built-in default. Delete or rename `gameplay_config.ini` and restart to return to built-in settings. This resets configuration, but does not undo gameplay changes already saved, such as evolutions or removed egg cycles.
+Every omitted option retains its built-in default. Delete or rename `gameplay_config.ini` and restart to regenerate it with built-in settings. This resets configuration, but does not undo gameplay changes already saved, such as evolutions or removed egg cycles.
+
+## Fixed defaults for ROM hacks
+
+Set your hack's defaults in `GameplayConfig_LoadDefaults` in [`src/port/gameplay_config.c`](../src/port/gameplay_config.c). In `GameplayConfig_Init` in the same file, comment out this single call and rebuild:
+
+```c
+    // GameplayConfig_LoadFile();
+```
+
+The game then uses only your code defaults. It neither generates nor reads `gameplay_config.ini`, so even an existing or manually created file cannot override your settings. Leave `GameplayConfig_LoadDefaults(&sGameplayConfig);` enabled. The libntr menu no longer contains a gameplay config generation button.
 
 ## File format and loading rules
 
@@ -32,7 +42,7 @@ Every omitted option retains its built-in default. Delete or rename `gameplay_co
 - Numbers must be non-negative decimal integers within the option's range. Negative numbers, fractions, and values outside the range are ignored.
 - Use lines beginning with `;` for comments, as in the example.
 - Missing options retain defaults. Unknown options and other sections are ignored. Invalid values are ignored, leaving the current value for that option (normally its default). If an option is repeated, the last valid value wins.
-- A malformed INI file, such as a line with no `=`, causes **all overrides to be discarded**. A missing or unreadable file also uses all defaults.
+- A malformed INI file, such as a line with no `=`, causes **all overrides to be discarded**. An unreadable file or failure to create a missing file also uses all defaults.
 - Settings are read at startup, so saving the file during play requires a restart. Existing files are never automatically updated with new defaults or options.
 
 ## Boolean options

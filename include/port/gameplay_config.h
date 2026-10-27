@@ -36,9 +36,9 @@ typedef struct {
 // Relative to the game working directory, like sim_config_prj.ini and the save files.
 #define GAMEPLAY_CONFIG_FILE_PATH "./gameplay_config.ini"
 
-// Generate an editable defaults template. Never overwrite an existing file.
-BOOL GameplayConfig_GenerateFile(void);
 void GameplayConfig_LoadDefaults(GameplayConfig *config);
+// Load defaults, create a missing config file, and apply file overrides.
+// See GameplayConfig_Init's implementation to disable all file overrides for a ROM hack.
 void GameplayConfig_Init(void);
 GameplayConfig *GameplayConfig_Get(void);
 u16 GameplayConfig_GetBPPrice(u16 item, u16 originalPrice);

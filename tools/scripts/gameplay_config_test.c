@@ -12,6 +12,18 @@ static void WriteConfig(const char *contents)
     assert(fclose(file) == 0);
 }
 
+static void AssertConfigContents(const char *contents)
+{
+    FILE *file = fopen(GAMEPLAY_CONFIG_FILE_PATH, "r");
+    assert(file != NULL);
+    while (*contents != '\0') {
+        assert(fgetc(file) == (unsigned char)*contents++);
+    }
+    assert(fgetc(file) == EOF);
+    assert(!ferror(file));
+    assert(fclose(file) == 0);
+}
+
 static void AssertOriginalDefaults(void)
 {
     const GameplayConfig *config = GameplayConfig_Get();
@@ -42,13 +54,9 @@ static void AssertOriginalDefaults(void)
 
 static void TestConfigFile(void)
 {
-    // Missing file uses defaults and does not create a file as a side effect.
+    // First start creates a template containing the built-in defaults.
     GameplayConfig_Init();
     AssertOriginalDefaults();
-    assert(fopen(GAMEPLAY_CONFIG_FILE_PATH, "r") == NULL);
-
-    assert(GameplayConfig_GenerateFile());
-    assert(!GameplayConfig_GenerateFile());
     FILE *file = fopen(GAMEPLAY_CONFIG_FILE_PATH, "r");
     assert(file != NULL);
     char template[8192];
@@ -108,8 +116,7 @@ static void TestConfigFile(void)
                 "friendshipGainMultiplier=255\n"
                 "eggHatchSpeedMultiplier=0\n"
                 "catchRateMultiplier=255\n");
-    // Generating again must preserve the player's existing overrides.
-    assert(!GameplayConfig_GenerateFile());
+    // Starting again must preserve the player's existing overrides.
     GameplayConfig_Init();
     GameplayConfig *config = GameplayConfig_Get();
     assert(config->prohibitBattleItems == TRUE);
@@ -167,15 +174,38 @@ static void TestConfigFile(void)
     WriteConfig("[Gameplay]\nprohibitBattleItems=true\ninvalid line\n");
     GameplayConfig_Init();
     AssertOriginalDefaults();
+    AssertConfigContents("[Gameplay]\nprohibitBattleItems=true\ninvalid line\n");
 
     assert(remove(GAMEPLAY_CONFIG_FILE_PATH) == 0);
     GameplayConfig_Init();
     AssertOriginalDefaults();
+    file = fopen(GAMEPLAY_CONFIG_FILE_PATH, "r");
+    assert(file != NULL);
+    assert(fclose(file) == 0);
+}
+
+static void TestDefaultsOnly(void)
+{
+    // Commenting out the file call must disable both creation and existing overrides.
+    GameplayConfig_Init();
+    AssertOriginalDefaults();
+    assert(fopen(GAMEPLAY_CONFIG_FILE_PATH, "r") == NULL);
+
+    const char *overrides = "[Gameplay]\nprohibitBattleItems=true\nbpPricePercent=0\n";
+    WriteConfig(overrides);
+    GameplayConfig_Init();
+    AssertOriginalDefaults();
+    AssertConfigContents(overrides);
+    assert(remove(GAMEPLAY_CONFIG_FILE_PATH) == 0);
 }
 
 int main(void)
 {
+#ifdef GAMEPLAY_CONFIG_DEFAULTS_ONLY
+    TestDefaultsOnly();
+#else
     TestConfigFile();
+#endif
 
     GameplayConfig_Init();
     GameplayConfig *config = GameplayConfig_Get();
