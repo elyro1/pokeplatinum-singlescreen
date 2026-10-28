@@ -12,23 +12,29 @@
 
 namespace SIM::GUI {
 
-static void ConfigCheckBox(const char *label, bool *configVar, bool &configChanged)
+static void ConfigCheckBox(const char *label, BOOL *configVar, bool &configChanged)
 {
-    if (ImGui::Checkbox(label, configVar)) {
+    SettingsRow(label);
+    bool value = *configVar != FALSE;
+    ImGui::PushID(configVar);
+    if (ImGui::Checkbox("##Enabled", &value)) {
+        *configVar = value;
         configChanged = true;
     }
+    ImGui::PopID();
 }
 
-void CheatsMain(bool *openState)
+void CheatsContents()
 {
-    ImGui::Begin("Cheats", openState);
     SIM_Config_prj_type *myConfig = SIM_Config_prj_GetConfig();
     bool configChanged = false;
 
-    ConfigCheckBox("Walk Through Walls", (bool *)&myConfig->walkThroughWalls, configChanged);
-    ConfigCheckBox("Disable Random Encounters", (bool *)&myConfig->disableRandomEncounters, configChanged);
-    ConfigCheckBox("Run from Trainer Battles", (bool *)&myConfig->runFromTrainerBattles, configChanged);
+    if (!BeginSettings("CheatSettings")) return;
+    ConfigCheckBox("Walk Through Walls", &myConfig->walkThroughWalls, configChanged);
+    ConfigCheckBox("Disable Random Encounters", &myConfig->disableRandomEncounters, configChanged);
+    ConfigCheckBox("Run from Trainer Battles", &myConfig->runFromTrainerBattles, configChanged);
 
+    ImGui::EndTable();
     ImGui::SeparatorText("Poketch");
     int appCount = DEBUG_GetPoketchAppCount();
     ImGui::BeginDisabled(appCount < 0);
@@ -39,15 +45,14 @@ void CheatsMain(bool *openState)
     ImGui::EndDisabled();
     if (appCount >= 0) {
         ImGui::Text("Registered apps: %d / %d", appCount, POKETCH_APPID_MAX);
-        ImGui::TextUnformatted("Use L/R in the Poketch. Save in-game to keep the unlocks.");
+        ImGui::TextWrapped("Use L/R in the Poketch. Save in-game to keep the unlocks.");
     } else {
-        ImGui::TextUnformatted("Load a game and acquire the Poketch first.");
+        ImGui::TextWrapped("Load a game and acquire the Poketch first.");
     }
 
     if (configChanged) {
         SIM_Config_prj_SaveConfigFile(myConfig);
     }
 
-    ImGui::End();
 }
 }

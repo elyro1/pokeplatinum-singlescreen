@@ -3,6 +3,7 @@ url = https://github.com/elyro1/libntr.git
 revision = 428df8be49e0c9665d0206be0fe3343af49ac1bd
 depth = 1
 directory = libntr
+diff_files = libntr/tab-menu.patch
 
 [provide]
 dependency_names = NitroSDK

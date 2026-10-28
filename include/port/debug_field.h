@@ -10,6 +10,7 @@ extern "C" {
 
 FieldSystem *DEBUG_GetFieldSystem();
 void DEBUG_SetFieldSystem(FieldSystem *fieldSystem);
+BOOL DEBUG_CanUseFieldTools(void);
 int DEBUG_GetPoketchAppCount(void);
 BOOL DEBUG_UnlockAllPoketchApps(void);
 void DEBUG_FieldFrame(FieldSystem *fieldSystem);

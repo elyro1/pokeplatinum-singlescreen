@@ -12,6 +12,8 @@
 
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <cstdlib>
 
 namespace SIM::GUI {
 
@@ -19,42 +21,42 @@ static std::vector<std::string> sSpeciesNames;
 static int sSpeciesNum = 0;
 static int sLevel = 1;
 
-static constexpr ImVec2 BtnSize = {100, 20};
 
 void CreateMonInit() {
     sSpeciesNames.clear();
     sSpeciesNames.push_back("None");
 
-    for(int i=1; i <= SPECIES_BAD_EGG; i++) {
+    for(int i=1; i <= SPECIES_ARCEUS; i++) {
         const char * pokemonName = GUI_CreateMon_GetSpeciesName(i);
         sSpeciesNames.push_back(std::string(pokemonName));
-        delete pokemonName;
+        std::free((void *)pokemonName);
     }
 }
 
-void CreateMonMain(bool * openState) {
-    ImGui::Begin("Gen Pokemon", openState);
+void CreateMonContents() {
 
-    ImGui::Combo("Species", &sSpeciesNum, [](void * vec, int idx){
+    if (!BeginSettings("CreatePokemon")) return;
+    SettingsRow("Species");
+    ImGui::Combo("##Species", &sSpeciesNum, [](void * vec, int idx){
         std::vector<std::string>* vector = reinterpret_cast<std::vector<std::string>*>(vec);
-        if(idx < 0 || idx > vector->size()) {
+        if(idx < 0 || idx >= static_cast<int>(vector->size())) {
             return "";
         }
 
         return vector->at(idx).c_str();
     }, reinterpret_cast<void*>(&sSpeciesNames), sSpeciesNames.size());
 
-    ImGui::InputScalar("Level", ImGuiDataType_U8, &sLevel, nullptr, nullptr, nullptr, ImGuiInputTextFlags_CharsDecimal);
-    if(sLevel < 1) {
-        sLevel = 1;
-    } else if (sLevel > 100) {
-        sLevel = 100;
+    SettingsRow("Level");
+    ImGui::InputInt("##Level", &sLevel);
+    sLevel = std::clamp(sLevel, 1, 100);
+    ImGui::EndTable();
+    static const char *result = "";
+    ImGui::BeginDisabled(sSpeciesNum == 0);
+    if(ImGui::Button("Create Pokemon")) {
+        result = GUI_CreateMon_GenPokemon(sSpeciesNum, sLevel)
+            ? "Pokemon added to your party. Save in-game to keep it." : "Your party is full.";
     }
-
-    if(ImGui::Button("Gen Pokemon", BtnSize)) {
-        GUI_CreateMon_GenPokemon(sSpeciesNum, sLevel);
-    }
-
-    ImGui::End();
+    ImGui::EndDisabled();
+    ImGui::TextWrapped("%s", result);
 }
 }

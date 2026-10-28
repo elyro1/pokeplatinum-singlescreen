@@ -1,6 +1,6 @@
 # PC graphics enhancements
 
-The twelve options under **Tab → libntr → Application → Config → Graphics** are
+The twelve options under **Tab → Graphics** are
 enabled by default, including when an older settings file lacks the new keys.
 Changes apply during play and are saved in `sim_config_prj.ini`:
 
@@ -177,7 +177,7 @@ EmissiveBloom=true
   ground, water), the lamps placed in land meshes, the lights on props and
   the maps where something glows by day. Entries can be scoped to a map or
   a prop model. The game reads it at start and again from **Reload light
-  table** in the Graphics panel, so it can be tuned while playing; the
+  table** in the Developer panel, so it can be tuned while playing; the
   panel shows where the table came from. A file with an error is reported
   there by line and the previous table stays; a missing file falls back to
   a built-in copy. The build copies the source file into the game's folder
@@ -227,7 +227,7 @@ EmissiveBloom=true
   light is off screen. It needs water shimmer and night glows.
 
 Forests with the dappled overlay and exterior lakes receive outdoor lighting
-although their map headers classify them as caves. The Graphics panel shows
+although their map headers classify them as caves. The Developer panel shows
 active particles, water tiles and ripples, the AA allocation and night-source
 count. **Show emission only** is a session-only debugging view; **Measure water
 timings** enables asynchronous GPU queries and displays CPU submission and
@@ -248,7 +248,7 @@ resolution with smooth edges enabled.
 
 ## Debug time preview
 
-Under **Tab → libntr → Application → Config → Graphics**, click **Cycle time of
+Under **Tab → Developer**, click **Cycle time of
 day** to preview **Night (00:00) → Dawn (06:00) → Day (12:00) → Sunset (18:00)
 → Real time**. The displayed label shows the active preview. **Use real time**
 restores the clock immediately. The preview resets on restart and affects
@@ -282,8 +282,16 @@ Backend changes are committed in libntr on the `lib_single_screen_mod` branch.
 `subprojects/libntr.wrap` pins the SDK commit directly, including the visual
 upgrades, extended battle VRAM, matrix and DMA behavior, widescreen edge
 rendering, compressed-texture cache support, simulator automation hooks, and
-gamepad settings. No libntr patches are applied during setup. Android
-compatibility changes live on separate Android branches.
+gamepad settings. The tracked subprojects/packagefiles/libntr/tab-menu.patch
+adds the centered PC settings panel and input/scaling behavior through Meson's
+diff_files mechanism on fresh SDK checkouts. For an existing clean checkout at
+the pinned revision, apply it once from the project root with:
+
+```sh
+git -C subprojects/libntr apply ../packagefiles/libntr/tab-menu.patch
+```
+
+Android compatibility changes live on separate Android branches.
 
 After building the Linux executable, run:
 
@@ -309,7 +317,7 @@ and toggling each graphics option while playing.
 
 ## Frame profiling
 
-**Measure frame timings** is a session-only Graphics control. It shows CPU work,
+**Measure frame timings** is a session-only Developer control. It shows CPU work,
 total frame duration, asynchronous GPU elapsed time and result age, plus the
 active renderer. CPU/GPU work overlaps; do not add the numbers. A delayed query
 may describe an older frame. See `night_performance.md` for the night rendering

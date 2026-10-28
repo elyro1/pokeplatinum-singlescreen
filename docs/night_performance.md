@@ -71,7 +71,7 @@ The reported drop below 60 FPS in Jubilife and Eterna at 10× is **not yet repro
 - Opaque and translucent geometry append into unused vertex-buffer space instead of overwriting offset zero for every draw. Exhausted storage is orphaned so queued draws retain their data. The current streaming allocation is about 4.76 MiB; driver-retained in-flight allocations may temporarily add to that.
 - Repeated effect and fog uniforms are skipped when their applied state is identical. Caches follow actual draw order, including deferred polygons, and invalidate when the renderer initializes or the shader program changes.
 - Texture modulation and emissive window/lamp calculations share a texture sample. The lighting, shadow opacity, glow placement and resolution settings are preserved.
-- **Measure frame timings** in the Graphics panel adds optional live CPU work, total frame time, asynchronous whole-frame GPU elapsed time, sample age and the active OpenGL renderer. Timing is session-only and uses nonblocking query reads. No frame timing query is enabled by default.
+- **Measure frame timings** in the Developer panel adds optional live CPU work, total frame time, asynchronous whole-frame GPU elapsed time, sample age and the active OpenGL renderer. Timing is session-only and uses nonblocking query reads. No frame timing query is enabled by default.
 
 ### Controlled measurements
 
@@ -92,7 +92,7 @@ Raw data includes day, legacy night, night lighting alone, glow alone and both: 
 
 ## Live diagnosis
 
-Enable **Graphics → Measure frame timings** in the normal game window, keep the same camera and compare Day and Night preview while the slowdown is visible.
+Enable **Developer → Measure frame timings** in the normal game window, keep the same camera and compare Day and Night preview while the slowdown is visible.
 
 - Record CPU work, GPU elapsed, total frame time, sample age, renderer, resolution and AA mode.
 - GPU time near/over 16.67 ms suggests GPU work needs attention. CPU work may include driver stalls or time waiting for game processing, so it is not exclusively CPU computation.

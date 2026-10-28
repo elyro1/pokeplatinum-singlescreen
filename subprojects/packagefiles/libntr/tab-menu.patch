@@ -1,0 +1,1447 @@
+diff --git a/include/simulator/config/sim_config.h b/include/simulator/config/sim_config.h
+index 777383b..99de427 100644
+--- a/include/simulator/config/sim_config.h
++++ b/include/simulator/config/sim_config.h
+@@ -69,6 +69,8 @@ typedef struct {
+     u8 vsyncInterval; /* Vertical sync interval. Set to 0 to disable vsync, 1 every vblank, 2 every second vblank etc*/
+     u8 capFrameRate; /* Should the frame rate be capped to 60 fps? */
+     float fastForwardMultiplier; /* Speed while holding the fast-forward key, from 1x to 10x. */
++    int menuScalePercent; /* 0: automatic; otherwise 100-200 percent in steps of 25. */
++    BOOL pauseWhileMenuOpen;
+     u8 macAddr[6]; /* MAC address */
+     SIM_config_pad_settings_type padSettings; /* Input pad settings */
+     NVRAMConfig osNvramConfig; /* OS NVRAM config */
+diff --git a/include/simulator/sim_gui.hpp b/include/simulator/sim_gui.hpp
+index 76d589a..eba1908 100644
+--- a/include/simulator/sim_gui.hpp
++++ b/include/simulator/sim_gui.hpp
+@@ -8,16 +8,30 @@
+ 
+ namespace SIM::GUI {
+ 
++enum class Page { Display, Graphics, Audio, Controls, GameSpeed, Tools, Multiplayer, Developer, Count };
++
+ void Init(SDL_Window * window, SDL_GLContext context);
+ void Main();
+ void NewFrame();
+-// Returns true when an input binding capture consumed the event.
++// Returns true when menu input or a binding capture consumed the event.
+ bool ProcessEvent(SDL_Event * event);
+ void Render();
+ void Toggle();
+ void Enable();
+ void OpenFileDialog(std::function<void(std::string)> callback);
+ bool IsGameLogicPaused();
++bool IsEnabled();
++// The render loop uses this to release held game input on menu transitions.
++bool ConsumeInputReset();
++void SelectPage(Page page);
++
++// Project hooks render contents inside the shared panel, without Begin/End.
++void ProjectPage(Page page);
++bool ProjectBack(Page page);
++
++// Responsive, font-sized settings rows. Call between BeginSettings/EndTable.
++bool BeginSettings(const char *id);
++void SettingsRow(const char *label, const char *description = nullptr);
+ void AppButton(const char * label, bool * state, void (*aInitFunc)(void), void (*aAppFunc)(bool *));
+ 
+ 
+diff --git a/libraries/sim/include/gui_internal.hpp b/libraries/sim/include/gui_internal.hpp
+index 85d89cb..b48c55c 100644
+--- a/libraries/sim/include/gui_internal.hpp
++++ b/libraries/sim/include/gui_internal.hpp
+@@ -2,14 +2,16 @@
+ #define LIBNTR_SIM_GUI_INTERNAL_HPP
+ 
+ namespace SIM::GUI {
+-void AppConfigInit();
+-void AppConfigMain(bool * openState);
++void DisplayContents();
++void AudioContents();
++void SpeedContents();
+ void AppNetInit();
+-void AppNetMain(bool * openState);
++void AppNetContents();
+ bool AppPadProcessEvent(SDL_Event *event, bool active);
+ void AppPadInit();
+-void AppPadMain(bool * openState);
++void AppPadContents();
++bool AppPadIsCapturing();
+ 
+ }
+ 
+-#endif
+\ No newline at end of file
++#endif
+diff --git a/libraries/sim/src/config/sim_config.c b/libraries/sim/src/config/sim_config.c
+index 720fb0c..190e3af 100644
+--- a/libraries/sim/src/config/sim_config.c
++++ b/libraries/sim/src/config/sim_config.c
+@@ -31,6 +31,19 @@ static int IniHandler(void* user, const char* section, const char* name,
+ 
+     SIM_config_type * config = (SIM_config_type *)user;
+ 
++    if(MATCH("Interface", "MenuScalePercent")) {
++        char *end;
++        errno = 0;
++        long scale = strtol(value, &end, 10);
++        BOOL parsed = end != value;
++        while (isspace((unsigned char)*end)) ++end;
++        config->menuScalePercent = (!parsed || *end || errno || scale < 100 || scale > 200 || scale % 25)
++            ? 0 : (int)scale;
++    }
++    if(MATCH("Interface", "PauseWhileOpen")) {
++        config->pauseWhileMenuOpen = StringToBool(value);
++    }
++
+     // General section
+     if(MATCH("General", "InternalResolutionScale")) {
+         int scale = atoi(value);
+@@ -399,6 +412,8 @@ void SIM_Config_LoadDefaults(SIM_config_type * aConfig)
+     aConfig->capFrameRate = TRUE;
+     aConfig->masterVolume = 50;
+     aConfig->fastForwardMultiplier = 5.0f;
++    aConfig->menuScalePercent = 0;
++    aConfig->pauseWhileMenuOpen = TRUE;
+ 
+     aConfig->padSettings.joyAxisDeadzone = SIM_CONFIG_JOY_DEFAULT_DEADZONE;
+     aConfig->padSettings.upJoyKeySecondary = SIM_CONFIG_JOY_AXIS_MINUS_MASK | 1;
+@@ -470,6 +485,11 @@ void SIM_Config_LoadDefaults(SIM_config_type * aConfig)
+ void SIM_Config_SaveConfigFile(SIM_config_type * aConfig)
+ {
+     FILE * configFile = fopen(SIM_CONFIG_FILE_PATH, "w");
++    if (!configFile) return;
++
++    fprintf(configFile, "[Interface]\n");
++    fprintf(configFile, "MenuScalePercent=%d\n", aConfig->menuScalePercent);
++    fprintf(configFile, "PauseWhileOpen=%s\n\n", BoolToString(aConfig->pauseWhileMenuOpen));
+     
+     fprintf(configFile, "[General]\n");
+     fprintf(configFile, "InternalResolutionScale=%d\n", aConfig->internalResolutionScale);
+diff --git a/libraries/sim/src/sim_gui.cpp b/libraries/sim/src/sim_gui.cpp
+index 631b456..93b2c45 100644
+--- a/libraries/sim/src/sim_gui.cpp
++++ b/libraries/sim/src/sim_gui.cpp
+@@ -1,138 +1,373 @@
+ #include "simulator/sim.h"
+ #include "simulator/sim_gui.hpp"
+-
++#include "simulator/sim_net.h"
+ #include "simulator/imgui/imgui.hpp"
+-
+ #include "imgui_impl_opengl3.h"
+ #include "imgui_impl_sdl2.h"
+ #include "gui_internal.hpp"
+-
+ #include "ImGuiFileDialog.h"
+ 
+-namespace SIM::GUI {
+-static SDL_Window * sWindow;
+-static SDL_GLContext sContext;
+-static ImGuiContext * sImguiContext;
+-static bool sEnabled = false;
+-static bool sPauseGameLogic = false;
+-static constexpr ImVec2 sButtonSize = {100, 20};
+-
+-static bool sShowAppConfig = false;
+-static bool sShowAppPad = false;
+-static bool sShowAppNet = false;
+-static bool sShowImGuiDemo = false;
+-static bool sShowWindowPrjSpecific = false;
+-
+-static std::function<void(std::string)> sFileDialogCallback = nullptr;
++#include <algorithm>
++#include <cmath>
+ 
+-void PrjMain(bool *) __attribute__((weak));
+-
+-void __attribute__((weak)) PrjMain(bool * openState) {
+-    ImGui::OpenPopup("Application-Specific GUI");
+-    if(ImGui::BeginPopupModal("Application-Specific GUI", openState, ImGuiWindowFlags_Modal | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove)) {
+-        ImGui::Text("No application-specific GUI has been created for this application.");
+-        ImGui::EndPopup();
+-    }
++namespace SIM::GUI {
++static SDL_Window *sWindow;
++static bool sEnabled;
++static bool sManualPause;
++static bool sInputReset;
++static bool sFocusPanel;
++static bool sShowImGuiDemo;
++static bool sSuppressedKeys[SDL_NUM_SCANCODES];
++static bool sStackSettings;
++static Page sPage = Page::Display;
++static ImGuiStyle sBaseStyle;
++static float sScale = 1.0f;
++static std::function<void(std::string)> sFileDialogCallback;
++
++static const char *const sPageNames[] = {
++    "Display", "Graphics", "Audio", "Controls", "Game speed",
++    "Cheats & tools", "Multiplayer", "Developer"
++};
++
++void __attribute__((weak)) ProjectPage(Page page) {
++    if (page == Page::Graphics || page == Page::Tools)
++        ImGui::TextWrapped("This application does not provide additional settings here.");
+ }
++bool __attribute__((weak)) ProjectBack(Page) { return false; }
+ 
+-void Init(SDL_Window * window, SDL_GLContext context) {
+-    sWindow = window;
+-    sContext = context;
+-
+-    sImguiContext = ImGui::CreateContext(NULL);
++static bool MultiplayerActive() {
++    const auto state = SIM_Net_GetCurrentState();
++    return state == SIM_NET_STATE_HOST || state == SIM_NET_STATE_CLIENT;
++}
+ 
+-    ImGuiIO igIO = ImGui::GetIO();
+-	igIO.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
+-	igIO.DisplaySize.x = (float)(SIM_NDS_SCREEN_WIDTH*SIM_NDS_WINDOW_SCALE_FACTOR);
+-	igIO.DisplaySize.y = (float)(SIM_NDS_SCREEN_HEIGHT*2*SIM_NDS_WINDOW_SCALE_FACTOR);
++bool IsEnabled() { return sEnabled; }
+ 
++bool ConsumeInputReset() {
++    const bool reset = sInputReset;
++    sInputReset = false;
++    return reset;
++}
+ 
++void SelectPage(Page page) {
++    if (page < Page::Display || page >= Page::Count || page == sPage) return;
++    sPage = page;
++    AppPadProcessEvent(nullptr, false);
++}
+ 
+-	ImGui_ImplSDL2_InitForOpenGL(sWindow, sContext);
+-	const char * glsl_version = "#version 420";
+-  	ImGui_ImplOpenGL3_Init(glsl_version);
++static void SetEnabled(bool enabled) {
++    if (enabled == sEnabled) return;
++    sEnabled = enabled;
++    sInputReset = true;
++    sFocusPanel = enabled;
++    AppPadProcessEvent(nullptr, false);
++    // Do not turn a held navigation key into a gameplay press after closing.
++    const Uint8 *keys = SDL_GetKeyboardState(nullptr);
++    for (int i = 0; i < SDL_NUM_SCANCODES; ++i)
++        sSuppressedKeys[i] = sSuppressedKeys[i] || keys[i];
++    if (!enabled) {
++        ImGui::GetIO().ClearInputKeys();
++        ImGui::GetIO().ClearEventsQueue();
++        sShowImGuiDemo = false;
++        ImGuiFileDialog::Instance()->Close();
++        sFileDialogCallback = nullptr;
++    }
++}
+ 
+-    ImGui::StyleColorsDark(NULL);
++void Toggle() { SetEnabled(!sEnabled); }
++void Enable() { SetEnabled(true); }
+ 
+-    //ImFontAtlas::ImFontAtlas_AddFontDefault
+-    //ioptr->Fonts.AddFontDefault(NULL);
++bool IsGameLogicPaused() {
++    // Network peers must keep progressing even if the local menu is open.
++    return sManualPause || (sEnabled && SIM_GetConfigPtr()->pauseWhileMenuOpen && !MultiplayerActive());
+ }
+ 
+-void Main() {
+-    if(sEnabled) {
+-        ImGui::Begin("libntr", &sEnabled);
++bool BeginSettings(const char *id) {
++    sStackSettings = ImGui::GetContentRegionAvail().x < ImGui::GetFontSize() * 28.0f;
++    if (!ImGui::BeginTable(id, sStackSettings ? 1 : 2, ImGuiTableFlags_SizingStretchProp))
++        return false;
++    if (!sStackSettings) {
++        ImGui::TableSetupColumn("Setting", ImGuiTableColumnFlags_WidthStretch, 1.15f);
++        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch, 1.0f);
++    }
++    return true;
++}
+ 
+-        ImGui::Text("Git rev: %s", SIM_GetLibntrGitHash());
++void SettingsRow(const char *label, const char *description) {
++    ImGui::TableNextRow(0, ImGui::GetFrameHeightWithSpacing());
++    ImGui::TableNextColumn();
++    ImGui::AlignTextToFramePadding();
++    ImGui::TextWrapped("%s", label);
++    if (description) {
++        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
++        ImGui::TextWrapped("%s", description);
++        ImGui::PopStyleColor();
++    }
++    if (sStackSettings) ImGui::TableNextRow();
++    ImGui::TableNextColumn();
++    ImGui::SetNextItemWidth(-1.0f);
++}
+ 
+-        float renderTimeMs = static_cast<float>(SIM_GetRenderFrameTime()) / 1000000.0f;
+-        ImGui::Text("Render time: %.3fms", renderTimeMs);
++void Init(SDL_Window *window, SDL_GLContext context) {
++    sWindow = window;
++    ImGui::CreateContext();
++    ImGuiIO &io = ImGui::GetIO();
++    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad;
++    ImGui_ImplSDL2_InitForOpenGL(window, context);
++    ImGui_ImplOpenGL3_Init("#version 420");
++    ImGui::StyleColorsDark();
++    auto &style = ImGui::GetStyle();
++    style.FontSizeBase = 16.0f;
++    style.WindowPadding = ImVec2(22, 18);
++    style.FramePadding = ImVec2(10, 7);
++    style.ItemSpacing = ImVec2(10, 9);
++    style.CellPadding = ImVec2(4, 7);
++    style.WindowRounding = 10.0f;
++    style.ChildRounding = 6.0f;
++    style.FrameRounding = 5.0f;
++    style.GrabRounding = 4.0f;
++    style.ScrollbarRounding = 5.0f;
++    style.Colors[ImGuiCol_WindowBg] = ImVec4(.115f, .135f, .17f, 1);
++    style.Colors[ImGuiCol_ChildBg] = ImVec4(.09f, .11f, .145f, 1);
++    style.Colors[ImGuiCol_FrameBg] = ImVec4(.16f, .195f, .25f, 1);
++    style.Colors[ImGuiCol_Button] = ImVec4(.19f, .25f, .34f, 1);
++    style.Colors[ImGuiCol_ButtonHovered] = ImVec4(.26f, .35f, .47f, 1);
++    style.Colors[ImGuiCol_Header] = ImVec4(.20f, .285f, .40f, 1);
++    style.Colors[ImGuiCol_HeaderHovered] = ImVec4(.26f, .35f, .47f, 1);
++    style.Colors[ImGuiCol_Text] = ImVec4(.92f, .94f, .98f, 1);
++    style.Colors[ImGuiCol_TextDisabled] = ImVec4(.65f, .72f, .81f, 1);
++    sBaseStyle = style;
++    AppPadInit();
++    AppNetInit();
++}
+ 
+-        float frameTimeMs = static_cast<float>(SIM_GetFullFrameTime()) / 1000000.0f;
+-        ImGui::Text("%.0ffps", 1000.0f / frameTimeMs);
++static void UpdateScale() {
++    const auto *config = SIM_GetConfigPtr();
++    float scale = config->menuScalePercent
++        ? config->menuScalePercent / 100.0f
++        : ImGui_ImplSDL2_GetContentScaleForWindow(sWindow);
++    // SDL reports logical units on Retina/Wayland. Framebuffer density is
++    // already handled by the backend; multiplying it here would double-scale.
++    if (!std::isfinite(scale) || scale <= 0) scale = 1.0f;
++    scale = std::clamp(scale, 1.0f, 3.0f);
++    if (std::fabs(scale - sScale) < .001f) return;
++    sScale = scale;
++    auto &style = ImGui::GetStyle();
++    style = sBaseStyle;
++    style.ScaleAllSizes(scale);
++    style.FontScaleDpi = scale;
++}
+ 
++static void DeveloperContents() {
++    ImGui::SeparatorText("Performance");
++    const double frame = SIM_GetFullFrameTime() / 1000000.0;
++    ImGui::Text("Frame: %.2f ms (%.0f FPS)", frame, frame > 0 ? 1000.0 / frame : 0);
++    ImGui::Text("CPU render work: %.2f ms", SIM_GetRenderFrameTime() / 1000000.0);
++    ImGui::TextWrapped("Renderer: %s", SIM_GetGraphicsRenderer());
++    ImGui::Checkbox("Manual pause", &sManualPause);
++    ImGui::TextWrapped("Manual pause stays active after closing settings.");
++    ProjectPage(Page::Developer);
++    ImGui::SeparatorText("Build");
++    ImGui::TextWrapped("libntr: %s", SIM_GetLibntrGitHash());
++    ImGui::Checkbox("Open ImGui demo", &sShowImGuiDemo);
++}
+ 
+-        AppButton("Config", &sShowAppConfig, AppConfigInit, AppConfigMain);
+-        AppButton("Input", &sShowAppPad, AppPadInit, AppPadMain);
+-        AppButton("Multiplayer", &sShowAppNet, AppNetInit, AppNetMain);
+-        AppButton("ImGui Demo", &sShowImGuiDemo, nullptr, ImGui::ShowDemoWindow);
+-        AppButton("Application", &sShowWindowPrjSpecific, nullptr, PrjMain);
++static void DrawPage() {
++    switch (sPage) {
++    case Page::Display: DisplayContents(); break;
++    case Page::Audio: AudioContents(); break;
++    case Page::Controls: AppPadContents(); break;
++    case Page::GameSpeed:
++        ProjectPage(sPage);
++        SpeedContents();
++        break;
++    case Page::Multiplayer: AppNetContents(); break;
++    case Page::Developer: DeveloperContents(); break;
++    default: ProjectPage(sPage); break;
++    }
++}
+ 
+-        if (ImGuiFileDialog::Instance()->Display("ChooseFileDlgKey", ImGuiWindowFlags_NoCollapse, ImVec2(200, 200))) {
+-          if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
+-            std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+-            std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
++static void FileDialog() {
++    auto *dialog = ImGuiFileDialog::Instance();
++    if (!dialog->IsOpened("ChooseFileDlgKey")) return;
++    auto *viewport = ImGui::GetMainViewport();
++    const ImVec2 size(std::max(1.0f, viewport->WorkSize.x * .94f),
++                      std::max(1.0f, viewport->WorkSize.y * .94f));
++    ImGui::SetNextWindowPos(viewport->GetWorkCenter(), ImGuiCond_Always, ImVec2(.5f, .5f));
++    ImGui::SetNextWindowSize(size, ImGuiCond_Always);
++    if (dialog->Display("ChooseFileDlgKey", ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings,
++                        ImVec2(0, 0), size)) {
++        if (dialog->IsOk() && sFileDialogCallback) sFileDialogCallback(dialog->GetFilePathName());
++        dialog->Close();
++        sFileDialogCallback = nullptr;
++    }
++}
+ 
+-            // FilePathName will be the full path to the file selected
+-            if(sFileDialogCallback) {
+-                sFileDialogCallback(filePathName);
++void Main() {
++    if (!sEnabled) return;
++    auto *viewport = ImGui::GetMainViewport();
++    const ImVec2 size(std::min(980.0f * sScale, viewport->WorkSize.x * .96f),
++                      std::min(710.0f * sScale, viewport->WorkSize.y * .94f));
++    ImGui::GetBackgroundDrawList()->AddRectFilled(
++        viewport->Pos, ImVec2(viewport->Pos.x + viewport->Size.x, viewport->Pos.y + viewport->Size.y),
++        IM_COL32(0, 0, 0, 115));
++    ImGui::SetNextWindowPos(viewport->GetWorkCenter(), ImGuiCond_Always, ImVec2(.5f, .5f));
++    ImGui::SetNextWindowSize(size, ImGuiCond_Always);
++    ImGui::SetNextWindowScroll(ImVec2(0, 0));
++    if (sFocusPanel) {
++        ImGui::SetNextWindowFocus();
++        sFocusPanel = false;
++    }
++    const auto flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove |
++        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings |
++        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
++    const bool tight = size.y < ImGui::GetFontSize() * 22.0f;
++    if (tight) ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12 * sScale, 10 * sScale));
++    ImGui::Begin("Settings & tools###PCSettings", nullptr, flags);
++    ImGui::PushFont(nullptr, sBaseStyle.FontSizeBase * 1.25f);
++    ImGui::TextUnformatted("Settings & tools");
++    ImGui::PopFont();
++    ImGui::SameLine();
++    ImGui::TextDisabled("%s", IsGameLogicPaused() ? "Game paused" :
++        MultiplayerActive() ? "Running (multiplayer)" : "Game running");
++    ImGui::Separator();
++
++    const float font = ImGui::GetFontSize();
++    const bool compact = ImGui::GetContentRegionAvail().x < font * 40.0f;
++    auto *config = SIM_GetConfigPtr();
++    char resume[96];
++    SDL_snprintf(resume, sizeof(resume), "Resume game (%s)", SDL_GetKeyName(config->padSettings.guiKey));
++    const auto &style = ImGui::GetStyle();
++    const float footerWidth = ImGui::GetContentRegionAvail().x;
++    const float resumeWidth = ImGui::CalcTextSize(resume).x + style.FramePadding.x * 2;
++    const float controlsWidth = ImGui::GetFrameHeight() + style.ItemInnerSpacing.x +
++        ImGui::CalcTextSize("Pause while open").x + style.ItemSpacing.x + resumeWidth;
++    const bool stackedFooter = footerWidth < controlsWidth;
++    const float footer = ImGui::GetFrameHeightWithSpacing() * (stackedFooter ? 2.0f : 1.0f) +
++        ImGui::GetStyle().ItemSpacing.y * 2;
++    if (compact) {
++        int page = static_cast<int>(sPage);
++        ImGui::SetNextItemWidth(-1);
++        if (ImGui::Combo("##Category", &page, sPageNames, static_cast<int>(Page::Count))) {
++            SelectPage(static_cast<Page>(page));
++        }
++    }
++    const float height = std::max(font * 2, ImGui::GetContentRegionAvail().y - footer);
++    if (!compact) {
++        ImGui::BeginChild("Categories", ImVec2(font * 11.5f, height), ImGuiChildFlags_Borders);
++        for (int i = 0; i < static_cast<int>(Page::Count); ++i) {
++            if (i == 0 || i == static_cast<int>(Page::Tools)) {
++                ImGui::Spacing();
++                ImGui::TextDisabled("%s", i == 0 ? "SETTINGS" : "TOOLS");
++            }
++            if (ImGui::Selectable(sPageNames[i], static_cast<int>(sPage) == i, 0,
++                                  ImVec2(0, ImGui::GetFrameHeight()))) {
++                SelectPage(static_cast<Page>(i));
+             }
+-          }
+-
+-          // close
+-          ImGuiFileDialog::Instance()->Close();
+         }
+-
+-        ImGui::Checkbox("Pause Game Logic", &sPauseGameLogic);
+-
+-        ImGui::End();
++        ImGui::EndChild();
++        ImGui::SameLine();
++    }
++    // Separate child IDs keep each page's scroll position across navigation.
++    ImGui::PushID(static_cast<int>(sPage));
++    ImGui::BeginChild("Page", ImVec2(0, height), ImGuiChildFlags_Borders);
++    if (!compact) ImGui::SeparatorText(sPageNames[static_cast<int>(sPage)]);
++    ImGui::PushItemWidth(-1);
++    DrawPage();
++    ImGui::PopItemWidth();
++    ImGui::EndChild();
++    ImGui::PopID();
++
++    ImGui::Separator();
++    bool pause = config->pauseWhileMenuOpen;
++    if (ImGui::Checkbox("Pause while open", &pause)) {
++        config->pauseWhileMenuOpen = pause;
++        SIM_Config_SaveConfigFile(config);
++    }
++    if (!stackedFooter) ImGui::SameLine();
++    if (ImGui::Button(resume)) SetEnabled(false);
++    if (footerWidth > (stackedFooter ? resumeWidth : controlsWidth) + style.ItemSpacing.x +
++            ImGui::CalcTextSize("Settings save automatically").x) {
++        ImGui::SameLine();
++        ImGui::TextDisabled("Settings save automatically");
++    }
++    ImGui::End();
++    if (tight) ImGui::PopStyleVar();
++    if (sEnabled) {
++        FileDialog();
++        if (sShowImGuiDemo) ImGui::ShowDemoWindow(&sShowImGuiDemo);
+     }
+ }
+ 
+ void OpenFileDialog(std::function<void(std::string)> callback) {
+     sFileDialogCallback = callback;
+-
+     IGFD::FileDialogConfig config;
+-    	config.path = ".";
++    config.path = ".";
++    config.flags |= ImGuiFileDialogFlags_Modal;
+     ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Select NDS ROM", ".nds,.srl", config);
+ }
+ 
+ void NewFrame() {
+-    // Keep the pointer available for settings and layouts with touch input.
+     const bool hideCursor = !sEnabled &&
+         SIM_GetConfigPtr()->screenLayout == SIM_CONFIG_SCREEN_LAYOUT_TOP_ONLY &&
+         (SDL_GetWindowFlags(sWindow) & SDL_WINDOW_FULLSCREEN) &&
+         SDL_GetKeyboardFocus() == sWindow;
+-    ImGuiIO& io = ImGui::GetIO();
+-    if(hideCursor) {
+-        io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+-    } else {
+-        io.ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;
+-    }
+-    const int cursorState = hideCursor ? SDL_DISABLE : SDL_ENABLE;
+-    if(SDL_ShowCursor(SDL_QUERY) != cursorState) {
+-        SDL_ShowCursor(cursorState);
+-    }
+-
++    ImGuiIO &io = ImGui::GetIO();
++    if (AppPadIsCapturing()) io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;
++    else io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
++    if (hideCursor) io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
++    else io.ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;
++    if (SDL_ShowCursor(SDL_QUERY) != (hideCursor ? SDL_DISABLE : SDL_ENABLE))
++        SDL_ShowCursor(hideCursor ? SDL_DISABLE : SDL_ENABLE);
++    UpdateScale();
+     ImGui_ImplOpenGL3_NewFrame();
+     ImGui_ImplSDL2_NewFrame();
+     ImGui::NewFrame();
+ }
+ 
+-bool ProcessEvent(SDL_Event * event) {
+-    if(sEnabled) {
+-        ImGui_ImplSDL2_ProcessEvent(event);
++bool ProcessEvent(SDL_Event *event) {
++    if (AppPadProcessEvent(event, sEnabled && sPage == Page::Controls)) return true;
++#ifdef SDK_BUILD_NX
++    if (event->type == SDL_JOYBUTTONDOWN && event->jbutton.button == 8) {
++        Toggle();
++        return true;
++    }
++#endif
++    if (event->type == SDL_KEYDOWN || event->type == SDL_KEYUP) {
++        const int scan = event->key.keysym.scancode;
++        if (event->type == SDL_KEYDOWN && event->key.keysym.sym == SIM_GetConfigPtr()->padSettings.guiKey) {
++            if (!event->key.repeat) Toggle();
++            return true;
++        }
++        if (scan > SDL_SCANCODE_UNKNOWN && scan < SDL_NUM_SCANCODES) {
++            const bool suppressed = sSuppressedKeys[scan];
++            if (event->type == SDL_KEYUP) sSuppressedKeys[scan] = false;
++            else if (sEnabled) sSuppressedKeys[scan] = true;
++            if (!sEnabled && suppressed) return true;
++        }
++    }
++    if (!sEnabled) return false;
++    if (event->type == SDL_KEYDOWN && !event->key.repeat &&
++        event->key.keysym.sym == SDLK_ESCAPE && !ImGui::GetIO().WantTextInput &&
++        !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel)) {
++        if (!ProjectBack(sPage)) SetEnabled(false);
++        return true;
++    }
++    ImGui_ImplSDL2_ProcessEvent(event);
++    // F11 remains usable inside settings, unless a text field owns the key.
++    if ((event->type == SDL_KEYDOWN || event->type == SDL_KEYUP) &&
++        event->key.keysym.sym == SIM_GetConfigPtr()->padSettings.fullScreenKey &&
++        !ImGui::GetIO().WantTextInput)
++        return false;
++    switch (event->type) {
++    case SDL_KEYDOWN: case SDL_KEYUP: case SDL_TEXTINPUT: case SDL_TEXTEDITING:
++    case SDL_MOUSEBUTTONDOWN: case SDL_MOUSEBUTTONUP: case SDL_MOUSEMOTION: case SDL_MOUSEWHEEL:
++    case SDL_JOYBUTTONDOWN: case SDL_JOYBUTTONUP: case SDL_JOYHATMOTION: case SDL_JOYAXISMOTION:
++    case SDL_CONTROLLERBUTTONDOWN: case SDL_CONTROLLERBUTTONUP: case SDL_CONTROLLERAXISMOTION:
++    case SDL_FINGERDOWN: case SDL_FINGERUP: case SDL_FINGERMOTION:
++        return true;
++    default:
++        return false;
+     }
+-    return AppPadProcessEvent(event, sEnabled && sShowAppPad);
+ }
+ 
+ void Render() {
+@@ -140,38 +375,12 @@ void Render() {
+     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+ }
+ 
+-void Toggle() {
+-    if(sEnabled) {
+-        sEnabled = false;
+-    } else {
+-        sEnabled = true;
++// Retained for library consumers using the older applet API.
++void AppButton(const char *label, bool *state, void (*initFunc)(), void (*appFunc)(bool *)) {
++    if (ImGui::Button(label)) {
++        if (!*state && initFunc) initFunc();
++        *state = !*state;
+     }
++    if (*state) appFunc(state);
+ }
+-
+-void Enable() {
+-    sEnabled = true;
+-}
+-
+-bool IsGameLogicPaused() {
+-    return sPauseGameLogic;
+ }
+-
+-// Generic button to open another GUI applet
+-void AppButton(const char * label, bool * state, void (*initFunc)(void), void (*appFunc)(bool *)) {
+-    if(ImGui::Button(label, sButtonSize)) {
+-        if(*state) {
+-            *state = false;
+-        } else {
+-            if(initFunc) {
+-                initFunc();
+-            }
+-            *state = true;
+-        }
+-    }
+-
+-    if(*state) {
+-        appFunc(state);
+-    }
+-}
+-
+-}
+\ No newline at end of file
+diff --git a/libraries/sim/src/sim_gui_config.cpp b/libraries/sim/src/sim_gui_config.cpp
+index 2b409dd..12e27df 100644
+--- a/libraries/sim/src/sim_gui_config.cpp
++++ b/libraries/sim/src/sim_gui_config.cpp
+@@ -1,105 +1,87 @@
+ #include "simulator/sim.h"
+ #include "simulator/sim_audio.h"
+ #include "simulator/sim_gui.hpp"
+-
+ #include "simulator/imgui/imgui.hpp"
+-#include "simulator/config/sim_config.h"
+-
+ #include "gui_internal.hpp"
+ 
+-#include <array>
+-#include <SDL2/SDL.h>
+-
+ namespace SIM::GUI {
+-
+-static constexpr ImVec2 s_btnSize = {50, 20};
+-
+-static SIM_config_type * sConfig;
+-
+-static constexpr const char * ScreenLayoutStrings[] = {
+-    "Vertical",
+-    "Horizontal",
+-    "Large Screen",
+-    "Top Screen / Widescreen"
+-};
+-
+-static constexpr const char * VblankStrings[] = {
+-    "Off",
+-    "Every V-Blank",
+-    "Every second V-Blank"
+-};
+-
+-void AppConfigInit() {
+-    sConfig = SIM_GetConfigPtr();
+-}
+-
+-void AppConfigMain(bool *openState) {
+-    bool configChanged = false;
+-    int screenLayout = sConfig->screenLayout;
+-    bool swapScreens = sConfig->swapScreens;
+-    int vSyncInterval = sConfig->vsyncInterval;
+-    bool frameLimit = sConfig->capFrameRate;
+-    bool fullScreen = sConfig->fullScreen;
+-    float fastForwardMultiplier = sConfig->fastForwardMultiplier;
+-    
+-    ImGui::Begin("Config", openState);
+-
+-    int resolution = sConfig->internalResolutionScale;
+-    if (ImGui::SliderInt("Internal resolution", &resolution, 1, 20, "%dx NDS")) {
+-        SIM_SetInternalResolutionAfterRender(resolution);
+-    }
+-    int volume = sConfig->masterVolume;
+-    if (ImGui::SliderInt("Master volume", &volume, 0, 127)) {
+-        sConfig->masterVolume = volume;
+-        SIM_Audio_SetMasterVolume(volume);
+-        configChanged = true;
+-    }
+-
+-    if(ImGui::Checkbox("Fullscreen", &fullScreen)) {
+-        configChanged = true;
+-    }
+-
+-    if(ImGui::Combo("Layout", &screenLayout, ScreenLayoutStrings, 4, 4)) {
+-        configChanged = true;
+-    }
+-    if (screenLayout == SIM_CONFIG_SCREEN_LAYOUT_TOP_ONLY) {
+-        ImGui::TextWrapped("Single screen. Overworld expands up to 21:9.");
++void DisplayContents() {
++    auto *config = SIM_GetConfigPtr();
++    bool changed = false;
++    if (!BeginSettings("DisplaySettings")) return;
++    bool fullscreen = config->fullScreen;
++    SettingsRow("Window mode");
++    int mode = fullscreen ? 0 : 1;
++    if (ImGui::Combo("##WindowMode", &mode, "Fullscreen\0Windowed\0")) {
++        fullscreen = mode == 0;
++        if (SDL_SetWindowFullscreen(SIM_GetSDLWindow(), fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) == 0) {
++            config->fullScreen = fullscreen;
++            changed = true;
++        }
+     }
+-    if(screenLayout != SIM_CONFIG_SCREEN_LAYOUT_TOP_ONLY && ImGui::Checkbox("Swap Screens", &swapScreens)) {
+-        configChanged = true;
++    SettingsRow("Screen layout", "Single screen expands the overworld up to 21:9.");
++    int layout = config->screenLayout;
++    if (ImGui::Combo("##Layout", &layout, "Vertical\0Horizontal\0Large screen\0Single screen / Widescreen\0")) {
++        config->screenLayout = static_cast<SIM_config_screen_layout_type>(layout);
++        changed = true;
+     }
+-    if(ImGui::Combo("VSync", &vSyncInterval, VblankStrings, 3, 3)) {
+-        configChanged = true;
++    if (layout != SIM_CONFIG_SCREEN_LAYOUT_TOP_ONLY) {
++        SettingsRow("Swap screens");
++        bool swap = config->swapScreens;
++        if (ImGui::Checkbox("##Swap", &swap)) { config->swapScreens = swap; changed = true; }
+     }
+-    if(ImGui::Checkbox("Cap framerate", &frameLimit)) {
+-        configChanged = true;
++    SettingsRow("Menu scale", "Auto follows the display. Override if text is too small.");
++    const char *scales[] = {"Auto", "100%", "125%", "150%", "175%", "200%"};
++    int scale = config->menuScalePercent ? (config->menuScalePercent - 100) / 25 + 1 : 0;
++    if (ImGui::Combo("##MenuScale", &scale, scales, 6)) {
++        config->menuScalePercent = scale ? 100 + (scale - 1) * 25 : 0;
++        changed = true;
+     }
+-    if (ImGui::SliderFloat("Fast-forward speed", &fastForwardMultiplier, 1.0f, 10.0f, "%.2fx")) {
+-        configChanged = true;
++    SettingsRow("Internal resolution", "Game sharpness; independent of menu size.");
++    int resolution = config->internalResolutionScale;
++    if (ImGui::SliderInt("##Resolution", &resolution, 1, 20, "%dx NDS"))
++        SIM_SetInternalResolutionAfterRender(resolution);
++    SettingsRow("VSync");
++    int vsync = config->vsyncInterval;
++    if (ImGui::Combo("##VSync", &vsync, "Off\0Every refresh\0Every second refresh\0")) {
++        config->vsyncInterval = vsync;
++        SDL_GL_SetSwapInterval(vsync);
++        changed = true;
+     }
+-    ImGui::TextWrapped("Hold %s to speed up the game and sound effects. Background music keeps its normal speed.",
+-        SDL_GetKeyName(sConfig->padSettings.fastForwardKey));
+-
+-    ImGui::End();
+-
+-    if(configChanged) {
+-        sConfig->screenLayout = static_cast<SIM_config_screen_layout_type>(screenLayout);
+-        sConfig->swapScreens = swapScreens;
+-        sConfig->fullScreen = fullScreen;
+-        if(sConfig->fullScreen) {
+-            SDL_SetWindowFullscreen(SIM_GetSDLWindow(), SDL_WINDOW_FULLSCREEN_DESKTOP);
+-        } else {
+-            SDL_SetWindowFullscreen(SIM_GetSDLWindow(), 0);
+-        }
+-        sConfig->vsyncInterval = vSyncInterval;
+-        if(vSyncInterval != SDL_GL_GetSwapInterval()) {
+-            SDL_GL_SetSwapInterval(vSyncInterval);
+-        }
+-        sConfig->capFrameRate = frameLimit;
+-        sConfig->fastForwardMultiplier = SIM_Config_ValidateFastForwardMultiplier(fastForwardMultiplier);
++    ImGui::EndTable();
++    if (changed) SIM_Config_SaveConfigFile(config);
++}
+ 
+-        SIM_Config_SaveConfigFile(sConfig);
++void AudioContents() {
++    auto *config = SIM_GetConfigPtr();
++    if (!BeginSettings("AudioSettings")) return;
++    SettingsRow("Master volume");
++    int volume = config->masterVolume * 100 / 127;
++    if (ImGui::SliderInt("##Volume", &volume, 0, 100, "%d%%")) {
++        config->masterVolume = (volume * 127 + 50) / 100;
++        SIM_Audio_SetMasterVolume(config->masterVolume);
++        SIM_Config_SaveConfigFile(config);
+     }
++    ImGui::EndTable();
+ }
+ 
++void SpeedContents() {
++    auto *config = SIM_GetConfigPtr();
++    bool changed = false;
++    ImGui::SeparatorText("Playback");
++    if (!BeginSettings("SpeedSettings")) return;
++    SettingsRow("Cap frame rate");
++    bool cap = config->capFrameRate;
++    if (ImGui::Checkbox("##Cap", &cap)) { config->capFrameRate = cap; changed = true; }
++    SettingsRow("Fast-forward speed", "Background music keeps its normal speed.");
++    float speed = config->fastForwardMultiplier;
++    if (ImGui::SliderFloat("##FastForward", &speed, 1, 10, "%.2fx")) {
++        config->fastForwardMultiplier = SIM_Config_ValidateFastForwardMultiplier(speed);
++        changed = true;
++    }
++    ImGui::EndTable();
++    ImGui::TextWrapped("Hold %s to fast-forward during gameplay.",
++        SDL_GetKeyName(config->padSettings.fastForwardKey));
++    if (changed) SIM_Config_SaveConfigFile(config);
++}
+ }
+diff --git a/libraries/sim/src/sim_gui_net.cpp b/libraries/sim/src/sim_gui_net.cpp
+index fd21a96..a42017c 100644
+--- a/libraries/sim/src/sim_gui_net.cpp
++++ b/libraries/sim/src/sim_gui_net.cpp
+@@ -13,7 +13,7 @@
+ 
+ namespace SIM::GUI {
+ 
+-static constexpr ImVec2 BtnSize = {100, 20};
++
+ static char sHostBuf[16] = {0};
+ static SIM_config_type * sConfig;
+ 
+@@ -38,20 +38,23 @@ void AppNetInit() {
+     strncpy(sHostBuf, sConfig->netSettings.serverIp, 15);
+ }
+ 
+-void AppNetMain(bool *openState) {
+-    ImGui::Begin("Multiplayer", openState);
++void AppNetContents() {
+ 
+     ImGui::PushID(1);
+     ImGui::Text("Host:");
+     ImGui::SameLine(0.0f, 1.0f);
+-    ImGui::InputText("", sHostBuf, sizeof(sHostBuf)-1, 0, nullptr, nullptr);
++    ImGui::SetNextItemWidth(-1);
++    ImGui::InputText("##Host", sHostBuf, sizeof(sHostBuf));
+     ImGui::PopID();
+ 
+-    if(ImGui::Button("Connect", BtnSize)) {
+-        SIM_Net_StartClient(sHostBuf);
++    if(ImGui::Button("Connect")) {
++        if (SIM_Net_StartClient(sHostBuf)) {
++            SDL_strlcpy(sConfig->netSettings.serverIp, sHostBuf, sizeof(sConfig->netSettings.serverIp));
++            SIM_Config_SaveConfigFile(sConfig);
++        }
+     }
+ 
+-    if(ImGui::Button("Start Host", BtnSize)) {
++    if(ImGui::Button("Start host")) {
+         SIM_Net_StartHost();
+     }
+ 
+@@ -59,66 +62,64 @@ void AppNetMain(bool *openState) {
+ 
+     if(SIM_Net_GetCurrentState() != SIM_NET_STATE_UNINITIALIZED) {
+         std::string playerCountString = std::format("Players: {}", SIM_Net_GetPlayerCount());
+-        ImGui::Text(playerCountString.c_str());
+-
+-        ImVec2 tableSize = {400, 800};
+-        ImGui::BeginTable("playersTable", 6, ImGuiTableFlags_SizingStretchSame, tableSize, 400);
+-        ImGui::TableHeader("Players");
+-        ImGui::TableSetupColumn("ID", 0, 0.1f);
+-        ImGui::TableSetupColumn("Status", 0, 0.2f);
+-        ImGui::TableSetupColumn("Username", 0, 0.5f);
+-        ImGui::TableSetupColumn("AID", 0, 0.1f);
+-        ImGui::TableSetupColumn("MPState", 0, 0.2f);
+-        ImGui::TableSetupColumn("GGID", 0, 0.2f);
+-        ImGui::TableHeadersRow();
+-
+-        const SIM_Net_Player_t* playerList = SIM_Net_GetPlayerList();
+-        for(size_t i=0; i< SIM_NET_MAX_PLAYERS; i++) {
+-            ImGui::TableNextColumn();
+-            if(SIM_Net_GetCurrentPlayerID() == playerList[i].id) {
+-                ImGui::Text("%d*", playerList[i].id);
+-            } else {
+-                ImGui::Text("%d", playerList[i].id);
+-            }
+-
+-            ImGui::TableNextColumn();
+-            const char * statusStr;
+-            switch(playerList[i].status) {
+-                default:
+-                case SIM_NET_PLAYERSTATUS_NONE:
+-                    statusStr = "None";
+-                    break;
+-                case SIM_NET_PLAYERSTATUS_DISCONNECTED:
+-                    statusStr = "Disconnected";
+-                    break;
+-                case SIM_NET_PLAYERSTATUS_CLIENT:
+-                    statusStr = "Client";
+-                    break;
+-                case SIM_NET_PLAYERSTATUS_HOST:
+-                    statusStr = "Host";
+-                    break;
+-            }
+-            ImGui::Text(statusStr);
+-
+-            ImGui::TableNextColumn();
+-            ImGui::Text("%s", playerList[i].userName);
+-            ImGui::TableNextColumn();
+-            ImGui::Text("%d", playerList[i].aid);
+-            ImGui::TableNextColumn();
+-            const char * mpStateStr = "Off";
+-            if(playerList[i].mpState == SIM_NET_MPSTATE_PARENT) {
+-                mpStateStr = "Parent";
+-            } else if(playerList[i].mpState == SIM_NET_MPSTATE_CHILD) {
+-                mpStateStr = "Child";
++        ImGui::TextUnformatted(playerCountString.c_str());
++
++        if (ImGui::BeginTable("playersTable", 6, ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_ScrollX, ImVec2(0, 0), ImGui::GetFontSize() * 32)) {
++            ImGui::TableSetupColumn("ID", 0, 0.1f);
++            ImGui::TableSetupColumn("Status", 0, 0.2f);
++            ImGui::TableSetupColumn("Username", 0, 0.5f);
++            ImGui::TableSetupColumn("AID", 0, 0.1f);
++            ImGui::TableSetupColumn("MPState", 0, 0.2f);
++            ImGui::TableSetupColumn("GGID", 0, 0.2f);
++            ImGui::TableHeadersRow();
++
++            const SIM_Net_Player_t* playerList = SIM_Net_GetPlayerList();
++            for(size_t i=0; i< SIM_NET_MAX_PLAYERS; i++) {
++                ImGui::TableNextColumn();
++                if(SIM_Net_GetCurrentPlayerID() == playerList[i].id) {
++                    ImGui::Text("%d*", playerList[i].id);
++                } else {
++                    ImGui::Text("%d", playerList[i].id);
++                }
++
++                ImGui::TableNextColumn();
++                const char * statusStr;
++                switch(playerList[i].status) {
++                    default:
++                    case SIM_NET_PLAYERSTATUS_NONE:
++                        statusStr = "None";
++                        break;
++                    case SIM_NET_PLAYERSTATUS_DISCONNECTED:
++                        statusStr = "Disconnected";
++                        break;
++                    case SIM_NET_PLAYERSTATUS_CLIENT:
++                        statusStr = "Client";
++                        break;
++                    case SIM_NET_PLAYERSTATUS_HOST:
++                        statusStr = "Host";
++                        break;
++                }
++                ImGui::Text(statusStr);
++
++                ImGui::TableNextColumn();
++                ImGui::Text("%s", playerList[i].userName);
++                ImGui::TableNextColumn();
++                ImGui::Text("%d", playerList[i].aid);
++                ImGui::TableNextColumn();
++                const char * mpStateStr = "Off";
++                if(playerList[i].mpState == SIM_NET_MPSTATE_PARENT) {
++                    mpStateStr = "Parent";
++                } else if(playerList[i].mpState == SIM_NET_MPSTATE_CHILD) {
++                    mpStateStr = "Child";
++                }
++                ImGui::Text(mpStateStr);
++                ImGui::TableNextColumn();
++                ImGui::Text("%d", playerList[i].ggid);
+             }
+-            ImGui::Text(mpStateStr);
+-            ImGui::TableNextColumn();
+-            ImGui::Text("%d", playerList[i].ggid);
++            ImGui::EndTable();
+         }
+-        ImGui::EndTable();
+     }
+ 
+-    ImGui::End();
+ }
+ 
+ }
+\ No newline at end of file
+diff --git a/libraries/sim/src/sim_gui_pad.cpp b/libraries/sim/src/sim_gui_pad.cpp
+index 3c42222..641300c 100644
+--- a/libraries/sim/src/sim_gui_pad.cpp
++++ b/libraries/sim/src/sim_gui_pad.cpp
+@@ -1,219 +1,181 @@
+ #include "simulator/sim.h"
+ #include "simulator/sim_gui.hpp"
+-
+ #include "simulator/imgui/imgui.hpp"
+-#include "simulator/config/sim_config.h"
+-
+ #include "gui_internal.hpp"
+ 
+ #include <algorithm>
+ #include <format>
+ #include <string>
+-#include <SDL2/SDL.h>
+ 
+ namespace SIM::GUI {
++static SIM_config_type *sConfig;
++static int *sPendingKeyboardBinding;
++static int *sPendingJoystickBinding;
+ 
+-static constexpr ImVec2 BtnSize = {50, 20};
+-
+-static SIM_config_type * sConfig;
+-static bool sConfigChanged = false;
+-
+-static void SetKeyConfig(int& config) {
+-    SDL_Event Event;
+-    while(true) {
+-        while( SDL_PollEvent(&Event)) {
+-            if(Event.type == SDL_KEYDOWN)
+-            {
+-                config = Event.key.keysym.sym;
+-                return;
+-            }
+-        }
+-    }
+-}
+-
+-static int *sPendingJoystickBinding = nullptr;
++bool AppPadIsCapturing() { return sPendingKeyboardBinding || sPendingJoystickBinding; }
+ 
+-// Capture through the normal event loop so the window stays responsive and
+-// keyboard release / focus / device removal events are never swallowed.
++// Binding capture shares the main event loop: no spinning, frozen rendering,
++// or swallowed focus/device/quit events.
+ bool AppPadProcessEvent(SDL_Event *event, bool active) {
+-    if (!active || (event->type == SDL_WINDOWEVENT &&
+-                    event->window.event == SDL_WINDOWEVENT_FOCUS_LOST)) {
++    if (!active || (event && event->type == SDL_WINDOWEVENT &&
++                    event->window.event == SDL_WINDOWEVENT_FOCUS_LOST) ||
++        (event && event->type == SDL_JOYDEVICEREMOVED)) {
++        sPendingKeyboardBinding = nullptr;
+         sPendingJoystickBinding = nullptr;
+     }
+-    if (!sPendingJoystickBinding) return false;
+-    if (event->type == SDL_KEYDOWN && event->key.keysym.sym == SDLK_ESCAPE) {
+-        sPendingJoystickBinding = nullptr;
++    if (!event || !AppPadIsCapturing()) return false;
++    if (event->type == SDL_KEYDOWN) {
++        if (event->key.repeat) return true;
++        if (event->key.keysym.sym == SDLK_ESCAPE) {
++            sPendingKeyboardBinding = nullptr;
++            sPendingJoystickBinding = nullptr;
++        } else if (sPendingKeyboardBinding) {
++            *sPendingKeyboardBinding = event->key.keysym.sym;
++            sPendingKeyboardBinding = nullptr;
++            SIM_Config_SaveConfigFile(sConfig);
++        }
+         return true;
+     }
++    if (!sPendingJoystickBinding) return false;
+     int binding = SIM_CONFIG_JOY_INVALID_KEY;
+     if (event->type == SDL_JOYBUTTONDOWN) {
+         binding = event->jbutton.button;
+     } else if (event->type == SDL_JOYHATMOTION && event->jhat.hat == 0) {
+         const int value = event->jhat.value;
+         if (value == SDL_HAT_UP || value == SDL_HAT_DOWN ||
+-            value == SDL_HAT_LEFT || value == SDL_HAT_RIGHT) {
++            value == SDL_HAT_LEFT || value == SDL_HAT_RIGHT)
+             binding = value | SIM_CONFIG_JOY_HAT_MASK;
+-        }
+     } else if (event->type == SDL_JOYAXISMOTION) {
+-        // Capture requires a deliberate tilt even with a zero play deadzone.
+         const int threshold = std::max(SIM_CONFIG_JOY_DEFAULT_DEADZONE,
+                                       sConfig->padSettings.joyAxisDeadzone);
+-        if (event->jaxis.value > threshold || event->jaxis.value < -threshold) {
++        if (event->jaxis.value > threshold || event->jaxis.value < -threshold)
+             binding = event->jaxis.axis | (event->jaxis.value > 0
+                 ? SIM_CONFIG_JOY_AXIS_PLUS_MASK : SIM_CONFIG_JOY_AXIS_MINUS_MASK);
+-        }
+     }
+     if (binding == SIM_CONFIG_JOY_INVALID_KEY) return false;
+     *sPendingJoystickBinding = binding;
+     sPendingJoystickBinding = nullptr;
+-    sConfigChanged = true;
++    SIM_Config_SaveConfigFile(sConfig);
+     return true;
+ }
+ 
+-static std::string GetJoystickKeyName(int key) {
++static std::string JoystickName(int key) {
+     if (key == SIM_CONFIG_JOY_INVALID_KEY) return "None";
+-    std::string ret = "";
+-    if(key & SIM_CONFIG_JOY_HAT_MASK) {
+-        ret = std::format("Hat {}", key & ~(SIM_CONFIG_JOY_HAT_MASK));
+-    } else if(key & SIM_CONFIG_JOY_AXIS_MINUS_MASK) {
+-        ret = std::format("Axis {}-", key & ~(SIM_CONFIG_JOY_AXIS_MINUS_MASK));
+-    } else if(key & SIM_CONFIG_JOY_AXIS_PLUS_MASK){
+-        ret = std::format("Axis {}+", key & ~(SIM_CONFIG_JOY_AXIS_PLUS_MASK));
+-    } else {
+-        ret = std::format("{}", key);
+-    }
+-
+-    return ret;
++    if (key & SIM_CONFIG_JOY_HAT_MASK)
++        return std::format("Hat {}", key & ~SIM_CONFIG_JOY_HAT_MASK);
++    if (key & SIM_CONFIG_JOY_AXIS_MINUS_MASK)
++        return std::format("Axis {}-", key & ~SIM_CONFIG_JOY_AXIS_MINUS_MASK);
++    if (key & SIM_CONFIG_JOY_AXIS_PLUS_MASK)
++        return std::format("Axis {}+", key & ~SIM_CONFIG_JOY_AXIS_PLUS_MASK);
++    return std::format("Button {}", key);
+ }
+ 
+-static void KeySettingButton(const char * keyName, int btnId, int& key) {
+-    ImGui::Text(keyName);
+-    ImGui::SameLine(0.0f, 1.0f);
+-    ImGui::PushID(btnId);
+-    if(ImGui::Button(SDL_GetKeyName(key), BtnSize)) {
+-        SetKeyConfig(key);
+-        sConfigChanged = true;
++static void KeyboardRow(const char *label, int &key) {
++    SettingsRow(label);
++    ImGui::PushID(&key);
++    if (ImGui::Button(sPendingKeyboardBinding == &key ? "Press a key..." : SDL_GetKeyName(key),
++                      ImVec2(-1, 0))) {
++        sPendingJoystickBinding = nullptr;
++        sPendingKeyboardBinding = &key;
+     }
+     ImGui::PopID();
+ }
+ 
+-static void JoystickBindingButton(int btnId, int& key, bool allowClear = false) {
+-    ImGui::PushID(btnId);
+-    auto buttonName = sPendingJoystickBinding == &key ? std::string("Press...") : GetJoystickKeyName(key);
+-    if (ImGui::Button(buttonName.c_str(), ImVec2(80, 20))) {
++static void ControllerRow(const char *label, int &key, bool clear = false) {
++    SettingsRow(label);
++    ImGui::PushID(&key);
++    const std::string name = sPendingJoystickBinding == &key ? "Press a button..." : JoystickName(key);
++    const float clearWidth = ImGui::CalcTextSize("Clear").x + ImGui::GetStyle().FramePadding.x * 2;
++    const float width = clear ? std::max(ImGui::GetFontSize() * 3,
++        ImGui::GetContentRegionAvail().x - clearWidth - ImGui::GetStyle().ItemSpacing.x) : -1;
++    if (ImGui::Button(name.c_str(), ImVec2(width, 0))) {
++        sPendingKeyboardBinding = nullptr;
+         sPendingJoystickBinding = &key;
+     }
+-    if (allowClear) {
++    if (clear) {
+         ImGui::SameLine();
+-        if (ImGui::SmallButton("Clear")) {
++        if (ImGui::Button("Clear")) {
+             if (sPendingJoystickBinding == &key) sPendingJoystickBinding = nullptr;
+             key = SIM_CONFIG_JOY_INVALID_KEY;
+-            sConfigChanged = true;
++            SIM_Config_SaveConfigFile(sConfig);
+         }
+     }
+     ImGui::PopID();
+ }
+ 
+-static void JoystickKeySettingButton(const char * keyName, int btnId, int& key) {
+-    ImGui::TextUnformatted(keyName);
+-    ImGui::SameLine(0.0f, 1.0f);
+-    JoystickBindingButton(btnId, key);
+-}
+-
+-void AppPadInit() {
+-    sPendingJoystickBinding = nullptr;
+-    sConfig = SIM_GetConfigPtr();
+-}
+-
+-void AppPadMain(bool *openState) {
+-    ImGui::Begin("Input", openState);
+-
+-    ImGui::Text("Keyboard");
+-    ImGui::Columns(2, "padKeyboard", true);
+-
+-    KeySettingButton("A   ", 1, sConfig->padSettings.aKey);
+-    KeySettingButton("B   ", 2, sConfig->padSettings.bKey);
+-    KeySettingButton("X   ", 3, sConfig->padSettings.xKey);
+-    KeySettingButton("Y   ", 4, sConfig->padSettings.yKey);
+-    KeySettingButton("L   ", 5, sConfig->padSettings.lKey);
+-    KeySettingButton("R   ", 6, sConfig->padSettings.rKey);
+-    KeySettingButton("GUI ", 25, sConfig->padSettings.guiKey);
+-    KeySettingButton("Speedup ", 26, sConfig->padSettings.fastForwardKey);
+-    KeySettingButton("Fullscreen ", 27, sConfig->padSettings.fullScreenKey);
+-
+-    ImGui::NextColumn();
+-
+-    KeySettingButton("Up     ", 7,  sConfig->padSettings.upKey);
+-    KeySettingButton("Down   ", 8,  sConfig->padSettings.downKey);
+-    KeySettingButton("Left   ", 9,  sConfig->padSettings.leftKey);
+-    KeySettingButton("Right  ", 10, sConfig->padSettings.rightKey);
+-    KeySettingButton("Start  ", 11, sConfig->padSettings.startKey);
+-    KeySettingButton("Select ", 12, sConfig->padSettings.selectKey);
+-
+-    ImGui::Columns(1, "pad2", false);
+-    ImGui::Separator();
+-    ImGui::Text("Gamepad");
+-    ImGui::Columns(2, "padJoystick", true);
+-
+-    JoystickKeySettingButton("A ", 13, sConfig->padSettings.aJoyKey);
+-    JoystickKeySettingButton("B ", 14, sConfig->padSettings.bJoyKey);
+-    JoystickKeySettingButton("X ", 15, sConfig->padSettings.xJoyKey);
+-    JoystickKeySettingButton("Y ", 16, sConfig->padSettings.yJoyKey);
+-    JoystickKeySettingButton("L ", 17, sConfig->padSettings.lJoyKey);
+-    JoystickKeySettingButton("R ", 18, sConfig->padSettings.rJoyKey);
+-
+-    ImGui::NextColumn();
+-
+-    JoystickKeySettingButton("Start  ", 23, sConfig->padSettings.startJoyKey);
+-    JoystickKeySettingButton("Select ", 24, sConfig->padSettings.selectJoyKey);
+-
+-    ImGui::Columns(1);
+-    ImGui::Separator();
+-    ImGui::TextUnformatted("Directions: D-pad and left stick work everywhere");
+-    if (ImGui::BeginTable("directions", 3, ImGuiTableFlags_SizingFixedFit)) {
+-        ImGui::TableSetupColumn("Direction");
+-        ImGui::TableSetupColumn("Primary");
+-        ImGui::TableSetupColumn("Secondary");
+-        ImGui::TableHeadersRow();
+-        ImGui::TableNextRow();
+-        ImGui::TableNextColumn(); ImGui::TextUnformatted("Up");
+-        ImGui::TableNextColumn(); JoystickBindingButton(19, sConfig->padSettings.upJoyKey);
+-        ImGui::TableNextColumn(); JoystickBindingButton(29, sConfig->padSettings.upJoyKeySecondary, true);
+-        ImGui::TableNextRow();
+-        ImGui::TableNextColumn(); ImGui::TextUnformatted("Down");
+-        ImGui::TableNextColumn(); JoystickBindingButton(20, sConfig->padSettings.downJoyKey);
+-        ImGui::TableNextColumn(); JoystickBindingButton(30, sConfig->padSettings.downJoyKeySecondary, true);
+-        ImGui::TableNextRow();
+-        ImGui::TableNextColumn(); ImGui::TextUnformatted("Left");
+-        ImGui::TableNextColumn(); JoystickBindingButton(21, sConfig->padSettings.leftJoyKey);
+-        ImGui::TableNextColumn(); JoystickBindingButton(31, sConfig->padSettings.leftJoyKeySecondary, true);
+-        ImGui::TableNextRow();
+-        ImGui::TableNextColumn(); ImGui::TextUnformatted("Right");
+-        ImGui::TableNextColumn(); JoystickBindingButton(22, sConfig->padSettings.rightJoyKey);
+-        ImGui::TableNextColumn(); JoystickBindingButton(32, sConfig->padSettings.rightJoyKeySecondary, true);
+-        ImGui::EndTable();
+-    }
+-    ImGui::TextWrapped("Click a binding, then press a direction. Escape cancels. Use Secondary for the left stick.");
+-
+-    float deadzonePercent = sConfig->padSettings.joyAxisDeadzone * 100.0f / 32767.0f;
+-    if (ImGui::SliderFloat("Axis deadzone", &deadzonePercent, 0.0f, 95.0f, "%.0f%%",
+-                           ImGuiSliderFlags_AlwaysClamp)) {
+-        sConfig->padSettings.joyAxisDeadzone = (int)(deadzonePercent * 32767.0f / 100.0f);
+-        sConfigChanged = true;
+-    }
+-    ImGui::SameLine();
+-    if (ImGui::Button("Reset##deadzone")) {
+-        sConfig->padSettings.joyAxisDeadzone = SIM_CONFIG_JOY_DEFAULT_DEADZONE;
+-        sConfigChanged = true;
++void AppPadInit() { sConfig = SIM_GetConfigPtr(); }
++
++void AppPadContents() {
++    static int activeDevice = 0;
++    ImGui::TextWrapped("Select a binding, then press a key or controller input. Escape cancels.");
++    if (AppPadIsCapturing())
++        ImGui::TextWrapped("Waiting for input... Escape cancels without changing the binding.");
++    if (!ImGui::BeginTabBar("InputDevice")) return;
++    if (ImGui::BeginTabItem("Keyboard")) {
++        if (activeDevice != 0) AppPadProcessEvent(nullptr, false);
++        activeDevice = 0;
++        if (BeginSettings("KeyboardBindings")) {
++            KeyboardRow("A - Confirm / interact", sConfig->padSettings.aKey);
++            KeyboardRow("B - Cancel / run", sConfig->padSettings.bKey);
++            KeyboardRow("X - In-game menu", sConfig->padSettings.xKey);
++            KeyboardRow("Y - Registered item", sConfig->padSettings.yKey);
++            KeyboardRow("L - Previous app", sConfig->padSettings.lKey);
++            KeyboardRow("R - Next app", sConfig->padSettings.rKey);
++            KeyboardRow("Up", sConfig->padSettings.upKey);
++            KeyboardRow("Down", sConfig->padSettings.downKey);
++            KeyboardRow("Left", sConfig->padSettings.leftKey);
++            KeyboardRow("Right", sConfig->padSettings.rightKey);
++            KeyboardRow("Start", sConfig->padSettings.startKey);
++            KeyboardRow("Select", sConfig->padSettings.selectKey);
++            KeyboardRow("Settings menu", sConfig->padSettings.guiKey);
++            KeyboardRow("Fast-forward (hold)", sConfig->padSettings.fastForwardKey);
++            KeyboardRow("Fullscreen", sConfig->padSettings.fullScreenKey);
++            ImGui::EndTable();
++        }
++        ImGui::EndTabItem();
+     }
+-    ImGui::TextWrapped("Applies to all mapped controller axes. 0%% disables filtering; increase it if the stick drifts.");
+-
+-    ImGui::End();
+-
+-    if(sConfigChanged) {
+-        SIM_Config_SaveConfigFile(sConfig);
+-        sConfigChanged = false;
++    if (ImGui::BeginTabItem("Controller")) {
++        if (activeDevice != 1) AppPadProcessEvent(nullptr, false);
++        activeDevice = 1;
++        if (BeginSettings("ControllerBindings")) {
++            ControllerRow("A - Confirm / interact", sConfig->padSettings.aJoyKey);
++            ControllerRow("B - Cancel / run", sConfig->padSettings.bJoyKey);
++            ControllerRow("X - In-game menu", sConfig->padSettings.xJoyKey);
++            ControllerRow("Y - Registered item", sConfig->padSettings.yJoyKey);
++            ControllerRow("L - Previous app", sConfig->padSettings.lJoyKey);
++            ControllerRow("R - Next app", sConfig->padSettings.rJoyKey);
++            ControllerRow("Start", sConfig->padSettings.startJoyKey);
++            ControllerRow("Select", sConfig->padSettings.selectJoyKey);
++            ImGui::EndTable();
++        }
++        ImGui::SeparatorText("Movement");
++        ImGui::TextWrapped("Use primary for the D-pad and secondary for the left stick.");
++        if (BeginSettings("DirectionBindings")) {
++            ControllerRow("Up - primary", sConfig->padSettings.upJoyKey);
++            ControllerRow("Up - secondary", sConfig->padSettings.upJoyKeySecondary, true);
++            ControllerRow("Down - primary", sConfig->padSettings.downJoyKey);
++            ControllerRow("Down - secondary", sConfig->padSettings.downJoyKeySecondary, true);
++            ControllerRow("Left - primary", sConfig->padSettings.leftJoyKey);
++            ControllerRow("Left - secondary", sConfig->padSettings.leftJoyKeySecondary, true);
++            ControllerRow("Right - primary", sConfig->padSettings.rightJoyKey);
++            ControllerRow("Right - secondary", sConfig->padSettings.rightJoyKeySecondary, true);
++            ImGui::EndTable();
++        }
++        float deadzone = sConfig->padSettings.joyAxisDeadzone * 100.0f / 32767.0f;
++        if (BeginSettings("Deadzone")) {
++            SettingsRow("Axis deadzone", "0% disables filtering. Increase to prevent stick drift.");
++            if (ImGui::SliderFloat("##Deadzone", &deadzone, 0, 95, "%.0f%%", ImGuiSliderFlags_AlwaysClamp)) {
++                sConfig->padSettings.joyAxisDeadzone = (int)(deadzone * 32767.0f / 100.0f);
++                SIM_Config_SaveConfigFile(sConfig);
++            }
++            ImGui::EndTable();
++        }
++        if (ImGui::Button("Reset deadzone")) {
++            sConfig->padSettings.joyAxisDeadzone = SIM_CONFIG_JOY_DEFAULT_DEADZONE;
++            SIM_Config_SaveConfigFile(sConfig);
++        }
++        ImGui::EndTabItem();
+     }
++    ImGui::EndTabBar();
++}
+ }
+-
+-}
+\ No newline at end of file
+diff --git a/libraries/sim/src/sim_main.cpp b/libraries/sim/src/sim_main.cpp
+index 8f00a11..51a29c8 100644
+--- a/libraries/sim/src/sim_main.cpp
++++ b/libraries/sim/src/sim_main.cpp
+@@ -178,6 +178,7 @@ static void UpdateFastForward(SDL_Window *gameWindow) {
+   const Uint8 *keys = SDL_GetKeyboardState(nullptr);
+   const SDL_Scancode fastForwardKey = SDL_GetScancodeFromKey(s_SIM_config.padSettings.fastForwardKey);
+   sFastForwardActive = SDL_GetKeyboardFocus() == gameWindow &&
++                       !SIM::GUI::IsEnabled() &&
+                        !ImGui::GetIO().WantCaptureKeyboard &&
+                        !SIM::GUI::IsGameLogicPaused() &&
+                        fastForwardKey != SDL_SCANCODE_UNKNOWN &&
+@@ -637,8 +638,11 @@ static void ApplyPending3DAntialiasing(bool resolutionChanged) {
+ 
+ void *SIM_RenderInit(void *arg) {
+ 
++#ifdef SDL_HINT_WINDOWS_DPI_AWARENESS
++  SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "permonitorv2");
++#endif
+   SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER |
+-           SDL_INIT_JOYSTICK);
++           SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER);
+   SIM_Audio_Init(44100);
+ 
+   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+@@ -709,7 +713,7 @@ void *SIM_RenderInit(void *arg) {
+ 
+   window = SDL_CreateWindow(
+       windowTitle.c_str(), 100, 100, windowWidth, windowHeight,
+-      SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
++      SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+   context = SDL_GL_CreateContext(window);
+ 
+   if(s_SIM_config.fullScreen) {
+@@ -1402,6 +1406,17 @@ static void DrawEngine(BOOL isSub) {
+ 
+ static unsigned s_KeyboardDirections = 0;
+ static bool s_DirectionalInputFocused = true;
++static bool s_WaitForJoystickNeutral = false;
++
++static void ReleaseGameplayInput() {
++  s_KeyboardDirections = 0;
++  s_reg_PAD_KEYINPUT |= 0x3ff;
++  *(vu16 *)HW_BUTTON_XY_BUF |= 0xc00;
++  isMouseDown = 0;
++  s_tpData.touch = 0;
++  s_tpData.validity = 0;
++  s_WaitForJoystickNeutral = true;
++}
+ 
+ static void HandleJoystickKeyDown(int aKey) {
+   if (aKey == s_SIM_config.padSettings.aJoyKey) {
+@@ -1689,12 +1704,14 @@ void *SIM_Render(void *arg) {
+ 
+     SIM_Autopilot_Frame();
+     while (SDL_PollEvent(&Event)) {
+-      if (SIM::GUI::ProcessEvent(&Event)) continue;
++      const bool consumed = SIM::GUI::ProcessEvent(&Event);
++      if (SIM::GUI::ConsumeInputReset()) ReleaseGameplayInput();
++      if (consumed) continue;
+ 
+       if (Event.type == SDL_WINDOWEVENT) {
+         switch (Event.window.event) {
+         case SDL_WINDOWEVENT_FOCUS_LOST:
+-          s_KeyboardDirections = 0;
++          ReleaseGameplayInput();
+           s_DirectionalInputFocused = false;
+           break;
+         case SDL_WINDOWEVENT_FOCUS_GAINED:
+@@ -1709,7 +1726,7 @@ void *SIM_Render(void *arg) {
+         int keyRead = Event.key.keysym.sym;
+         if (keyRead == s_SIM_config.padSettings.fullScreenKey) {
+           if (!Event.key.repeat && SDL_GetKeyboardFocus() == window &&
+-              !ImGui::GetIO().WantCaptureKeyboard) {
++              (SIM::GUI::IsEnabled() || !ImGui::GetIO().WantCaptureKeyboard)) {
+             const bool fullScreen = !s_SIM_config.fullScreen;
+             if (SDL_SetWindowFullscreen(window, fullScreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) == 0) {
+               s_SIM_config.fullScreen = fullScreen;
+@@ -1758,9 +1775,6 @@ void *SIM_Render(void *arg) {
+         } else if (keyRead == s_SIM_config.padSettings.selectKey) {
+           // Select button
+           s_reg_PAD_KEYINPUT = s_reg_PAD_KEYINPUT & 0b1111111111111011;
+-        } else if (keyRead == s_SIM_config.padSettings.guiKey) {
+-          // Toggle Debug GUI
+-          SIM::GUI::Toggle();
+         }
+       }
+       if (Event.type == SDL_KEYUP) {
+@@ -1875,8 +1889,13 @@ void *SIM_Render(void *arg) {
+     }
+     // Polling keeps overlapping bindings, remapping, disconnects and live
+     // deadzone changes independent of the order of SDL release events.
+-    const unsigned joystickDirections = s_DirectionalInputFocused
++    unsigned joystickDirections = s_DirectionalInputFocused && !SIM::GUI::IsEnabled()
+         ? SIM::Input::JoystickDirections(s_SIM_SDLJoystick, s_SIM_config.padSettings) : 0;
++    if (s_WaitForJoystickNeutral) {
++      if (!joystickDirections) s_WaitForJoystickNeutral = false;
++      joystickDirections = 0;
++    }
++    if (SIM::GUI::IsEnabled()) ReleaseGameplayInput();
+     s_reg_PAD_KEYINPUT = SIM::Input::ApplyDirections(
+         s_reg_PAD_KEYINPUT, s_KeyboardDirections, joystickDirections);
+ 
+@@ -1896,6 +1915,7 @@ void *SIM_Render(void *arg) {
+ 
+     SIM::GUI::NewFrame();
+     SIM::GUI::Main();
++    if (SIM::GUI::ConsumeInputReset()) ReleaseGameplayInput();
+     UpdateFastForward(window);
+ 
+     memset(bgtex, 0,
+@@ -1984,7 +2004,7 @@ void *SIM_Render(void *arg) {
+     // high-refresh displays and on drivers that ignore the swap interval.
+     if (paced && swapInterval == 0) WaitForFrameDeadline(deadline);
+     const u64 profileSwapStart = SIM_ProfileNow();
+-    SIM_Autopilot_BeforeSwap(windowWidth, windowHeight);
++    SIM_Autopilot_BeforeSwap(drawableWidth, drawableHeight);
+     SDL_GL_SwapWindow(window);
+     const u64 profileSwapEnd = SIM_ProfileNow();
+     if (paced && swapInterval != 0) WaitForFrameDeadline(deadline);

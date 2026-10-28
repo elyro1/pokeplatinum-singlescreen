@@ -29,6 +29,13 @@ void DEBUG_SetFieldSystem(FieldSystem *fieldSystem)
     s_fieldSystem = fieldSystem;
 }
 
+BOOL DEBUG_CanUseFieldTools(void)
+{
+    return s_fieldSystem != NULL && s_fieldSystem->processManager != NULL
+        && s_fieldSystem->saveData != NULL && s_fieldSystem->runningFieldMap
+        && !s_fieldSystem->processManager->pause && !FieldSystem_IsRunningTask(s_fieldSystem);
+}
+
 int DEBUG_GetPoketchAppCount(void)
 {
     if (s_fieldSystem == NULL || !s_fieldSystem->runningFieldMap) {

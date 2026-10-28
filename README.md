@@ -36,7 +36,7 @@ Configurable gameplay modifiers below are opt-in through `gameplay_config.ini`; 
 ## Visual upgrades
 
 Richer day/night lighting, regional haze, and smooth 3D edges are enabled by default.
-Toggle them under Tab → Application → Config → Graphics.
+Toggle them under Tab → Graphics.
 See [graphics notes](docs/visual_upgrades.md).
 
 ## How to run
@@ -45,11 +45,11 @@ Use a build from this fork's [Releases](https://github.com/elyro1/pokeplatinum/r
 
 Optionally place your dumped **US Black 2 or White 2** `.nds` ROM beside the executable too. On startup, the game extracts the required battle assets into `bw2/` and automatically enables **BW2 battle visuals**, saving the setting. Existing assets are reused. While a compatible BW2 ROM remains present, startup enables the setting again; move the ROM away if you want to keep BW2 visuals disabled. Platinum is still required.
 
-Discovery checks the executable's directory first, then the working directory. Extraction uses the working directory, alongside settings and saves; normally this is the game folder. You can also select a BW2 ROM manually under **Tab → libntr → Application → Config**.
+Discovery checks the executable's directory first, then the working directory. Extraction uses the working directory, alongside settings and saves; normally this is the game folder. You can also select a BW2 ROM manually under **Tab → Graphics**.
 
 ## Default keybindings
 
-These are the defaults for a fresh configuration. Existing settings retain your previous bindings. Open **Tab → Input** to remap keyboard and controller buttons.
+These are the defaults for a fresh configuration. Existing settings retain your previous bindings. Open **Tab → Controls** to remap keyboard and controller buttons.
 
 | Key | DS button / action |
 | --- | --- |
@@ -71,7 +71,7 @@ Inside the Pokétch, **X** or **C** on the keyboard closes it (DS B or X).
 
 Battle Frontier scratch-off cards support buttons in the single-screen layout: use left/right to pick cards, then the D-pad to select a square and A to scratch it. B skips a card or finishes the last card after confirmation; X opens the prize list, and B or X returns. The on-screen hints use DS button names (A = Z, B = X, X = C with the default keyboard bindings).
 
-In **Tab → Input → Gamepad**, each direction has Primary and Secondary bindings. The D-pad is Primary and the left stick is Secondary by default (axis 0 for left/right, axis 1 for up/down), so either control works for movement and menus. Click **Clear** to remove a secondary binding; press Escape to cancel controller binding capture. Saved mappings, including cleared secondary bindings, are preserved; configurations without secondary bindings inherit the left-stick defaults.
+In **Tab → Controls → Controller**, each direction has Primary and Secondary bindings. The D-pad is Primary and the left stick is Secondary by default (axis 0 for left/right, axis 1 for up/down), so either control works for movement and menus. Click **Clear** to remove a secondary binding; press Escape to cancel controller binding capture. Saved mappings, including cleared secondary bindings, are preserved; configurations without secondary bindings inherit the left-stick defaults.
 
 The **Axis deadzone** slider applies to all mapped controller axes and saves automatically. Its default is 25%; set it to 0% to disable filtering, or increase it to prevent stick drift. **Reset** restores the default. Movement remains digital, with the original game’s directional behavior and speed.
 
@@ -79,14 +79,22 @@ The **Axis deadzone** slider applies to all mapped controller axes and saves aut
 
 The default layout shows one screen, with 60 FPS and Smooth battle pacing enabled, and Normal Battle UI & Timing disabled by default. Speed correction is automatic at 60 FPS. Existing configuration files may override these defaults.
 
-Press **Tab** to access:
+Press **Tab** to open a centered settings panel. Categories replace the current page; tools stay inside the panel instead of opening overlapping windows. The menu remembers your category and page scroll positions during the session.
 
-- **libntr → Config:** screen layout, fullscreen, internal resolution, volume, frame pacing, and fast-forward speed (1×–10×).
-- **libntr → Input:** keyboard and controller mappings.
-- **libntr → Application → Config:** frame rate (30/60 FPS), battle pacing (Original/Smooth/Quick), and the independent Normal Battle UI & Timing checkbox. Smooth keeps original animation timing with sprite interpolation; Quick accelerates battle effects while keeping Pokémon idle animations and idle camera movement at Smooth speed. The checkbox keeps HP/EXP bars, messages and UI delays at normal speed when enabled. See [battle pacing settings](docs/battle_speed_settings.md) for details.
-- **libntr → Application tools:** cheats, Pokémon and item generation, and map jumping while a game is loaded.
+- **Display:** screen layout, fullscreen, internal rendering resolution, VSync, and menu scale.
+- **Graphics:** lighting, atmosphere, shadows, water, weather, bloom, and BW2 battle visuals/ROM selection.
+- **Audio:** master volume.
+- **Controls:** keyboard and controller mappings, primary/secondary directions, axis deadzone, and PC shortcuts. Select a binding and press the new input; Escape cancels. Binding capture keeps the window responsive.
+- **Game speed:** frame rate (30/60 FPS), battle pacing (Original/Smooth/Quick), the independent Normal Battle UI & Timing checkbox, frame cap, and fast-forward speed (1×–10×). Smooth keeps original animation timing with sprite interpolation; Quick speeds up battle effects. Normal Battle UI & Timing keeps HP/EXP bars, messages, and UI delays at normal speed.
+- **Cheats & tools:** cheats, Pokétch unlocks, Pokémon/item creation, and map jumping. Creation and travel require normal overworld control.
+- **Multiplayer:** host/connect settings and player information.
+- **Developer:** frame/GPU timings, lighting previews, assertions, build information, and the optional ImGui demo.
 
-Settings are stored locally in `sim_config.ini` and `sim_config_prj.ini`. If performance is poor, lower the internal resolution scale in the PC settings.
+**Pause while open** is enabled by default. Uncheck it to preview visual changes while the game runs. Closing with Tab, Escape, or Resume clears automatic menu pause. Developer → Manual pause is independent and remains active after closing the panel. Automatic pause is suspended while hosting or connected to multiplayer; menu input is still kept out of gameplay. Escape cancels a binding/dialog or returns from a tool before closing settings.
+
+**Display → Menu scale** offers Auto and 100–200% in 25% steps. Auto uses the display scale reported by SDL; use the manual override if your desktop's scale is not reported correctly. Fonts, spacing, controls, and dialogs scale together. Internal rendering resolution changes game sharpness independently. On smaller windows or at larger menu scales, categories collapse into a picker and page content scrolls.
+
+Settings save automatically to **sim_config.ini** and **sim_config_prj.ini**. The new **[Interface]** section in sim_config.ini stores **MenuScalePercent** (0 for Auto) and **PauseWhileOpen**; existing files inherit Auto and automatic pause. Gameplay overrides in gameplay_config.ini still load at startup. If performance is poor, lower the internal resolution under Display.
 
 ## Saves
 

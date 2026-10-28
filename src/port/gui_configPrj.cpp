@@ -21,59 +21,33 @@ namespace SIM::GUI {
 
 static void ConfigCheckBox(const char *label, BOOL *configVar, bool &configChanged)
 {
+    SettingsRow(label);
     bool checked = *configVar != FALSE;
-    if (ImGui::Checkbox(label, &checked)) {
+    ImGui::PushID(configVar);
+    if (ImGui::Checkbox("##Enabled", &checked)) {
         *configVar = checked ? TRUE : FALSE;
         configChanged = true;
     }
+    ImGui::PopID();
 }
 
 static std::string sBw2ExtractMessage;
 
-// Black 2 / White 2's battle view (docs/bwbattle.md): the setting, and the extraction of its assets from the player's
-// own ROM
-static void Bw2BattleVisualsConfig(SIM_Config_prj_type *myConfig, bool &configChanged)
-{
-    bool ready = BwBattle_AssetsReady();
-
-    ImGui::BeginDisabled(!ready);
-    ConfigCheckBox("BW2 battle visuals", &myConfig->bw2BattleVisuals, configChanged);
-    ImGui::EndDisabled();
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-        ImGui::SetTooltip("Show battles with Pokemon Black 2 / White 2's 3D arena and animated sprites.\n"
-            "Needs graphics from your own US Black 2 or White 2 ROM. Takes effect from the next battle.");
-    }
-    ImGui::SameLine();
-    if (ImGui::Button(ready ? "Re-extract BW2 ROM..." : "Select BW2 ROM...")) {
-        OpenFileDialog([](std::string path) {
-            sBw2ExtractMessage = BwBattle_ExtractResultMessage(BwBattle_ExtractAssets(path.c_str()));
-        });
-    }
-    if (!sBw2ExtractMessage.empty()) {
-        ImGui::TextUnformatted(sBw2ExtractMessage.c_str());
-    } else if (!ready) {
-        ImGui::TextUnformatted("BW2 battle graphics not extracted.");
-    }
-    if (ready && !BwBattle_IrisAssetsReady()) {
-        ImGui::TextUnformatted("Re-extract your BW2 ROM to enable Iris on Iron Island.");
-    } else if (ready && !BwBattle_IrisVsReady()) {
-        ImGui::TextUnformatted("Re-extract your BW2 ROM to enable Iris's VS portrait.");
-    }
-}
-
-void ConfigPrjMain(bool * openState) {
-    ImGui::Begin("pokeplatinum Config", openState);
+void GameSpeedContents() {
     SIM_Config_prj_type * myConfig = SIM_Config_prj_GetConfig();
     bool configChanged = false;
 
+    if (!BeginSettings("BattleSpeed")) return;
+    SettingsRow("Frame rate");
     int frameRate = myConfig->enable60fps ? 1 : 0;
-    if (ImGui::Combo("Frame rate", &frameRate, "30 FPS\0" "60 FPS\0")) {
+    if (ImGui::Combo("##FrameRate", &frameRate, "30 FPS\0" "60 FPS\0")) {
         myConfig->enable60fps = frameRate == 1;
         configChanged = true;
     }
     ImGui::BeginDisabled(!myConfig->enable60fps);
+    SettingsRow("Battle pacing");
     int pacing = myConfig->battlePacing;
-    if (ImGui::Combo("Battle pacing", &pacing, "Original\0Smooth\0Quick\0")) {
+    if (ImGui::Combo("##Pacing", &pacing, "Original\0Smooth\0Quick\0")) {
         myConfig->battlePacing = static_cast<BattlePacing>(pacing);
         configChanged = true;
     }
@@ -89,22 +63,19 @@ void ConfigPrjMain(bool * openState) {
         ImGui::SetTooltip("Keep HP/EXP bars, messages and battle UI delays at normal speed at 60 FPS, independently of Battle pacing.");
     }
     ImGui::EndDisabled();
-    Bw2BattleVisualsConfig(myConfig, configChanged);
-    ConfigCheckBox("Enable GF_Asserts", &myConfig->enableAsserts, configChanged);
-    ConfigCheckBox("DebugBreak on GF assertion fail", &myConfig->breakDebuggerOnGfAssert, configChanged);
+    ImGui::EndTable();
 
     if (configChanged) {
         SIM_Config_prj_SaveConfigFile(myConfig);
     }
-    ImGui::End();
 }
 
-void GraphicsPrjMain(bool *openState)
+void GraphicsContents()
 {
-    ImGui::Begin("pokeplatinum Graphics", openState);
     SIM_Config_prj_type *myConfig = SIM_Config_prj_GetConfig();
     bool configChanged = false;
 
+    if (!BeginSettings("GraphicsSettings")) return;
     ConfigCheckBox("Richer day/night lighting", &myConfig->enhancedDayNight, configChanged);
     ConfigCheckBox("Regional atmosphere", &myConfig->regionalAtmosphere, configChanged);
     // Keep the edge-smoothing control hidden for now. Antialias3D remains available in the INI.
@@ -123,10 +94,48 @@ void GraphicsPrjMain(bool *openState)
     ConfigCheckBox("Coherent night lighting", &myConfig->nightLighting, configChanged);
     ConfigCheckBox("Night window and lamp glow", &myConfig->nightGlows, configChanged);
     ConfigCheckBox("Emissive bloom", &myConfig->emissiveBloom, configChanged);
+    ImGui::EndTable();
+    ImGui::SeparatorText("Battle visuals");
+    bool ready = BwBattle_AssetsReady();
+    if (BeginSettings("BattleVisuals")) {
+        ImGui::BeginDisabled(!ready);
+        ConfigCheckBox("BW2 battle visuals", &myConfig->bw2BattleVisuals, configChanged);
+        ImGui::EndDisabled();
+        ImGui::EndTable();
+    }
+    if (ImGui::Button(ready ? "Re-extract BW2 ROM..." : "Select BW2 ROM...")) {
+        OpenFileDialog([](std::string path) {
+            sBw2ExtractMessage = BwBattle_ExtractResultMessage(BwBattle_ExtractAssets(path.c_str()));
+        });
+    }
+    ImGui::TextWrapped("Uses graphics from your own US Black 2 / White 2 ROM. Changes apply to the next battle.");
+    if (!sBw2ExtractMessage.empty()) ImGui::TextWrapped("%s", sBw2ExtractMessage.c_str());
+    if (!ready) ImGui::TextWrapped("BW2 battle graphics not extracted.");
+    else if (!BwBattle_IrisAssetsReady() || !BwBattle_IrisVsReady())
+        ImGui::TextWrapped("Re-extract your BW2 ROM to enable all Iris graphics.");
+
+    if(configChanged) {
+        SIM_Config_prj_SaveConfigFile(myConfig);
+    }
+
+
+}
+
+void DeveloperContentsPrj()
+{
+    auto *myConfig = SIM_Config_prj_GetConfig();
+    bool configChanged = false;
+    ImGui::SeparatorText("Assertions");
+    if (BeginSettings("Assertions")) {
+        ConfigCheckBox("Enable GF_Asserts", &myConfig->enableAsserts, configChanged);
+        ConfigCheckBox("Break debugger on assertion", &myConfig->breakDebuggerOnGfAssert, configChanged);
+        ImGui::EndTable();
+    }
+    if (configChanged) SIM_Config_prj_SaveConfigFile(myConfig);
+    ImGui::SeparatorText("Rendering diagnostics");
     if (ImGui::Button("Reload light table"))
         FieldLights_Reload();
-    ImGui::SameLine();
-    ImGui::TextDisabled("%s", FieldLights_Status());
+    ImGui::TextWrapped("%s", FieldLights_Status());
     static bool emissionOnly;
     if (ImGui::Checkbox("Show emission only", &emissionOnly))
         FieldVisuals_SetEmissionDebug(emissionOnly);
@@ -157,17 +166,11 @@ void GraphicsPrjMain(bool *openState)
     if (ImGui::Button("Cycle time of day")) {
         FieldVisuals_CycleTimePreview();
     }
-    ImGui::SameLine();
     if (ImGui::Button("Use real time")) {
         FieldVisuals_ResetTimePreview();
     }
     ImGui::TextWrapped("Lighting only; resets on restart. Resume game logic if paused to see the preview.");
 
-    if(configChanged) {
-        SIM_Config_prj_SaveConfigFile(myConfig);
-    }
-
-
-    ImGui::End();
+    ImGui::TextWrapped("Project build: %s", SIM_GetProjectGitHash());
 }
 }
