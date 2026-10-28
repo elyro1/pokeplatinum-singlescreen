@@ -3,6 +3,42 @@
 This document aims to provide an overview of how the maps are loaded during the
 life cycle of the game.
 
+## Native widescreen scenery
+
+The Linux and Windows ports keep a separate cache of scenery outside the four
+gameplay quadrants. Each named chunk resolves its area through the map matrix's
+map header. Chunks in another area share a cached terrain texture set, prop
+models, prop textures, and their own animation managers. Unnamed border chunks
+inherit the current area's resources. Distortion World keeps its existing floor
+loading behavior.
+
+Supplemental areas load in stages before their chunks become ready. They use a
+native scenery heap, reserved from the configured cache budget, rather than the
+small gameplay field heap. The common material/shape table is borrowed from the
+current area. Resources stay alive while referenced by cached chunks and are
+released, including their texture and palette allocations, when the last chunk
+leaves the cache.
+
+Foreign chunks remain visual previews even when they overlap a gameplay
+quadrant: the scenery pass draws them with their own resources, while the live
+quadrants retain their original gameplay resources, callbacks and collision.
+No neighboring scripts, NPCs or interactive prop animations are started.
+
+Run the native regression check with a packaged Linux build and a usable save:
+
+```sh
+python3 tools/scripts/check_visible_area_resources.py --build build_linux \
+  --output /tmp/visible-area-check
+```
+
+The check copies assets and saves, captures the Jubilife/Route 218 boundary from
+both sides by day and night, validates terrain/prop texture and palette bindings,
+checks shared references, exercises cancellation at different loading stages,
+and forces texture/palette allocation failures to check cleanup. It requires an
+unstripped binary and `gdb` to read
+structure offsets; it does not attach to a running game. An optional `--baseline`
+binary produces comparison captures.
+
 ## Introduction and initial loading
 
 There are two concepts that are fundamental to understand how maps are loaded:

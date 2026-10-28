@@ -176,24 +176,21 @@ BOOL Easy3D_UploadTextureToVRAM(NNSG3dResTex *texture)
             paletteKey = 0;
         }
 
-        if (!texOk) {
-            int result = NNS_GfdFreeTexVram(texKey);
-            GF_ASSERT(!result);
-
-            return FALSE;
-        }
-
-        if (!tex4x4Ok) {
-            int result = NNS_GfdFreeTexVram(tex4x4Key);
-            GF_ASSERT(!result);
-
-            return FALSE;
-        }
-
-        if (!paletteOk) {
-            int result = NNS_GfdFreePlttVram(paletteKey);
-            GF_ASSERT(!result);
-
+        if (!texOk || !tex4x4Ok || !paletteOk) {
+            // A later allocation can fail after earlier ones succeeded. Return
+            // every successful allocation so speculative scenery can fall back.
+            if (texKey) {
+                int result = NNS_GfdFreeTexVram(texKey);
+                GF_ASSERT(!result);
+            }
+            if (tex4x4Key) {
+                int result = NNS_GfdFreeTexVram(tex4x4Key);
+                GF_ASSERT(!result);
+            }
+            if (paletteKey) {
+                int result = NNS_GfdFreePlttVram(paletteKey);
+                GF_ASSERT(!result);
+            }
             return FALSE;
         }
 

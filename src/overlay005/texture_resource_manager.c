@@ -33,15 +33,17 @@ typedef struct FieldTextureManager_t {
     void *dataBuffer;
     TextureDataHeader *dataHeader;
     TextureSlot textureSlots[MAX_TEXTURE_KEYS];
+    enum HeapID heapID;
 } FieldTextureManager;
 
 static int TextureResourceManager_LoadSingleTexture(FieldTextureManager *textureManager, NNSG3dResTex *textureResource, int textureIndex, NARC *narc);
 
-FieldTextureManager *TextureResourceManager_Create(void)
+static FieldTextureManager *TextureResourceManager_Alloc(enum HeapID heapID)
 {
-    FieldTextureManager *textureManager = Heap_Alloc(HEAP_ID_FIELD1, sizeof(FieldTextureManager));
+    FieldTextureManager *textureManager = Heap_Alloc(heapID, sizeof(FieldTextureManager));
 
     GF_ASSERT(textureManager);
+    textureManager->heapID = heapID;
 
     for (int slotIndex = 0; slotIndex < MAX_TEXTURE_KEYS; slotIndex++) {
         textureManager->textureSlots[slotIndex].currentFrame = 0;
@@ -55,12 +57,24 @@ FieldTextureManager *TextureResourceManager_Create(void)
     return textureManager;
 }
 
+FieldTextureManager *TextureResourceManager_Create(void)
+{
+    return TextureResourceManager_Alloc(HEAP_ID_FIELD1);
+}
+
+#if defined(SDK_BUILD_LINUX) || defined(SDK_BUILD_WIN64)
+FieldTextureManager *TextureResourceManager_CreateOnHeap(enum HeapID heapID)
+{
+    return TextureResourceManager_Alloc(heapID);
+}
+#endif
+
 int TextureResourceManager_LoadTexture(FieldTextureManager *textureManager, NNSG3dResTex *textureResource)
 {
     int loadedCount = 0;
-    NARC *narc = NARC_ctor(NARC_INDEX_DATA__FLDTANIME, HEAP_ID_FIELD1);
+    NARC *narc = NARC_ctor(NARC_INDEX_DATA__FLDTANIME, textureManager->heapID);
 
-    textureManager->dataBuffer = NARC_AllocAndReadWholeMember(narc, 0, 4);
+    textureManager->dataBuffer = NARC_AllocAndReadWholeMember(narc, 0, textureManager->heapID);
     textureManager->dataHeader = (TextureDataHeader *)textureManager->dataBuffer;
 
     for (int textureIndex = 0; textureIndex < textureManager->dataHeader->textureCount; textureIndex++) {
@@ -102,7 +116,7 @@ static int TextureResourceManager_LoadSingleTexture(FieldTextureManager *texture
     textureManager->textureSlots[slotIndex].textureSize = CalcTextureDataSizeFromResourceName(textureResource, textureManager->dataHeader->animationData[textureIndex].name);
     sprintf(debugString, "data/fld_anime%d.bin", textureIndex);
     textureManager->textureSlots[slotIndex].animationData = &(textureManager->dataHeader->animationData[textureIndex]);
-    textureManager->textureSlots[slotIndex].narcData = NARC_AllocAndReadWholeMember(narc, textureIndex + 1, 4);
+    textureManager->textureSlots[slotIndex].narcData = NARC_AllocAndReadWholeMember(narc, textureIndex + 1, textureManager->heapID);
     textureManager->textureSlots[slotIndex].textureResource = NNS_G3dGetTex((NNSG3dResFileHeader *)textureManager->textureSlots[slotIndex].narcData);
 
     return slotIndex;

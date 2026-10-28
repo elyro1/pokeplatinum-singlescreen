@@ -4,6 +4,7 @@
 #include <nnsys.h>
 
 #include "narc.h"
+#include "constants/heap.h"
 
 #define MAP_PROP_ANIME_LIST_FILE_ARCHIVE_IDS_COUNT 4
 
@@ -50,6 +51,7 @@ typedef struct MapPropAnimationManager {
     BicycleSlopeAnimation bicycleSlopeAnimations[MAP_PROP_ANIMATION_MANAGER_MAX_BICYCLE_SLOPE_ANIMATIONS];
     NARC *animeNARC;
     NARC *animeListNARC;
+    enum HeapID heapID;
 } MapPropAnimationManager;
 
 typedef struct MapPropOneShotAnimationList {
@@ -107,6 +109,7 @@ const BOOL MapPropOneShotAnimationManager_IsAnimationLoopFinished(MapPropOneShot
 const int MapPropOneShotAnimationManager_GetAnimationMapPropModelID(MapPropOneShotAnimationManager *const oneShotAnimMan, const int tag);
 
 #if defined(SDK_BUILD_LINUX) || defined(SDK_BUILD_WIN64)
+MapPropAnimationManager *MapPropAnimationManager_NewOnHeap(enum HeapID heapID);
 // Attach shared scenery loops without registering interactive bicycle slopes.
 void MapPropAnimationManager_AddPreviewAnimations(int modelID, NNSG3dRenderObj *renderObj, MapPropAnimationManager *manager);
 #endif

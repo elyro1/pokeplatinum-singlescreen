@@ -41,12 +41,12 @@ static BOOL BicycleSlopeAnimation_Load(BicycleSlopeAnimation *bicycleSlopeAnims,
     return TRUE;
 }
 
-static void *MapPropAnimation_LoadAnimationObj(NARC *animeNARC, const u32 animeArchiveID, NNSG3dResMdl *mapPropModel, NNSG3dAnmObj **animationObj, NNSG3dResTex *mapPropTexture, NNSFndAllocator *allocator)
+static void *MapPropAnimation_LoadAnimationObj(NARC *animeNARC, const u32 animeArchiveID, NNSG3dResMdl *mapPropModel, NNSG3dAnmObj **animationObj, NNSG3dResTex *mapPropTexture, NNSFndAllocator *allocator, enum HeapID heapID)
 {
     void *animation;
 
     GF_ASSERT(animeArchiveID != ANIME_ARCHIVE_ID_NONE);
-    void *animationFile = NARC_AllocAndReadWholeMember(animeNARC, animeArchiveID, HEAP_ID_FIELD1);
+    void *animationFile = NARC_AllocAndReadWholeMember(animeNARC, animeArchiveID, heapID);
     GF_ASSERT(animationFile != NULL);
 
     animation = NNS_G3dGetAnmByIdx(animationFile, 0);
@@ -84,10 +84,11 @@ static void BicycleSlopeAnimation_ResetFinishedAnimations(BicycleSlopeAnimation 
     }
 }
 
-MapPropAnimationManager *MapPropAnimationManager_New(void)
+static MapPropAnimationManager *MapPropAnimationManager_Alloc(enum HeapID heapID)
 {
     int i;
-    MapPropAnimationManager *manager = Heap_Alloc(HEAP_ID_FIELD1, sizeof(MapPropAnimationManager));
+    MapPropAnimationManager *manager = Heap_Alloc(heapID, sizeof(MapPropAnimationManager));
+    manager->heapID = heapID;
 
     for (i = 0; i < MAP_PROP_ANIMATION_MANAGER_MAX_ANIMATIONS; i++) {
         manager->animations[i].loaded = FALSE;
@@ -109,13 +110,25 @@ MapPropAnimationManager *MapPropAnimationManager_New(void)
         manager->bicycleSlopeAnimations[i].animeArchiveID = 0;
     }
 
-    HeapExp_FndInitAllocator(&manager->allocator, HEAP_ID_FIELD1, 4);
+    HeapExp_FndInitAllocator(&manager->allocator, heapID, 4);
 
-    manager->animeNARC = NARC_ctor(NARC_INDEX_ARC__BM_ANIME, HEAP_ID_FIELD1);
-    manager->animeListNARC = NARC_ctor(NARC_INDEX_ARC__BM_ANIME_LIST, HEAP_ID_FIELD1);
+    manager->animeNARC = NARC_ctor(NARC_INDEX_ARC__BM_ANIME, heapID);
+    manager->animeListNARC = NARC_ctor(NARC_INDEX_ARC__BM_ANIME_LIST, heapID);
 
     return manager;
 }
+
+MapPropAnimationManager *MapPropAnimationManager_New(void)
+{
+    return MapPropAnimationManager_Alloc(HEAP_ID_FIELD1);
+}
+
+#if defined(SDK_BUILD_LINUX) || defined(SDK_BUILD_WIN64)
+MapPropAnimationManager *MapPropAnimationManager_NewOnHeap(enum HeapID heapID)
+{
+    return MapPropAnimationManager_Alloc(heapID);
+}
+#endif
 
 static NNSG3dAnmObj *MapPropAnimation_GetAnimationObj(MapPropAnimation *animation)
 {
@@ -173,7 +186,7 @@ MapPropAnimation *MapPropAnimationManager_LoadPropAnimationForOneShot(const int 
             manager->animations[i].animeArchiveID = animeArchiveID;
             manager->animations[i].reversed = animationReversed;
             manager->animations[i].pastoriaGymButtonGroup = pastoriaGymButtonGroup;
-            manager->animations[i].animationFile = MapPropAnimation_LoadAnimationObj(manager->animeNARC, animeArchiveID, mapPropModel, &manager->animations[i].animationObj, mapPropTexture, &manager->allocator);
+            manager->animations[i].animationFile = MapPropAnimation_LoadAnimationObj(manager->animeNARC, animeArchiveID, mapPropModel, &manager->animations[i].animationObj, mapPropTexture, &manager->allocator, manager->heapID);
             manager->animations[i].loopCount = animationLoopCount;
             manager->animations[i].looping = TRUE;
 
@@ -218,7 +231,7 @@ void MapPropAnimationManager_LoadPropAnimations(const int mapPropModelID, NNSG3d
                 manager->animations[j].animeArchiveID = animeArchiveID;
                 manager->animations[j].reversed = FALSE;
                 manager->animations[j].pastoriaGymButtonGroup = PASTORIA_NO_BUTTON_GROUP;
-                manager->animations[j].animationFile = MapPropAnimation_LoadAnimationObj(manager->animeNARC, animeArchiveID, mapPropModel, &manager->animations[j].animationObj, mapPropTexture, &manager->allocator);
+                manager->animations[j].animationFile = MapPropAnimation_LoadAnimationObj(manager->animeNARC, animeArchiveID, mapPropModel, &manager->animations[j].animationObj, mapPropTexture, &manager->allocator, manager->heapID);
                 manager->animations[j].loopCount = -1;
                 manager->animations[j].looping = TRUE;
 
@@ -347,7 +360,7 @@ void MapPropAnimationManager_AddPreviewAnimations(int modelID, NNSG3dRenderObj *
             break;
         }
         for (int j = 0; j < MAP_PROP_ANIMATION_MANAGER_MAX_ANIMATIONS; j++) {
-            if (manager->animations[j].animeArchiveID == id) {
+            if (manager->animations[j].loaded && manager->animations[j].animationObj && manager->animations[j].animeArchiveID == id) {
                 NNS_G3dRenderObjAddAnmObj(renderObj, manager->animations[j].animationObj);
                 break;
             }

@@ -2,6 +2,9 @@
 
 #include <nitro.h>
 #include <string.h>
+#if defined(SDK_BUILD_LINUX) || defined(SDK_BUILD_WIN64)
+#include <stdlib.h>
+#endif
 
 #include "comm_manager.h"
 #include "error_message_reset.h"
@@ -126,14 +129,27 @@ static BOOL CreateHeapInternal(enum HeapID parent, enum HeapID child, u32 size, 
     if (sHeapInfo.unallocatedHeapID == ptr[child]) {
         NNSFndHeapHandle parentHeap = sHeapInfo.heapHandles[ptr[parent]];
         if (parentHeap != NNS_FND_HEAP_INVALID_HANDLE) {
-            void *newHeapAddr = NNS_FndAllocFromExpHeapEx(parentHeap, size, alignment);
+            BOOL nativeScenery = FALSE;
+#if defined(SDK_BUILD_LINUX) || defined(SDK_BUILD_WIN64)
+            nativeScenery = child == HEAP_ID_FIELD_SCENERY;
+#endif
+            // Additional visible areas must not consume the DS gameplay heap.
+            void *newHeapAddr;
+#if defined(SDK_BUILD_LINUX) || defined(SDK_BUILD_WIN64)
+            if (nativeScenery) {
+                newHeapAddr = malloc(size);
+            } else
+#endif
+            {
+                newHeapAddr = NNS_FndAllocFromExpHeapEx(parentHeap, size, alignment);
+            }
             if (newHeapAddr != NULL) {
                 s32 i = FindFirstAvailableHeapHandle();
                 if (i >= 0) {
                     sHeapInfo.heapHandles[i] = NNS_FndCreateExpHeap(newHeapAddr, size);
 
                     if (sHeapInfo.heapHandles[i] != NNS_FND_HEAP_INVALID_HANDLE) {
-                        sHeapInfo.parentHeapHandles[i] = parentHeap;
+                        sHeapInfo.parentHeapHandles[i] = nativeScenery ? NNS_FND_HEAP_INVALID_HANDLE : parentHeap;
                         sHeapInfo.subHeapRawPtrs[i] = newHeapAddr;
                         sHeapInfo.heapIdxs[child] = (u8)i;
 
@@ -144,6 +160,11 @@ static BOOL CreateHeapInternal(enum HeapID parent, enum HeapID child, u32 size, 
                 } else {
                     GF_ASSERT(FALSE);
                 }
+#if defined(SDK_BUILD_LINUX) || defined(SDK_BUILD_WIN64)
+                if (nativeScenery) {
+                    free(newHeapAddr);
+                }
+#endif
             } else {
                 GF_ASSERT(FALSE);
             }
@@ -168,6 +189,11 @@ void Heap_Destroy(enum HeapID heapID)
         u8 index = sHeapInfo.heapIdxs[heapID];
         NNSFndHeapHandle parentHeap = sHeapInfo.parentHeapHandles[index];
         void *childRaw = sHeapInfo.subHeapRawPtrs[index];
+#if defined(SDK_BUILD_LINUX) || defined(SDK_BUILD_WIN64)
+        if (heapID == HEAP_ID_FIELD_SCENERY) {
+            free(childRaw);
+        } else
+#endif
         if (parentHeap != NNS_FND_HEAP_INVALID_HANDLE && childRaw != NULL) {
             NNS_FndFreeToExpHeap(parentHeap, childRaw);
         } else {

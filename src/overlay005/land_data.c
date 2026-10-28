@@ -30,15 +30,18 @@
 #include "overlay005/map_prop.h"
 #include "overlay005/map_prop_animation.h"
 #include "overlay005/model_attributes.h"
+#include "overlay005/texture_resource_manager.h"
 
 #include "comm_manager.h"
 #include "easy3d.h"
 #include "heap.h"
 #include "map_matrix.h"
+#include "map_header.h"
 #include "narc.h"
 #include "sys_task.h"
 #include "sys_task_manager.h"
 #include "system.h"
+#include "vram_transfer.h"
 
 #define MAP_LAZY_LOADER_SLOT_COUNT            2
 #define MAP_LAZY_LOADER_MANAGER_COUNT         2
@@ -247,6 +250,14 @@ static const MapLoadFunctions sMapLoadWithoutAttributesFns = {
 #define PC_PREPARED_COUNT 64
 #define PC_CHUNK_READY    5
 static void LandDataHeader_Load(NARC *, const int, LandDataHeader *);
+typedef struct PCPreparedArea {
+    struct PCPreparedArea *next;
+    AreaDataManager *resources;
+    MapPropAnimationManager *animations;
+    FieldTextureManager *textureAnimations;
+    int references;
+    BOOL ready;
+} PCPreparedArea;
 typedef struct {
     BOOL hidden, applyRotation;
     VecFx32 position, rotation, scale;
@@ -257,6 +268,7 @@ typedef struct {
     int index, landID, stage, nextMaterial, nextProp, nextPropMaterial;
     u64 used;
     BOOL pinned;
+    PCPreparedArea *area;
     LandDataHeader header;
     LoadedMap map;
     BDHC collision;
@@ -266,6 +278,7 @@ typedef struct {
 } PCPreparedChunk;
 struct PCPreparedCache {
     PCPreparedChunk chunks[PC_PREPARED_COUNT];
+    PCPreparedArea *areas;
     u64 use, peakPrepareNs;
     VecFx32 previous;
     BOOL hasPrevious;
@@ -275,6 +288,8 @@ struct PCPreparedCache {
 };
 // Distortion World can hold multiple floor managers concurrently.
 static u64 sPCPreparedBytes;
+static int sPCSceneryHeapUsers;
+static u32 sPCSceneryHeapBytes;
 static u64 PCPrepareClock(void)
 {
     return OS_TicksToMicroSeconds(OS_GetTick()) * 1000;
@@ -296,6 +311,93 @@ static BOOL PCLoadingEnabled(void)
     const char *legacy = getenv("PLATINUM_LEGACY_LOADING");
     return !legacy || *legacy != '1';
 }
+static BOOL PCAreaAcquire(LandDataManager *man, PCPreparedChunk *chunk)
+{
+    if (chunk->area || man->inDistortionWorld) {
+        return TRUE;
+    }
+    int header = MapMatrix_GetMapHeaderIDAtIndex(man->mapMatrix, chunk->index);
+    // Unnamed border scenery inherits the active area's resources.
+    if (header == MAP_HEADER_EVERYWHERE) {
+        return TRUE;
+    }
+    int id = MapHeader_GetAreaDataArchiveID(header);
+    if (id == man->areaDataMan->areaDataArchiveID) {
+        return TRUE;
+    }
+    PCPreparedCache *cache = man->prepared;
+    PCPreparedArea *area;
+    for (area = cache->areas; area; area = area->next) {
+        if (area->resources->areaDataArchiveID == id) {
+            break;
+        }
+    }
+    if (!area) {
+        area = calloc(1, sizeof(*area));
+        if (!area) {
+            return FALSE;
+        }
+        if (!sPCSceneryHeapUsers) {
+            u32 bytes = NARC_PCWorkingBudget() / 16;
+            if (sPCPreparedBytes + bytes > NARC_PCWorkingBudget() / 2 || !Heap_Create(HEAP_ID_APPLICATION, HEAP_ID_FIELD_SCENERY, bytes)) {
+                free(area);
+                return FALSE;
+            }
+            sPCSceneryHeapBytes = bytes;
+            sPCPreparedBytes += bytes;
+        }
+        sPCSceneryHeapUsers++;
+        area->animations = MapPropAnimationManager_NewOnHeap(HEAP_ID_FIELD_SCENERY);
+        area->resources = AreaDataManager_AllocPreview(id, area->animations, man->areaDataMan);
+        area->next = cache->areas;
+        cache->areas = area;
+    }
+    area->references++;
+    chunk->area = area;
+    return TRUE;
+}
+static void PCAreaRelease(PCPreparedCache *cache, PCPreparedArea *area)
+{
+    if (!area || --area->references > 0) {
+        return;
+    }
+    PCPreparedArea **link = &cache->areas;
+    while (*link != area) {
+        link = &(*link)->next;
+    }
+    *link = area->next;
+    if (area->textureAnimations) {
+        // Queued transfers refer to animation files that are about to be freed.
+        VramTransfer_Process();
+        TextureResourceManager_FreeAllSlots(area->textureAnimations);
+        TextureResourceManager_Destroy(area->textureAnimations);
+    }
+    MapPropAnimationManager_UnloadAllAnimations(area->animations);
+    MapPropAnimationManager_Free(area->animations);
+    AreaDataManager_FreePreview(&area->resources);
+    free(area);
+    if (--sPCSceneryHeapUsers == 0) {
+        Heap_Destroy(HEAP_ID_FIELD_SCENERY);
+        sPCPreparedBytes -= sPCSceneryHeapBytes;
+        sPCSceneryHeapBytes = 0;
+    }
+}
+static AreaDataManager *PCChunkArea(const LandDataManager *man, const PCPreparedChunk *chunk)
+{
+    return chunk->area ? chunk->area->resources : man->areaDataMan;
+}
+static void PCAreasTick(LandDataManager *man)
+{
+    if (!man->prepared) {
+        return;
+    }
+    for (PCPreparedArea *area = man->prepared->areas; area; area = area->next) {
+        if (area->ready) {
+            MapPropAnimationManager_AdvanceAnimations(area->animations);
+            TextureResourceManager_Free(area->textureAnimations);
+        }
+    }
+}
 static void PCChunkFree(PCPreparedCache *cache, PCPreparedChunk *chunk)
 {
     cache->bytes -= chunk->bytes;
@@ -303,6 +405,7 @@ static void PCChunkFree(PCPreparedCache *cache, PCPreparedChunk *chunk)
     free(chunk->map.mapModelFile);
     free(chunk->map.bdhcFile);
     free(chunk->map.mapPropManager);
+    PCAreaRelease(cache, chunk->area);
     memset(chunk, 0, sizeof(*chunk));
     chunk->index = INVALID_MAP_MATRIX_INDEX;
 }
@@ -384,6 +487,21 @@ static BOOL PCChunkStep(LandDataManager *man, PCPreparedChunk *chunk)
     LandDataHeader *header = &chunk->header;
     switch (chunk->stage) {
     case 0: {
+        if (!PCAreaAcquire(man, chunk)) {
+            return FALSE;
+        }
+        if (chunk->area && !chunk->area->ready) {
+            AreaPreviewLoadResult result = AreaDataManager_LoadPreviewStep(chunk->area->resources);
+            if (result == AREA_PREVIEW_LOAD_FAILED) {
+                return FALSE;
+            }
+            if (result == AREA_PREVIEW_LOADING) {
+                return TRUE;
+            }
+            chunk->area->textureAnimations = TextureResourceManager_CreateOnHeap(HEAP_ID_FIELD_SCENERY);
+            TextureResourceManager_LoadTexture(chunk->area->textureAnimations, AreaDataManager_GetMapTexture(chunk->area->resources));
+            chunk->area->ready = TRUE;
+        }
         LandDataHeader_Load(narc, chunk->landID, header);
         // The header's physical order is attributes, props, model, collision.
         u32 size = NARC_GetMemberSize(narc, chunk->landID);
@@ -423,11 +541,11 @@ static BOOL PCChunkStep(LandDataManager *man, PCPreparedChunk *chunk)
         NARC_ReadFromMember(narc, chunk->landID, 16, header->terrainAttributesSize, map->terrainAttributes);
         if (map->mapPropManager) {
             MapPropManager_Init(map->mapPropManager);
-            MapPropManager_Load(narc, header->mapPropsSize, man->areaDataMan, map->mapPropManager, NULL);
+            MapPropManager_Load(narc, header->mapPropsSize, PCChunkArea(man, chunk), map->mapPropManager, NULL);
             for (int i = 0; i < MAX_LOADED_MAP_PROPS; i++) {
                 MapProp *prop = &map->mapPropManager->loadedProps[i];
                 if (prop->loaded) {
-                    MapPropAnimationManager_AddPreviewAnimations(prop->modelID, &prop->renderObj, man->mapPropAnimMan);
+                    MapPropAnimationManager_AddPreviewAnimations(prop->modelID, &prop->renderObj, chunk->area ? chunk->area->animations : man->mapPropAnimMan);
                 }
             }
         }
@@ -435,8 +553,8 @@ static BOOL PCChunkStep(LandDataManager *man, PCPreparedChunk *chunk)
     case 2:
         // Reset the member cursor at each stage. Other jobs can use this NARC.
         NARC_ReadFromMember(narc, chunk->landID, 16 + header->terrainAttributesSize + header->mapPropsSize, 0, map->mapModelFile);
-        LandDataManager_LoadMapModel(narc, header->mapModelSize, &map->mapRenderObj, &map->mapModelFile, AreaDataManager_GetMapTexture(man->areaDataMan));
-        if (AreaDataManager_IsOutdoorsLighting(man->areaDataMan)) {
+        LandDataManager_LoadMapModel(narc, header->mapModelSize, &map->mapRenderObj, &map->mapModelFile, AreaDataManager_GetMapTexture(PCChunkArea(man, chunk)));
+        if (AreaDataManager_IsOutdoorsLighting(PCChunkArea(man, chunk))) {
             AreaLight_UseGlobalModelAttributes(map->mapRenderObj.resMdl);
         }
         break;
@@ -502,8 +620,22 @@ static BOOL PCChunkActivate(LandDataManager *man, LoadedMap *dest, int index)
     }
     SIM_ProfileAdd(SIM_PROFILE_READY_HITS, 1);
     memcpy(dest->terrainAttributes, chunk->map.terrainAttributes, sizeof(dest->terrainAttributes));
-    memcpy(dest->mapModelFile, chunk->map.mapModelFile, chunk->header.mapModelSize);
-    NNS_G3dRenderObjInit(&dest->mapRenderObj, NNS_G3dGetMdlByIdx(NNS_G3dGetMdlSet(dest->mapModelFile), 0));
+    if (chunk->area) {
+        // Foreign areas are visual previews. Keep live quadrant props and models
+        // owned by the gameplay area, including when the preview cache is freed.
+        NARC_ReadFromMember(man->landDataNARC, chunk->landID, 16 + chunk->header.terrainAttributesSize, 0, dest->mapModelFile);
+        if (dest->mapPropManager) {
+            MapPropManager_Load(man->landDataNARC, chunk->header.mapPropsSize, man->areaDataMan, dest->mapPropManager, man->mapPropAnimMan);
+        }
+        NARC_ReadFromMember(man->landDataNARC, chunk->landID, 16 + chunk->header.terrainAttributesSize + chunk->header.mapPropsSize, 0, dest->mapModelFile);
+        NNSG3dResMdl *model = LandDataManager_LoadMapModel(man->landDataNARC, chunk->header.mapModelSize, &dest->mapRenderObj, &dest->mapModelFile, AreaDataManager_GetMapTexture(man->areaDataMan));
+        if (AreaDataManager_IsOutdoorsLighting(man->areaDataMan)) {
+            AreaLight_UseGlobalModelAttributes(model);
+        }
+    } else {
+        memcpy(dest->mapModelFile, chunk->map.mapModelFile, chunk->header.mapModelSize);
+        NNS_G3dRenderObjInit(&dest->mapRenderObj, NNS_G3dGetMdlByIdx(NNS_G3dGetMdlSet(dest->mapModelFile), 0));
+    }
     if (dest->bdhc && chunk->collision.loaded) {
         memcpy(dest->bdhcFile, chunk->map.bdhcFile, BDHC_BUFFER_SIZE);
         *dest->bdhc = chunk->collision;
@@ -516,7 +648,7 @@ static BOOL PCChunkActivate(LandDataManager *man, LoadedMap *dest, int index)
         PC_RELOCATE_BDHC(accessList, u16);
 #undef PC_RELOCATE_BDHC
     }
-    if (dest->mapPropManager && chunk->map.mapPropManager) {
+    if (!chunk->area && dest->mapPropManager && chunk->map.mapPropManager) {
         *dest->mapPropManager = *chunk->map.mapPropManager;
         for (int i = 0; i < MAX_LOADED_MAP_PROPS; i++) {
             MapProp *prop = &dest->mapPropManager->loadedProps[i];
@@ -632,6 +764,11 @@ static void PCRequestBounds(LandDataManager *man, const FieldSystem *field, int 
             if (man->loadedMaps[q] && man->loadedMaps[q]->mapMatrixIndex == chunk->index) {
                 chunk->pinned = TRUE;
             }
+        }
+        // Release foreign areas once none of their chunks are in the footprint.
+        // Otherwise a long journey can retain every area's texture allocations.
+        if (!chunk->pinned && chunk->area) {
+            PCChunkFree(cache, chunk);
         }
     }
 }
@@ -1267,6 +1404,7 @@ void LandDataManager_Tick(FieldSystem *fieldSystem, LandDataManager *landDataMan
 
 #if defined(SDK_BUILD_LINUX) || defined(SDK_BUILD_WIN64)
     PCPrepareTick(landDataMan, fieldSystem, FALSE);
+    PCAreasTick(landDataMan);
 #endif
     // Here, we run the logic for lazy loading maps.
     switch (landDataMan->lazyLoaderSubTask) {
@@ -1400,7 +1538,7 @@ static void LandDataManager_ResetLoadedMap(const u8 index, LandDataManager *land
 #if defined(SDK_BUILD_LINUX) || defined(SDK_BUILD_WIN64)
     LoadedMap *live = landDataMan->loadedMaps[index];
     PCPreparedChunk *chunk = PCChunkFind(landDataMan, live->mapMatrixIndex, FALSE);
-    if (live->valid && live->mapPropManager && chunk && chunk->map.mapPropManager) {
+    if (live->valid && live->mapPropManager && chunk && !chunk->area && chunk->map.mapPropManager) {
         // Only copy appearance, never live animation objects or script instances.
         // Removed/replaced authored props stay hidden in the scenery pass.
         for (int i = 0; i < MAX_LOADED_MAP_PROPS; i++) {
@@ -1756,6 +1894,13 @@ static void LandDataManager_QueueLazyLoadNextMapPair(const int trackedTargetMapM
 
 static void LandDataManager_RenderLoadedMap(const u8 index, const LandDataManager *landDataMan, ModelAttributes *const modelAttrs)
 {
+#if defined(SDK_BUILD_LINUX) || defined(SDK_BUILD_WIN64)
+    PCPreparedChunk *preview = PCChunkFind((LandDataManager *)landDataMan, landDataMan->loadedMaps[index]->mapMatrixIndex, FALSE);
+    if (preview && preview->area && preview->stage == PC_CHUNK_READY) {
+        // The scenery pass draws this foreign chunk with its own resources.
+        return;
+    }
+#endif
     VecFx32 position = { 0, 0, 0 };
 
     LandDataManager_CalculateRenderingPosition(landDataMan->loadedMaps[index]->mapMatrixIndex, landDataMan->mapMatrixWidth, landDataMan->mapMatrix, &position);
@@ -2245,7 +2390,7 @@ void LandDataManager_RenderLoadedMaps(const LandDataManager *landDataMan, ModelA
                     active = TRUE;
                 }
             }
-            if (active) {
+            if (active && !chunk->area) {
                 continue;
             }
             VecFx32 position = { 0, 0, 0 }, scale = {FX32_ONE,FX32_ONE,FX32_ONE};
@@ -2270,7 +2415,8 @@ void LandDataManager_RenderLoadedMaps(const LandDataManager *landDataMan, ModelA
                         prop->applyRotation = state->applyRotation;
                     }
                 }
-                MapPropManager_Render(&position, landDataMan->areaDataMan, AreaDataManager_IsOutdoorsLighting(landDataMan->areaDataMan), modelAttrs, &preview);
+                AreaDataManager *area = PCChunkArea(landDataMan, chunk);
+                MapPropManager_Render(&position, area, AreaDataManager_IsOutdoorsLighting(area), modelAttrs, &preview);
             }
         }
     }

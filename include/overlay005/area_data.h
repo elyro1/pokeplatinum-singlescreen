@@ -35,6 +35,10 @@ typedef struct AreaDataManager {
     AreaDataManagerLoadData *loadData;
     // Note: the first element is the size of this array
     u16 *mapPropModelIDs;
+#if defined(SDK_BUILD_LINUX) || defined(SDK_BUILD_WIN64)
+    int areaDataArchiveID;
+    enum HeapID heapID;
+#endif
 } AreaDataManager;
 
 AreaDataManager *AreaDataManager_Alloc(int areaDataArchiveID, MapPropAnimationManager *mapPropAnimMan);
@@ -48,5 +52,17 @@ BOOL AreaDataManager_IsOutdoorsLighting(const AreaDataManager *areaDataManager);
 u8 AreaDataManager_GetAreaLightArchiveID(const AreaDataManager *areaDataManager);
 int AreaDataManager_GetMapPropModelID(const AreaDataManager *areaDataManager, const int index);
 BOOL AreaDataManager_HasMapPropModelFile(const AreaDataManager *areaDataManager, const int mapPropModelID);
+
+#if defined(SDK_BUILD_LINUX) || defined(SDK_BUILD_WIN64)
+AreaDataManager *AreaDataManager_AllocPreview(int areaDataArchiveID, MapPropAnimationManager *animations, const AreaDataManager *owner);
+// Load one resource group/prop per step without changing global field graphics.
+typedef enum AreaPreviewLoadResult {
+    AREA_PREVIEW_LOAD_FAILED = -1,
+    AREA_PREVIEW_LOADING,
+    AREA_PREVIEW_READY
+} AreaPreviewLoadResult;
+AreaPreviewLoadResult AreaDataManager_LoadPreviewStep(AreaDataManager *areaDataManager);
+void AreaDataManager_FreePreview(AreaDataManager **areaDataManager);
+#endif
 
 #endif // POKEPLATINUM_OV5_AREA_DATA_H
