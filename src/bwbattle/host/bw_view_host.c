@@ -378,9 +378,9 @@ void BwBattleView_SetGaugeVisible(unsigned int viewPos, bool visible) {
     }
 }
 
-void BwBattleView_SetGaugeHp(unsigned int viewPos, int hp) {
+void BwBattleView_SetGaugeHp(unsigned int viewPos, int hp, bool moving) {
     if (sViewActive) {
-        BtlvGauge_SetHpAtOnce(BtlvEffect_GetGauge(), viewPos, hp);
+        BtlvGauge_SyncHp(BtlvEffect_GetGauge(), viewPos, hp, moving);
     }
 }
 
@@ -476,6 +476,15 @@ bool BwBattleView_IsEffectBusy(void) {
     return sViewActive && BtlvEffect_IsBusy();
 }
 
+// Execute the setup and final state of an opening effect without showing its camera travel.
+// Bound the loop in case an effect needs input or an external event; the normal queue then waits for it.
+void BwBattleView_FinishOpeningEffect(void) {
+    for (unsigned int i = 0; i < 1200 && BwBattleView_IsEffectBusy(); i++) {
+        BtlvEffect_Step(FALSE);
+        BwBattle_VBlank();
+    }
+}
+
 bool BwBattleView_StartEffect(int viewPos, unsigned short effect) {
     if (!sViewActive || effect < BTLV_EFFECT_FIRST_ID || effect >= BTLV_EFFECT_FIRST_ID + BW_EFFECT_COUNT) {
         return false;
@@ -486,4 +495,8 @@ bool BwBattleView_StartEffect(int viewPos, unsigned short effect) {
         BtlvEffect_StartPos(viewPos, effect);
     }
     return true;
+}
+
+bool BwBattleView_StartFastWildSendOut(void) {
+    return sViewActive && BtlvEffect_StartFastWildSendOut();
 }

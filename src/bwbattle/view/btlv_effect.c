@@ -363,6 +363,16 @@ BOOL BtlvEffect_ShouldTickIdle(void) {
     return sTickIdle;
 }
 
+BOOL BtlvEffect_StartFastWildSendOut(void) {
+    if (BtlvEffect_IsBusy()) {
+        return FALSE;
+    }
+    BtlvEffect_Start(0x234);
+    BtlvEffvm_OverlapIntroCry(sBtlvEffect->effvm);
+    BtlvEffvm_PrefixWildShinies(sBtlvEffect->effvm);
+    return TRUE;
+}
+
 // bwbattle: a frame of the view without its 3D drawing (BtlvEffect_Main's first part, and the particles' update of
 // its last), for a frame of the port that has to run more than one of BW2's
 static void BtlvEffect_UpdateFrame(void) {

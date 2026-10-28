@@ -572,8 +572,13 @@ static BOOL Field_CheckWildEncounter(FieldSystem *fieldSystem)
         }
     }
 
-    return MapHeader_HasWildEncounters(fieldSystem->location->mapHeaderID)
-        && GetRadarChainActive(fieldSystem->chain) && WildEncounters_TryRadarEncounter(fieldSystem);
+    if (!MapHeader_HasWildEncounters(fieldSystem->location->mapHeaderID)) {
+        return FALSE;
+    }
+    if (OverworldEncounters_ReplaceRandom(fieldSystem)) {
+        return GetRadarChainActive(fieldSystem->chain) && WildEncounters_TryRadarEncounter(fieldSystem);
+    }
+    return WildEncounters_TryWildEncounter(fieldSystem);
 }
 
 static BOOL Field_CheckMapTransition(FieldSystem *fieldSystem, const FieldInput *input)

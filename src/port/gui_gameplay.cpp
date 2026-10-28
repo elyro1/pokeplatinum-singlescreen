@@ -16,8 +16,11 @@ void GameplayContents()
         attemptedLoad = true;
     }
 
+    const bool pending = editor.IsDirty() || editor.NeedsRestart();
+    if (pending) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.82f, 0.25f, 1.0f));
     ImGui::TextWrapped("%s", editor.IsDirty() ? "Unsaved changes - save for next restart." :
         editor.NeedsRestart() ? "Saved changes apply after restart." : "Changes apply after restart.");
+    if (pending) ImGui::PopStyleColor();
     ImGui::BeginDisabled(!editor.IsDirty());
     if (ImGui::Button("Save changes")) editor.Save();
     ImGui::EndDisabled();

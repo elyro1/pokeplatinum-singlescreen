@@ -93,6 +93,8 @@ typedef struct HealthBox {
     s32 portShownHPHeld;
     s32 portShownExp;
     s32 portShownExpHeld;
+    BOOL portHPSkipNext;
+    BOOL portExpSkipNext;
 #endif
 } HealthBox;
 

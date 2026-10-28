@@ -15,6 +15,8 @@ typedef struct OverworldEncounterPokemon {
     u32 battleType;
 } OverworldEncounterPokemon;
 
+// Whether visible encounters currently replace ordinary step encounters.
+BOOL OverworldEncounters_ReplaceRandom(FieldSystem *fieldSystem);
 void OverworldEncounters_Update(FieldSystem *fieldSystem);
 void OverworldEncounters_Clear(FieldSystem *fieldSystem);
 void OverworldEncounters_Free(FieldSystem *fieldSystem);

@@ -187,13 +187,17 @@ void SpriteList_Update(const SpriteList *list)
         if (!sprite->draw || sprite->portHidden) {
             sprite->battleVisualHistory.valid = FALSE;
         }
-        sDrawFuncs[sprite->draw && !sprite->portHidden](list, sprite);
+        if (!BattleTiming_IsExtraAnimationStep()) {
+            sDrawFuncs[sprite->draw && !sprite->portHidden](list, sprite);
+        }
 #else
         sDrawFuncs[sprite->draw](list, sprite);
 #endif
 #ifdef SDK_PORT
-        if (BattleTiming_ShouldTick(sprite->battleTimingDomain)) {
+        for (int step = BattleTiming_StepCount(sprite->battleTimingDomain); step > 0; step--) {
+            BattleTimingDomain previous = BattleTiming_SetDomain(sprite->battleTimingDomain);
             sAnimUpdateFuncs[sprite->animate](sprite);
+            BattleTiming_SetDomain(previous);
         }
 #else
         sAnimUpdateFuncs[sprite->animate](sprite);

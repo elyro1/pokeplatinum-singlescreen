@@ -8,16 +8,26 @@ extern "C" {
 #endif
 
 typedef enum {
-    BATTLE_PACING_ORIGINAL,
     BATTLE_PACING_SMOOTH,
     BATTLE_PACING_QUICK,
+    BATTLE_PACING_TURBO,
     BATTLE_PACING_COUNT,
 } BattlePacing;
+
+typedef enum {
+    PORT_SPEED_FAST,
+    PORT_SPEED_FASTER,
+    PORT_SPEED_INSTANT,
+    PORT_SPEED_NORMAL,
+    PORT_SPEED_COUNT,
+} PortSpeed;
 
 typedef struct {
     BOOL enable60fps; // Speed correction is automatic at 60 FPS.
     BattlePacing battlePacing;
-    BOOL battleUiSpeedFix; // Keep battle UI and delays at normal speed independently of animations.
+    PortSpeed textSpeed; // Overrides the saved text setting, in and out of battle.
+    PortSpeed battleBarSpeed; // HP/EXP progression, independent of effects and text.
+    BOOL fastWildBattleIntro; // Shorten eligible BW2 wild battle intros.
     BOOL bw2BattleVisuals; // Show battles with Black 2 / White 2's view when its assets are extracted (docs/bwbattle.md)
     BOOL overworldEncounters;
     BOOL pokemonFollower;

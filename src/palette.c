@@ -216,7 +216,14 @@ static void FilterMaskToValidPalettes(int bufferID, PaletteBuffer *buffer, u16 *
 static void SetTimedFadeParams(PaletteFadeControl *fade, u16 unfadedMask, s8 wait, u8 cur, u8 end, u16 target)
 {
     if (wait < 0) {
+#ifdef SDK_PORT
+        // Accelerated fades must fit the four-bit step; wrapping to zero
+        // leaves every caller waiting on a fade that can never complete.
+        int step = 2 + abs(wait);
+        fade->step = step > 15 ? 15 : step;
+#else
         fade->step = 2 + abs(wait);
+#endif
         fade->wait = 0;
     } else {
         fade->step = 2;

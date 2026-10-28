@@ -6,7 +6,7 @@ The PC port creates `gameplay_config.ini` with its built-in defaults on first st
 
 Open **Tab → Gameplay** to change all 24 options. The page groups them into battle rules, moves and tutors, evolution and eggs, encounters and events, progression and prices, and developer settings. Each option includes its description; numeric inputs stay within the ranges below.
 
-Choose **Save changes**, then restart the game to apply the saved rules. The page displays **Unsaved changes** while you edit and **Saved changes apply after restart** when the file differs from the running game. Draft values remain available when switching categories or closing and reopening TAB during the session.
+Choose **Save changes**, then restart the game to apply the saved rules. The page displays **Unsaved changes** while you edit and **Saved changes apply after restart** when the file differs from the running game. Both messages appear in yellow while action is pending. Draft values remain available when switching categories or closing and reopening TAB during the session.
 
 **Reload / discard** discards the draft and reads the file again. **Defaults** stages the built-in defaults; choose Save changes to store them. The action buttons stay visible while the options scroll.
 
@@ -77,6 +77,12 @@ All options in this table default to `false`. Set an option to `true` to enable 
 | `instantSpiritomb` | Skips Underground conversations when encountering Spiritomb. An Odd Keystone is still required; already-inserted Keystones work, and each successful encounter still uses one. |
 | `feebasWaterStoneEvolution` | Feebas evolves with a Water Stone instead of leveling up with sufficient Beauty. Disabling it restores Beauty evolution and removes the Water Stone alternative. |
 | `disableOverworldPoisonDamage` | Skips walking poison damage and its visual/survival effects. Poison status and battle damage remain. |
+
+## Fast BW battle introductions
+
+Enable **Tab → Speed & text → Fast wild battle intro** for shorter wild encounters. This setting saves automatically to `sim_config_prj.ini` and applies to the next battle. Trainer battles use their full introductions. The former `fastTrainerBattleIntro` gameplay option has been removed; existing entries are ignored.
+
+Fast openings skip the encounter text and opening camera shots, show the player throwing their Poké Ball and releasing their Pokémon at twice the usual effect speed, and then proceed to battle. Opponent and health-box setup still runs. The option applies only when BW battle view is active. Link and recorded battles, the first battle, catching tutorial, Safari Zone, Pal Park, and Giratina's special entrance retain their existing presentation. Later switches and battle animations are unaffected. The exact speedup varies with text, encounter animations, and system performance.
 
 ## Numeric options
 

@@ -541,7 +541,8 @@ BOOL BattleAnimSystem_ExecuteScript(BattleAnimSystem *system)
         return FALSE;
     }
 
-    if (BattleTiming_ShouldTick(BATTLE_TIMING_ANIMATION)) {
+    int steps = BattleTiming_StepCount(BATTLE_TIMING_ANIMATION);
+    for (int step = 0; step < steps && system->moveActive; step++) {
         BattleTimingDomain previous = BattleTiming_SetDomain(BATTLE_TIMING_ANIMATION);
         system->executeAnimScriptFunc(system);
         BattleTiming_SetDomain(previous);

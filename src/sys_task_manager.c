@@ -14,6 +14,7 @@ static void SysTaskManager_InitTasks(SysTaskManager *sysTaskMgr);
 static SysTask *SysTaskManager_AllocTask(SysTaskManager *sysTaskMgr);
 static BOOL SysTaskManager_FreeTask(SysTaskManager *sysTaskMgr, SysTask *task);
 static SysTask *SysTaskManager_InternalAddTask(SysTaskManager *sysTaskMgr, SysTaskFunc callback, void *param, u32 priority);
+static void SysTaskManager_ExecuteTasksInternal(SysTaskManager *sysTaskMgr);
 
 static void SysTaskManager_InitTask(SysTaskManager *sysTaskMgr, SysTask *task)
 {
@@ -99,6 +100,20 @@ void SysTaskManager_InternalInit(SysTaskManager *sysTaskMgr)
 
 void SysTaskManager_ExecuteTasks(SysTaskManager *sysTaskMgr)
 {
+#ifdef SDK_PORT
+    if (!sysTaskMgr->locked && BattleTiming_StepCount(BATTLE_TIMING_ANIMATION) > 1) {
+        // A separate pass preserves task ordering and deletion/reuse semantics.
+        // Only animation owners run; turn logic and input/UI tasks run once below.
+        BOOL previous = BattleTiming_SetExtraAnimationStep(TRUE);
+        SysTaskManager_ExecuteTasksInternal(sysTaskMgr);
+        BattleTiming_SetExtraAnimationStep(previous);
+    }
+#endif
+    SysTaskManager_ExecuteTasksInternal(sysTaskMgr);
+}
+
+static void SysTaskManager_ExecuteTasksInternal(SysTaskManager *sysTaskMgr)
+{
     if (sysTaskMgr->locked) {
         return;
     }
@@ -108,34 +123,46 @@ void SysTaskManager_ExecuteTasks(SysTaskManager *sysTaskMgr)
     while (sysTaskMgr->currentTask != &sysTaskMgr->sentinelTask) {
         sysTaskMgr->nextTask = sysTaskMgr->currentTask->nextTask;
 
+#ifdef SDK_PORT
+        if (BattleTiming_IsExtraAnimationStep() && sysTaskMgr->currentTask->timingDomain != BATTLE_TIMING_ANIMATION) {
+            sysTaskMgr->currentTask = sysTaskMgr->nextTask;
+            continue;
+        }
+#endif
         if (sysTaskMgr->currentTask->state == TASK_STATE_ACTIVE) {
             if (sysTaskMgr->currentTask->callback != NULL) {
 #ifdef SDK_PORT
                 BattleTimingDomain domain = sysTaskMgr->currentTask->timingDomain;
                 SysTask *task = sysTaskMgr->currentTask;
+                BOOL extra = BattleTiming_IsExtraAnimationStep();
                 // Preserve short input edges across a skipped presentation update.
                 // Live input/communication tasks have NONE and are never skipped.
-                task->timingPressedKeys |= gSystem.pressedKeys;
-                task->timingRepeatKeys |= gSystem.pressedKeysRepeatable;
-                if (gSystem.touchPressed) {
-                    task->timingTouchPressed = TRUE;
-                    task->timingTouchX = gSystem.touchX;
-                    task->timingTouchY = gSystem.touchY;
+                if (!extra) {
+                    task->timingPressedKeys |= gSystem.pressedKeys;
+                    task->timingRepeatKeys |= gSystem.pressedKeysRepeatable;
+                    if (gSystem.touchPressed) {
+                        task->timingTouchPressed = TRUE;
+                        task->timingTouchX = gSystem.touchX;
+                        task->timingTouchY = gSystem.touchY;
+                    }
                 }
                 if (BattleTiming_ShouldTick(domain)) {
                     u32 pressedKeys = gSystem.pressedKeys;
                     u32 repeatKeys = gSystem.pressedKeysRepeatable;
                     u16 touchPressed = gSystem.touchPressed;
                     u16 touchX = gSystem.touchX, touchY = gSystem.touchY;
-                    gSystem.pressedKeys = task->timingPressedKeys;
-                    gSystem.pressedKeysRepeatable = task->timingRepeatKeys;
-                    if (task->timingTouchPressed) {
+                    gSystem.pressedKeys = extra ? 0 : task->timingPressedKeys;
+                    gSystem.pressedKeysRepeatable = extra ? 0 : task->timingRepeatKeys;
+                    gSystem.touchPressed = extra ? FALSE : task->timingTouchPressed;
+                    if (!extra && task->timingTouchPressed) {
                         gSystem.touchPressed = TRUE;
                         gSystem.touchX = task->timingTouchX;
                         gSystem.touchY = task->timingTouchY;
                     }
-                    task->timingPressedKeys = task->timingRepeatKeys = 0;
-                    task->timingTouchPressed = FALSE;
+                    if (!extra) {
+                        task->timingPressedKeys = task->timingRepeatKeys = 0;
+                        task->timingTouchPressed = FALSE;
+                    }
                     BattleTimingDomain previous = BattleTiming_SetDomain(domain);
                     task->callback(task, task->param);
                     // The callback may delete/reuse its task. Do not access it here.

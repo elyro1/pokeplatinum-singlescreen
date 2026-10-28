@@ -174,12 +174,14 @@ void StartScreenFade(enum FadeMode mode, enum FadeType typeMain, enum FadeType t
 void ExecScreenFade(void)
 {
     ScreenFadeManager *manager = &sScreenFadeManager;
-    if (manager->active
+    int steps = 1;
 #ifdef SDK_PORT
-        && BattleTiming_ShouldTick(manager->timingDomain)
+    steps = BattleTiming_StepCount(manager->timingDomain);
 #endif
-        && TryScreenFade(&manager->screen, &manager->mainScreenFade, &manager->subScreenFade) == TRUE) {
-        ResetScreenFadeManager(manager);
+    for (int step = 0; step < steps && manager->active; step++) {
+        if (TryScreenFade(&manager->screen, &manager->mainScreenFade, &manager->subScreenFade) == TRUE) {
+            ResetScreenFadeManager(manager);
+        }
     }
 }
 

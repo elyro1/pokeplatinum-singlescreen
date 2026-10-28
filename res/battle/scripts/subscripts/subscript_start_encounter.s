@@ -2,6 +2,7 @@
 
 
 _000:
+    JumpIfFastIntro _fast
     CompareVarToValue OPCODE_FLAG_SET, BTLVAR_BATTLE_TYPE, BATTLE_TYPE_TRAINER, _118
     CompareVarToValue OPCODE_FLAG_SET, BTLVAR_BATTLE_TYPE, BATTLE_TYPE_SAFARI, _215
     CompareVarToValue OPCODE_FLAG_SET, BTLVAR_BATTLE_TYPE, BATTLE_TYPE_PAL_PARK, _237
@@ -154,3 +155,16 @@ _237:
 _258:
     SetBattleBackground 
     End 
+
+// Keep the normal setup commands but omit the encounter text and long opening waits.
+_fast:
+    SetPokemonEncounter BTLSCR_ENEMY
+    SetTrainerEncounter BTLSCR_PLAYER
+    PlayEncounterAnimation
+    HealthBoxSlideIn BTLSCR_ENEMY
+    ThrowPokeball BTLSCR_PLAYER, BTLSCR_THROW_POKE_BALL
+    PokemonSlideIn BTLSCR_PLAYER
+    HealthBoxSlideIn BTLSCR_PLAYER
+    Wait
+    SetBattleBackground
+    End

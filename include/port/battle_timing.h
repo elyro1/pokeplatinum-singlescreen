@@ -18,6 +18,15 @@ u32 BattleTiming_GetFrame(void);
 u32 BattleTiming_GetVisualEpoch(void);
 BOOL BattleTiming_ShouldSmoothAnimations(void);
 BOOL BattleTiming_ShouldTick(BattleTimingDomain domain);
+// Platinum animation updates per rendered frame: Smooth 0/1, Quick 1, Turbo 1/2.
+// Nested animation owners already execute individual steps and receive at most one.
+int BattleTiming_StepCount(BattleTimingDomain domain);
+BOOL BattleTiming_IsExtraAnimationStep(void);
+BOOL BattleTiming_SetExtraAnimationStep(BOOL extra);
+// Scale only presentation pauses. Never use for animation, input or communication clocks.
+int BattleTiming_PresentationDelay(int frames);
+// Battle exits: half duration in Quick, at most two updates in Turbo.
+int BattleTiming_ExitDelay(int frames);
 BattleTimingDomain BattleTiming_GetDomain(void);
 BattleTimingDomain BattleTiming_SetDomain(BattleTimingDomain domain);
 #else
@@ -48,6 +57,28 @@ static inline BOOL BattleTiming_ShouldTick(BattleTimingDomain domain)
 {
     (void)domain;
     return TRUE;
+}
+static inline int BattleTiming_StepCount(BattleTimingDomain domain)
+{
+    (void)domain;
+    return 1;
+}
+static inline BOOL BattleTiming_IsExtraAnimationStep(void)
+{
+    return FALSE;
+}
+static inline BOOL BattleTiming_SetExtraAnimationStep(BOOL extra)
+{
+    (void)extra;
+    return FALSE;
+}
+static inline int BattleTiming_PresentationDelay(int frames)
+{
+    return frames;
+}
+static inline int BattleTiming_ExitDelay(int frames)
+{
+    return frames;
 }
 static inline BattleTimingDomain BattleTiming_GetDomain(void)
 {

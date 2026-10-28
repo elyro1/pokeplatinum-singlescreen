@@ -31,6 +31,8 @@ void BtlvGauge_StartHpChange(BtlvGauge *gauge, int index, s32 hp);
 void BtlvGauge_SetHpAtOnce(BtlvGauge *gauge, int index, s32 hp);
 void BtlvGauge_StartExpGain(BtlvGauge *gauge, int index, s32 exp);
 #ifdef BWBATTLE
+// Mirror an already animated healthbox, with one damage blink when its drain finishes.
+void BtlvGauge_SyncHp(BtlvGauge *gauge, int index, s32 hp, BOOL moving);
 void BtlvGauge_SetExpAtOnce(BtlvGauge *gauge, int index, s32 exp);
 #endif
 void BtlvGauge_StartLevelUp(BtlvGauge *gauge, BattleMon *mon, int index);

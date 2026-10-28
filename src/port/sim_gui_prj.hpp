@@ -5,6 +5,7 @@ void CheatsContents();
 void GeneralContentsPrj();
 void GameplayContents();
 void GraphicsContents();
+void BattleSpeedContents();
 void DeveloperContentsPrj();
 void CreateItemInit();
 void CreateItemContents();

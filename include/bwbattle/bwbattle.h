@@ -153,12 +153,16 @@ void BwBattleView_RemoveTrainer(unsigned int viewPos);
 bool BwBattleView_StartMove(unsigned int attackerPos, unsigned int defenderPos, unsigned short move);
 // Starts one of BW2's other effects (archive 66: 0x231 and on) at a view position, or for the field with -1
 bool BwBattleView_StartEffect(int viewPos, unsigned short effect);
+// Fast wild opening: overlap wild shiny sparkles with the player's existing send-out.
+bool BwBattleView_StartFastWildSendOut(void);
+// Finish an opening effect without drawing its intermediate camera shots.
+void BwBattleView_FinishOpeningEffect(void);
 // The HP and EXP gauge of the Pokémon at a view position: shown for a record (which has to stay valid while shown),
 // then set at once to the HP, the experience points of the level and the status (BW2's CONDITION_*, 6 badly poisoned)
 void BwBattleView_ShowGauge(unsigned int viewPos, const BwBattleMon *mon);
 void BwBattleView_HideGauge(unsigned int viewPos);
 void BwBattleView_SetGaugeVisible(unsigned int viewPos, bool visible);
-void BwBattleView_SetGaugeHp(unsigned int viewPos, int hp);
+void BwBattleView_SetGaugeHp(unsigned int viewPos, int hp, bool moving);
 void BwBattleView_SetGaugeExp(unsigned int viewPos, int exp);
 void BwBattleView_SetGaugeStatus(unsigned int viewPos, unsigned char status);
 // BW2's message window (btlv_scu.c): its eight frame tiles (corners and edges, 4 bits a dot) and its 16 colors, of

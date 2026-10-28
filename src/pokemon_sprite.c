@@ -505,6 +505,24 @@ static void PokemonSprite_PrepareRenderPose(PokemonSprite *sprite, PokemonSprite
 }
 #endif
 
+static void PokemonSpriteManager_AdvanceSprite(PokemonSpriteManager *manager, PokemonSprite *sprite)
+{
+    int steps = manager->heapID == HEAP_ID_BATTLE ? BattleTiming_StepCount(BATTLE_TIMING_ANIMATION) : 1;
+    BattleTimingDomain previous = BattleTiming_GetDomain();
+    if (manager->heapID == HEAP_ID_BATTLE) {
+        BattleTiming_SetDomain(BATTLE_TIMING_ANIMATION);
+    }
+    for (int step = 0; step < steps && sprite->active && !sprite->transforms.hide && !sprite->transforms.hide2; step++) {
+        if (sprite->callback != NULL) {
+            sprite->callback(sprite, &sprite->transforms);
+        }
+        if (sprite->active) {
+            PokemonSprite_TickAnim(sprite);
+        }
+    }
+    BattleTiming_SetDomain(previous);
+}
+
 #ifdef SDK_PORT
 // What PokemonSpriteManager_DrawSprites does besides drawing: the sprites' callbacks and animations, which the battle
 // waits on. For when another renderer shows the Pokemon (BW2's battle view, docs/bwbattle.md)
@@ -515,22 +533,19 @@ void PokemonSpriteManager_UpdateWithoutDrawing(PokemonSpriteManager *monSpriteMa
     BufferPokemonSpritePlttData(monSpriteMan);
 
     for (int i = 0; i < MAX_MON_SPRITES; i++) {
-        if (monSpriteMan->sprites[i].active
-            && monSpriteMan->sprites[i].transforms.hide == FALSE
-            && monSpriteMan->sprites[i].transforms.hide2 == FALSE
-            && (monSpriteMan->heapID != HEAP_ID_BATTLE || BattleTiming_ShouldTick(BATTLE_TIMING_ANIMATION))) {
-            if (monSpriteMan->sprites[i].callback != NULL) {
-                monSpriteMan->sprites[i].callback(&monSpriteMan->sprites[i], &monSpriteMan->sprites[i].transforms);
-            }
-
-            PokemonSprite_TickAnim(&monSpriteMan->sprites[i]);
-        }
+        PokemonSpriteManager_AdvanceSprite(monSpriteMan, &monSpriteMan->sprites[i]);
     }
 }
 #endif
 
 void PokemonSpriteManager_DrawSprites(PokemonSpriteManager *monSpriteMan)
 {
+#ifdef SDK_PORT
+    if (BattleTiming_IsExtraAnimationStep()) {
+        PokemonSpriteManager_UpdateWithoutDrawing(monSpriteMan);
+        return;
+    }
+#endif
     int width, height;
     int u0, v0, u1, v1;
 
@@ -546,19 +561,15 @@ void PokemonSpriteManager_DrawSprites(PokemonSpriteManager *monSpriteMan)
         if (monSpriteMan->sprites[i].active
             && monSpriteMan->sprites[i].transforms.hide == FALSE
             && monSpriteMan->sprites[i].transforms.hide2 == FALSE) {
-            if ((monSpriteMan->heapID != HEAP_ID_BATTLE || BattleTiming_ShouldTick(BATTLE_TIMING_ANIMATION))
-                && monSpriteMan->sprites[i].callback != NULL) {
-                monSpriteMan->sprites[i].callback(&monSpriteMan->sprites[i], &monSpriteMan->sprites[i].transforms);
+            PokemonSpriteManager_AdvanceSprite(monSpriteMan, &monSpriteMan->sprites[i]);
+            if (!monSpriteMan->sprites[i].active) {
+                continue;
             }
 
             NNS_G3dGeFlushBuffer();
 
             if (monSpriteMan->excludeIdentity != TRUE) {
                 G3_Identity();
-            }
-
-            if (monSpriteMan->heapID != HEAP_ID_BATTLE || BattleTiming_ShouldTick(BATTLE_TIMING_ANIMATION)) {
-                PokemonSprite_TickAnim(&monSpriteMan->sprites[i]);
             }
 
             PokemonSprite *drawSprite = &monSpriteMan->sprites[i];
@@ -1587,13 +1598,13 @@ static void BufferPokemonSpritePlttData(PokemonSpriteManager *monSpriteMan)
             }
         }
 
-        BOOL tickFade = TRUE;
+        int fadeSteps = 1;
 #ifdef SDK_PORT
         if (monSpriteMan->heapID == HEAP_ID_BATTLE) {
-            tickFade = BattleTiming_ShouldTick(monSpriteMan->sprites[i].battleFadeTimingDomain);
+            fadeSteps = BattleTiming_StepCount(monSpriteMan->sprites[i].battleFadeTimingDomain);
         }
 #endif
-        if (monSpriteMan->sprites[i].active && monSpriteMan->sprites[i].transforms.fadeActive && tickFade) {
+        for (int step = 0; step < fadeSteps && monSpriteMan->sprites[i].active && monSpriteMan->sprites[i].transforms.fadeActive; step++) {
             if (monSpriteMan->sprites[i].transforms.fadeDelayCounter == 0) {
                 needReloadPltt = TRUE;
                 monSpriteMan->sprites[i].transforms.fadeDelayCounter = monSpriteMan->sprites[i].transforms.fadeDelayLength;

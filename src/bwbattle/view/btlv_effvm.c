@@ -89,6 +89,9 @@ struct BtlvEffvm {
     u32 unk2A0;                    // 0x2a0  variable 0x37
     u32 lastMove;                  // 0x2a4  effects 0x261 and 0x262 don't repeat for the same attacker
     u32 lastAttacker;              // 0x2a8
+#ifdef BWBATTLE
+    BOOL overlapIntroCry;
+#endif
 };
 
 #define BTLV_EFFECT_FIRST 0x231
@@ -321,6 +324,7 @@ static BOOL BtlvEffvm_CmdPlayCry(VM *vm, void *env);
 static BOOL BtlvEffvm_CmdSetBallSource(VM *vm, void *env);
 static BOOL BtlvEffvm_CmdBallAdd(VM *vm, void *env);
 static BOOL BtlvEffvm_CmdCall(VM *vm, void *env);
+static BOOL BtlvEffvm_Call(VM *vm, u32 effect, u32 attacker, u32 defender);
 static BOOL BtlvEffvm_CmdReturn(VM *vm, void *env);
 static BOOL BtlvEffvm_CmdJump(VM *vm, void *env);
 static BOOL BtlvEffvm_CmdWaitExternal(VM *vm, void *env);
@@ -570,6 +574,9 @@ void BtlvEffvm_Start(VM *vm, u32 attacker, u32 defender, u16 move, BtlvEffvmPara
     wk->defender = defender;
     wk->unk244 = 1;
     wk->move = move;
+#ifdef BWBATTLE
+    wk->overlapIntroCry = FALSE;
+#endif
     if (wk->move >= BTLV_EFFECT_FIRST && (wk->move == 0x261 || wk->move == 0x262) && wk->lastMove == wk->move &&
         wk->lastAttacker == attacker) {
         return;
@@ -2557,10 +2564,15 @@ static BOOL BtlvEffvm_CmdBallAdd(VM *vm, void *env) {
 }
 
 static BOOL BtlvEffvm_CmdCall(VM *vm, void *env) {
-    BtlvEffvm *wk = env;
     u32 effect = VM_Read32(vm);
     u32 attacker = VM_Read32(vm);
     u32 defender = VM_Read32(vm);
+
+    return BtlvEffvm_Call(vm, effect, attacker, defender);
+}
+
+static BOOL BtlvEffvm_Call(VM *vm, u32 effect, u32 attacker, u32 defender) {
+    BtlvEffvm *wk = VM_GetEnv(vm);
 
     wk->callAttackers[wk->callDepth] = wk->attacker;
     wk->callDefenders[wk->callDepth] = wk->defender;
@@ -2578,6 +2590,27 @@ static BOOL BtlvEffvm_CmdCall(VM *vm, void *env) {
     wk->callDepth++;
     return wk->ret;
 }
+
+#ifdef BWBATTLE
+void BtlvEffvm_OverlapIntroCry(VM *vm) {
+    BtlvEffvm *wk = VM_GetEnv(vm);
+
+    wk->overlapIntroCry = wk->move == 0x234;
+}
+
+void BtlvEffvm_PrefixWildShinies(VM *vm) {
+    BtlvMcss *mcss = BtlvEffect_GetMcss();
+
+    // Push in reverse order so the first wild Pokémon starts sparkling first.
+    // 0x260 is BW2's normal shiny sparkle/sound subroutine; it starts particles
+    // and returns immediately, leaving them to animate during the player's throw.
+    for (int pos = 7; pos >= 1; pos -= 2) {
+        if (BtlvMcss_Exists(mcss, pos) && (BtlvMcss_GetFlags(mcss, pos) & BTLV_MCSS_FLAG_RARE)) {
+            BtlvEffvm_Call(vm, 0x260, pos, pos);
+        }
+    }
+}
+#endif
 
 static BOOL BtlvEffvm_CmdReturn(VM *vm, void *env) {
     BtlvEffvm *wk = env;
@@ -2759,6 +2792,28 @@ static BOOL BtlvEffvm_CmdEnd(VM *vm, void *env) {
     return TRUE;
 }
 
+static BOOL BtlvEffvm_WaitCries(BtlvEffvm *wk) {
+    if (wk->cryDelayed) {
+        return FALSE;
+    }
+#ifdef BWBATTLE
+    if (wk->overlapIntroCry) {
+        // Keep the voices alive for the background cry/BGM task. Only the
+        // shortened opening's UI wait ends; audio and visual cleanup continue.
+        return TRUE;
+    }
+#endif
+    for (int i = 0; i < 6; i++) {
+        if (wk->voices[i] != -1) {
+            if (PokeVoice_IsPlaying(wk->voices[i])) {
+                return FALSE;
+            }
+            wk->voices[i] = -1;
+        }
+    }
+    return TRUE;
+}
+
 static BOOL BtlvEffvm_WaitNative(VM *vm, void *env) {
     BtlvEffvm *wk = env;
     int i;
@@ -2847,16 +2902,8 @@ static BOOL BtlvEffvm_WaitNative(VM *vm, void *env) {
         }
     }
     if (wk->waitKind == 16) {
-        if (wk->cryDelayed) {
+        if (!BtlvEffvm_WaitCries(wk)) {
             return FALSE;
-        }
-        for (i = 0; i < 6; i++) {
-            if (wk->voices[i] != -1) {
-                if (PokeVoice_IsPlaying(wk->voices[i])) {
-                    return FALSE;
-                }
-                wk->voices[i] = -1;
-            }
         }
     }
     if ((wk->waitKind == 0 || wk->waitKind == 17) && wk->windowTask) {

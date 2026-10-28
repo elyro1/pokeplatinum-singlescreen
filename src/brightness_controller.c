@@ -156,19 +156,17 @@ void BrightnessController_ResetScreenController(u32 screenSelect)
 
 void BrightnessController_Update(void)
 {
-    if (controllerMain.isActive
+    int mainSteps = 1;
+    int subSteps = 1;
 #ifdef SDK_PORT
-        && BattleTiming_ShouldTick(controllerMain.timingDomain)
+    mainSteps = BattleTiming_StepCount(controllerMain.timingDomain);
+    subSteps = BattleTiming_StepCount(controllerSub.timingDomain);
 #endif
-    ) {
+    for (int step = 0; step < mainSteps && controllerMain.isActive; step++) {
         BrightnessController_StepTransition(&controllerMain);
     }
 
-    if (controllerSub.isActive
-#ifdef SDK_PORT
-        && BattleTiming_ShouldTick(controllerSub.timingDomain)
-#endif
-    ) {
+    for (int step = 0; step < subSteps && controllerSub.isActive; step++) {
         BrightnessController_StepTransition(&controllerSub);
     }
 }

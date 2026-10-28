@@ -8,13 +8,12 @@
 typedef struct {
     SIM_Config_prj_type *config;
     BOOL hasPreset;
-    BOOL hasLegacyBattleSettings;
+    BOOL hasLegacyAnimation;
     BOOL legacyAnimation;
-    BOOL hasUiSetting;
-    BOOL legacySmooth;
 } ConfigLoadContext;
 
-static const char *sBattlePacingNames[BATTLE_PACING_COUNT] = { "Original", "Smooth", "Quick" };
+static const char *sBattlePacingNames[BATTLE_PACING_COUNT] = { "Smooth", "Quick", "Turbo" };
+static const char *sSpeedNames[PORT_SPEED_COUNT] = { "Fast", "Faster", "Instant", "Normal" };
 
 static int IniHandler(void *user, const char *section, const char *name, const char *value);
 static const char * BoolToString(BOOL arg);
@@ -34,29 +33,38 @@ static int IniHandler(void* user, const char* section, const char* name,
     if(MATCH("General", "60Fps")) {
         config->enable60fps = StringToBool(value);
     }
-    // Field speed correction is automatic; battle animation and UI timing are independent.
+    // Old Original pacing migrates to Smooth. Removed UI timing switches are ignored.
     if (MATCH("General", "BattlePacing")) {
-        context->hasPreset = TRUE;
-        config->battlePacing = BATTLE_PACING_SMOOTH;
+        if (strcmp(value, "Original") == 0) {
+            context->hasPreset = TRUE;
+            config->battlePacing = BATTLE_PACING_SMOOTH;
+        }
         for (int i = 0; i < BATTLE_PACING_COUNT; i++) {
             if (strcmp(value, sBattlePacingNames[i]) == 0) {
+                context->hasPreset = TRUE;
                 config->battlePacing = (BattlePacing)i;
                 break;
             }
         }
     }
     if (MATCH("General", "BattleAnimationSpeedFix")) {
-        context->hasLegacyBattleSettings = TRUE;
+        context->hasLegacyAnimation = TRUE;
         context->legacyAnimation = StringToBool(value);
     }
-    if (MATCH("General", "SmoothBattleAnimations")) {
-        context->hasLegacyBattleSettings = TRUE;
-        context->legacySmooth = StringToBool(value);
+    if (MATCH("General", "TextSpeed") || MATCH("General", "BattleBarSpeed")) {
+        for (int i = 0; i < PORT_SPEED_COUNT; i++) {
+            if (strcmp(value, sSpeedNames[i]) == 0) {
+                if (strcmp(name, "TextSpeed") == 0) config->textSpeed = (PortSpeed)i;
+                // Instant bars were removed; keep old configurations on the fastest available setting.
+                else config->battleBarSpeed = i == PORT_SPEED_INSTANT ? PORT_SPEED_FASTER : (PortSpeed)i;
+                break;
+            }
+        }
     }
-    if (MATCH("General", "BattleUiSpeedFix")) {
-        context->hasLegacyBattleSettings = TRUE;
-        context->hasUiSetting = TRUE;
-        config->battleUiSpeedFix = StringToBool(value);
+    if (MATCH("General", "FastWildBattleIntro")) {
+        if (strcmp(value, "true") == 0 || strcmp(value, "false") == 0) {
+            config->fastWildBattleIntro = StringToBool(value);
+        }
     }
     if (MATCH("General", "BW2BattleVisuals")) {
         config->bw2BattleVisuals = StringToBool(value);
@@ -122,9 +130,11 @@ static BOOL StringToBool(const char * str)
 // Initialize a SIM_Config_prj_type to default values
 void SIM_Config_prj_LoadDefaults(SIM_Config_prj_type * aConfig)
 {
+  memset(aConfig, 0, sizeof(*aConfig));
   aConfig->enable60fps = TRUE;
   aConfig->battlePacing = BATTLE_PACING_SMOOTH;
-  aConfig->battleUiSpeedFix = FALSE;
+  aConfig->textSpeed = PORT_SPEED_FAST;
+  aConfig->battleBarSpeed = PORT_SPEED_FAST;
   aConfig->bw2BattleVisuals = FALSE;
   aConfig->overworldEncounters = TRUE;
   aConfig->pokemonFollower = TRUE;
@@ -157,12 +167,9 @@ BOOL SIM_Config_prj_LoadConfigFile(SIM_Config_prj_type * aConfig)
     if (ini_parse(SIM_CONFIG_PRJ_FILE_PATH, IniHandler, &context) < 0) {
         return FALSE;
     }
-    if (!context.hasPreset && context.hasLegacyBattleSettings) {
+    if (!context.hasPreset && context.hasLegacyAnimation) {
         aConfig->battlePacing = !context.legacyAnimation ? BATTLE_PACING_QUICK
-            : (context.legacySmooth ? BATTLE_PACING_SMOOTH : BATTLE_PACING_ORIGINAL);
-    }
-    if (!context.hasUiSetting) {
-        aConfig->battleUiSpeedFix = FALSE;
+            : BATTLE_PACING_SMOOTH;
     }
     return TRUE;
 }
@@ -176,7 +183,9 @@ void SIM_Config_prj_SaveConfigFile(SIM_Config_prj_type * aConfig)
     fprintf(configFile, "[General]\n");
     fprintf(configFile, "60Fps=%s\n", BoolToString(aConfig->enable60fps));
     fprintf(configFile, "BattlePacing=%s\n", sBattlePacingNames[aConfig->battlePacing]);
-    fprintf(configFile, "BattleUiSpeedFix=%s\n", BoolToString(aConfig->battleUiSpeedFix));
+    fprintf(configFile, "TextSpeed=%s\n", sSpeedNames[aConfig->textSpeed]);
+    fprintf(configFile, "BattleBarSpeed=%s\n", sSpeedNames[aConfig->battleBarSpeed]);
+    fprintf(configFile, "FastWildBattleIntro=%s\n", BoolToString(aConfig->fastWildBattleIntro));
     fprintf(configFile, "BW2BattleVisuals=%s\n", BoolToString(aConfig->bw2BattleVisuals));
     fprintf(configFile, "OverworldEncounters=%s\n", BoolToString(aConfig->overworldEncounters));
     fprintf(configFile, "PokemonFollower=%s\n", BoolToString(aConfig->pokemonFollower));
@@ -211,8 +220,7 @@ void SIM_Config_prj_init() {
   SIM_Config_prj_LoadDefaults(&s_SIM_config_prj);
   
   //Load configuration file
-  if(!SIM_Config_prj_LoadConfigFile(&s_SIM_config_prj)){
-    //Config file does not exist. Save config file with defaults
+  if (!SIM_Config_prj_LoadConfigFile(&s_SIM_config_prj)) {
     SIM_Config_prj_SaveConfigFile(&s_SIM_config_prj);
   }
 }

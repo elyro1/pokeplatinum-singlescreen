@@ -278,18 +278,11 @@ existing authored fog and background composition. Enhancements reset to neutral
 for each new frame until the field explicitly opts in. The Nintendo DS target
 keeps the original rendering path.
 
-Backend changes are committed in libntr on the `lib_single_screen_mod` branch.
-`subprojects/libntr.wrap` pins the SDK commit directly, including the visual
+Backend changes are committed in libntr. `subprojects/libntr.wrap` pins the SDK
+commit directly, including the visual
 upgrades, extended battle VRAM, matrix and DMA behavior, widescreen edge
 rendering, compressed-texture cache support, simulator automation hooks, and
-gamepad settings. The tracked subprojects/packagefiles/libntr/tab-menu.patch
-adds the centered PC settings panel and input/scaling behavior through Meson's
-diff_files mechanism on fresh SDK checkouts. For an existing clean checkout at
-the pinned revision, apply it once from the project root with:
-
-```sh
-git -C subprojects/libntr apply ../packagefiles/libntr/tab-menu.patch
-```
+gamepad settings, and the centered PC settings panel and its menu categories.
 
 Android compatibility changes live on separate Android branches.
 

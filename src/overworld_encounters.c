@@ -85,6 +85,15 @@ static BOOL Enabled(FieldSystem *field)
     return state == PLAYER_AVATAR_WALKING || state == PLAYER_AVATAR_CYCLING || state == PLAYER_AVATAR_SURFING;
 }
 
+BOOL OverworldEncounters_ReplaceRandom(FieldSystem *field)
+{
+#ifdef SDK_PORT
+    return Enabled(field);
+#else
+    return FALSE;
+#endif
+}
+
 static BOOL Paused(FieldSystem *field)
 {
     return field->processManager->pause || FieldSystem_IsRunningTask(field)

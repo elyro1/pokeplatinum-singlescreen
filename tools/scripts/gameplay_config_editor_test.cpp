@@ -41,6 +41,7 @@ int main()
         GameplayConfigOption option;
         assert(GameplayConfig_GetOption(i, &option));
         assert(*option.name && *option.label && *option.group && *option.description);
+        assert(std::string(option.name) != "fastTrainerBattleIntro");
         assert(GameplayConfig_SetOptionValue(&values, i, option.maximum));
         assert(GameplayConfig_GetOptionValue(&values, i) == option.maximum);
         assert(!GameplayConfig_SetOptionValue(&values, i, option.maximum + 1));
@@ -48,8 +49,8 @@ int main()
         assert(GameplayConfig_SetOptionValue(&values, i, 0));
         assert(GameplayConfig_GetOptionValue(&values, i) == 0);
     }
-    assert(!GameplayConfig_GetOption(24, nullptr));
-    assert(!GameplayConfig_SetOptionValue(&values, 24, 0));
+    assert(!GameplayConfig_GetOption(GameplayConfig_OptionCount(), nullptr));
+    assert(!GameplayConfig_SetOptionValue(&values, GameplayConfig_OptionCount(), 0));
 
     const std::string unrelated = "[Other]\r\ninfiniteTMs=false\r\ncustom=keep me ; untouched\r\n";
     const std::string original = std::string("\xef\xbb\xbf") +
@@ -73,6 +74,7 @@ int main()
     assert(saved.find("infiniteTMs = true  ; keep this comment\r\n") != std::string::npos);
     assert(saved.find("infiniteTMs=true\r\n") != std::string::npos);
     assert(saved.find("shinyRolls: 65535 ; odds\r\n") != std::string::npos);
+    assert(saved.find("fastTrainerBattleIntro=") == std::string::npos);
     assert(saved.find("unknownOption=keep this too\r\n") != std::string::npos);
     assert(saved.find(unrelated) != std::string::npos);
     for (size_t i = 0; i < saved.size(); ++i)
@@ -118,6 +120,13 @@ int main()
     assert(editor.Load());
     editor.values.infiniteTMs = TRUE;
     assert(!editor.Save() && Read() == continuation);
+
+    // Removed options load as unknown keys and do not reappear in the editor.
+    Write("[Gameplay]\nfastTrainerBattleIntro=all\n");
+    assert(editor.Load() && !editor.IsDirty());
+    editor.values.freeMoveTutors = TRUE;
+    assert(editor.Save());
+    assert(Read().find("fastTrainerBattleIntro=all\n") != std::string::npos);
 
     // Add a missing Gameplay section without modifying the unrelated section.
     Write("; notes\n[Other]\nkey=value");

@@ -80,6 +80,7 @@ typedef struct {
     u16 announcedAbility; // Deduplicates one activation affecting several Pokémon in doubles
     BwBattleMon gaugeMon;
     s32 gaugeHp;
+    BOOL gaugeHpMoving;
     s32 gaugeExp;
     u8 gaugeStatus;
 } BwAdapterBattler;
@@ -121,6 +122,9 @@ typedef struct {
 #define BW_STEPS_MAX 16
 
 static BOOL sActive;
+static BOOL sFastIntro;
+static BOOL sFastIntroBattle;
+static BOOL sFastPlayerSendOut;
 // BW2's player stands on the field from the camera's turn to the player's side to the send-out
 static BOOL sPlayerThrowing;
 // A partner fights beside the player (a 2 vs 2 battle): BW2's multi battle, whose send-out brings the partner in
@@ -775,6 +779,33 @@ static BwTrainerBack BwAdapter_TrainerBack(int trainerClass)
     }
 }
 
+static BOOL BwAdapter_ChooseFastIntro(BattleSystem *battleSys)
+{
+    u32 type = BattleSystem_GetBattleType(battleSys);
+    u32 status = BattleSystem_GetBattleStatusMask(battleSys);
+
+    if ((type & (BATTLE_TYPE_TRAINER | BATTLE_TYPE_LINK | BATTLE_TYPE_SAFARI | BATTLE_TYPE_PAL_PARK | BATTLE_TYPE_CATCH_TUTORIAL))
+        || (status & (BATTLE_STATUS_RECORDED | BATTLE_STATUS_RECORDING | BATTLE_STATUS_FIRST_BATTLE | BATTLE_STATUS_GIRATINA))) {
+        return FALSE;
+    }
+    return SIM_Config_prj_GetConfig()->fastWildBattleIntro;
+}
+
+BOOL BwAdapter_FastIntro(void)
+{
+    return sActive && sFastIntro;
+}
+
+BOOL BwAdapter_UsedFastIntro(void)
+{
+    return sActive && sFastIntroBattle;
+}
+
+void BwAdapter_EndIntro(void)
+{
+    sFastIntro = FALSE;
+}
+
 void BwAdapter_BattleCreate(BattleSystem *battleSys)
 {
     BwBattleSetup setup;
@@ -836,6 +867,9 @@ void BwAdapter_BattleCreate(BattleSystem *battleSys)
         BwAdapter_SetPlatinumTrainerImage(BW_TRAINER_POS_PARTNER, partnerClass, FACE_BACK);
     }
     sActive = TRUE;
+    sFastIntro = BwAdapter_ChooseFastIntro(battleSys);
+    sFastIntroBattle = sFastIntro;
+    sFastPlayerSendOut = FALSE;
     sBattleSys = battleSys;
     sDoubles = (battleType & BATTLE_TYPE_DOUBLES) != 0;
     memset(sBattlers, 0, sizeof(sBattlers));
@@ -1063,6 +1097,7 @@ static void BwAdapter_SyncGauges(BattleSystem *battleSys)
         BOOL exists;
         BOOL shown;
         s32 hp;
+        BOOL hpMoving;
         s32 exp;
         u8 status;
 
@@ -1090,6 +1125,7 @@ static void BwAdapter_SyncGauges(BattleSystem *battleSys)
         }
 
         hp = BwAdapter_HealthboxValue(healthbox->curHP, healthbox->portShownHP, healthbox->portShownHPHeld);
+        hpMoving = hp != healthbox->curHP;
         exp = BwAdapter_HealthboxValue(healthbox->curExp, healthbox->portShownExp, healthbox->portShownExpHeld);
         status = healthbox->status < NELEMS(sBw2StatusOfHealthbox) ? sBw2StatusOfHealthbox[healthbox->status] : 0;
         // A new Pokémon's gauge waits for BW2's send-out to end, as in BW2 (btlv_scu.c), while Platinum's healthbox
@@ -1117,12 +1153,14 @@ static void BwAdapter_SyncGauges(BattleSystem *battleSys)
             entry->gaugeShown = TRUE;
             entry->gaugeVisible = shown;
             entry->gaugeHp = hp;
+            entry->gaugeHpMoving = FALSE;
             entry->gaugeExp = exp;
             entry->gaugeStatus = status;
         }
-        if (hp != entry->gaugeHp) {
-            BwBattleView_SetGaugeHp(viewPos, hp);
+        if (hp != entry->gaugeHp || hpMoving != entry->gaugeHpMoving) {
+            BwBattleView_SetGaugeHp(viewPos, hp, hpMoving);
             entry->gaugeHp = hp;
+            entry->gaugeHpMoving = hpMoving;
         }
         if (exp != entry->gaugeExp) {
             BwBattleView_SetGaugeExp(viewPos, exp);
@@ -1412,6 +1450,7 @@ static void BwAdapter_RunSteps(void)
 {
     if (sStepEffectRunning && !BwBattleView_IsEffectBusy()) {
         sStepEffectRunning = FALSE;
+        sFastPlayerSendOut = FALSE;
         BwBattle_SetCriesMuted(FALSE);
     }
     for (int i = 0; i < sStepCount; i++) {
@@ -1444,6 +1483,9 @@ static void BwAdapter_RunSteps(void)
                 BwBattleView_RemoveMon(BwAdapter_ViewPos(step.battler));
             }
             BwBattleView_AddMon(BwAdapter_ViewPos(step.battler), &entry->mon);
+            if (sFastIntro && BwAdapter_IsEnemy(step.battler)) {
+                BwBattleView_SetMonVisible(BwAdapter_ViewPos(step.battler), TRUE);
+            }
             entry->added = TRUE;
             entry->changed = FALSE;
             break;
@@ -1459,9 +1501,22 @@ static void BwAdapter_RunSteps(void)
             // Send-out cries follow BW2's visible animation; Platinum still plays the wild encounter's cry.
             BwBattle_SetCriesMuted(step.effect != BW_EFFECT_PLAYER_SEND_OUT
                 && step.effect != BW_EFFECT_TRAINER_SEND_OUT && step.effect != BW_EFFECT_SEND_OUT);
-            sStepEffectRunning = BwBattleView_StartEffect(step.effectPos, step.effect);
+            if (sFastIntro && step.effect == BW_EFFECT_PLAYER_SEND_OUT) {
+                sStepEffectRunning = BwBattleView_StartFastWildSendOut();
+            } else {
+                sStepEffectRunning = BwBattleView_StartEffect(step.effectPos, step.effect);
+            }
+            sFastPlayerSendOut = sStepEffectRunning && sFastIntro && step.effect == BW_EFFECT_PLAYER_SEND_OUT;
+            if (sStepEffectRunning && sFastIntro
+                && (step.effect == BW_EFFECT_TO_PLAYER || step.effect == BW_EFFECT_TO_PLAYER_AND_PARTNER)) {
+                BwBattleView_FinishOpeningEffect();
+                if (!BwBattleView_IsEffectBusy()) {
+                    sStepEffectRunning = FALSE;
+                    BwBattle_SetCriesMuted(FALSE);
+                }
+            }
             if (sStepEffectRunning) {
-                return; // Its first frame runs with the view's
+                return;
             }
             break;
         case BW_STEP_SET_TRAINER:
@@ -1553,7 +1608,9 @@ void BwAdapter_OnSetEncounter(BattleSystem *battleSys, int battler)
         return;
     }
     sBattlers[battler].scripted = TRUE;
-    BwAdapter_QueueWithEffect(&step, BW_EFFECT_WILD_APPEAR, BwAdapter_ViewPos(battler));
+    // The wild appearance effect ends on an enemy close-up even when advanced offscreen.
+    // Add the wild Pokémon directly so the first camera shot stays on the field.
+    BwAdapter_QueueWithEffect(&step, sFastIntro ? 0 : BW_EFFECT_WILD_APPEAR, BwAdapter_ViewPos(battler));
 }
 
 void BwAdapter_OnTrainerEncounter(BattleSystem *battleSys, int battler, int trainerClass)
@@ -1844,15 +1901,15 @@ void BwAdapter_SetSuspended(BOOL suspended)
 
 // BW2's battle runs at 60 frames a second, and Platinum's at 30: the port's 60 FPS loop runs Platinum's battle on
 // every other frame (battle_timing.c) and a frame of BW2's on each. Without it, the loop runs at 30 Hz and each of its
-// frames runs two of BW2's. Quick pacing doubles effect updates, while ambient motion keeps its normal clock.
+// frames runs two of BW2's. Quick doubles effects; Turbo triples them. Ambient motion keeps its normal clock.
 static unsigned int BwAdapter_ViewFrames(void)
 {
     const SIM_Config_prj_type *config = SIM_Config_prj_GetConfig();
 
-    if (!config->enable60fps || config->battlePacing == BATTLE_PACING_QUICK) {
+    if (!config->enable60fps) {
         return 2;
     }
-    return 1;
+    return config->battlePacing == BATTLE_PACING_TURBO ? 3 : (config->battlePacing == BATTLE_PACING_QUICK ? 2 : 1);
 }
 
 BOOL BwAdapter_Draw(BattleSystem *battleSys)
@@ -1872,7 +1929,11 @@ BOOL BwAdapter_Draw(BattleSystem *battleSys)
     BwAdapter_ShowPlatinumBackground(FALSE);
     // The arena widescreen, as the field is (its 2D layers stay on the 256 dots in the middle)
     BwBattleView_SetViewWidth(SIM_SetFieldWidescreen(TRUE));
-    BwBattleView_Main(BwAdapter_ViewFrames(), SIM_Config_prj_GetConfig()->enable60fps ? 1 : 2);
+    unsigned int frames = BwAdapter_ViewFrames();
+    if (sFastPlayerSendOut) {
+        frames *= 2;
+    }
+    BwBattleView_Main(frames, SIM_Config_prj_GetConfig()->enable60fps ? 1 : 2);
     return TRUE;
 }
 

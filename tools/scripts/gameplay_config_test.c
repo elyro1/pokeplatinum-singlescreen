@@ -66,6 +66,8 @@ static void TestConfigFile(void)
     assert(fclose(file) == 0);
     assert(strstr(template, "[Gameplay]"));
 
+    assert(!strstr(template, "fastWildBattleIntro="));
+    assert(!strstr(template, "fastTrainerBattleIntro="));
     assert(strstr(template, "prohibitBattleItems=false\n"));
     assert(strstr(template, "forceSetBattleStyle=false\n"));
     assert(strstr(template, "unlimitedVitaminEVs=false\n"));
@@ -146,6 +148,11 @@ static void TestConfigFile(void)
     assert(config->eggHatchSpeedMultiplier == 0);
     assert(config->catchRateMultiplier == 255);
     assert(config->overworldEncounterCount == 0);
+
+    // Legacy trainer intro entries are ignored without affecting other defaults.
+    WriteConfig("[Gameplay]\nfastTrainerBattleIntro=all\nfastTrainerBattleIntro=invalid\n");
+    GameplayConfig_Init();
+    AssertOriginalDefaults();
 
     // Partial files inherit defaults. Unknown names/sections and invalid values are ignored.
     WriteConfig("[Gameplay]\nprohibitBattleItems=1\nforceSetBattleStyle=TRUE\n"

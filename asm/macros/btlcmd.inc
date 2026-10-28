@@ -1240,3 +1240,13 @@
 _start:
 
     .endif // ASM_BATTLE_SCRIPT_INC
+
+    .macro JumpIfFastIntro target
+    .long BTLCMD_JUMPIFFASTINTRO
+    .long (\target - .) / 4 - 1
+    .endm
+
+    .macro JumpIfFastExit target
+    .long BTLCMD_JUMPIFFASTEXIT
+    .long (\target - .) / 4 - 1
+    .endm

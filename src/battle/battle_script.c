@@ -313,6 +313,8 @@ static BOOL BtlCmd_CheckCurMoveIsType(BattleSystem *battleSys, BattleContext *ba
 static BOOL BtlCmd_LoadArchivedMonData(BattleSystem *battleSys, BattleContext *battleCtx);
 static BOOL BtlCmd_RefreshMonData(BattleSystem *battleSys, BattleContext *battleCtx);
 static BOOL BtlCmd_End(BattleSystem *battleSys, BattleContext *battleCtx);
+static BOOL BtlCmd_JumpIfFastIntro(BattleSystem *battleSys, BattleContext *battleCtx);
+static BOOL BtlCmd_JumpIfFastExit(BattleSystem *battleSys, BattleContext *battleCtx);
 
 static int BattleScript_Read(BattleContext *battleCtx);
 static void BattleScript_Iter(BattleContext *battleCtx, int i);
@@ -1835,6 +1837,16 @@ static BOOL BtlCmd_WaitButtonABTime(BattleSystem *battleSys, BattleContext *batt
 {
     BattleScript_Iter(battleCtx, 1);
     int frames = BattleScript_Read(battleCtx);
+    if (!(BattleSystem_GetBattleType(battleSys) & BATTLE_TYPE_LINK)) {
+        // The final message before an exit fade should also be brief in Quick.
+        if (battleCtx->scriptNarc == NARC_INDEX_BATTLE__SKILL__SUB_SEQ
+            && (battleCtx->scriptFile == subscript_escape || battleCtx->scriptFile == subscript_escape_success
+                || battleCtx->scriptFile == subscript_escape_item || battleCtx->scriptFile == subscript_enemy_escape)) {
+            frames = BattleTiming_ExitDelay(frames);
+        } else {
+            frames = BattleTiming_PresentationDelay(frames);
+        }
+    }
 
     if ((BattleSystem_GetBattleType(battleSys) & BATTLE_TYPE_LINK) == FALSE) {
         if ((gSystem.pressedKeys & (PAD_BUTTON_A | PAD_BUTTON_B | PAD_BUTTON_X | PAD_BUTTON_Y)) || TouchScreen_Tapped()) {
@@ -3440,6 +3452,34 @@ static BOOL BtlCmd_UpdateMonDataFromVar(BattleSystem *battleSys, BattleContext *
  * @param battleCtx
  * @return FALSE
  */
+static BOOL BtlCmd_JumpIfFastIntro(BattleSystem *battleSys, BattleContext *battleCtx)
+{
+    BattleScript_Iter(battleCtx, 1);
+    int jump = BattleScript_Read(battleCtx);
+    (void)battleSys;
+#ifdef SDK_PORT
+    if (BwAdapter_FastIntro()) {
+        BattleScript_Iter(battleCtx, jump);
+    }
+#else
+    (void)jump;
+#endif
+    return FALSE;
+}
+
+static BOOL BtlCmd_JumpIfFastExit(BattleSystem *battleSys, BattleContext *battleCtx)
+{
+    BattleScript_Iter(battleCtx, 1);
+    int jump = BattleScript_Read(battleCtx);
+
+    // Quick/Turbo exit timing applies only at 60 FPS. Keep link/forfeit dialogue.
+    if (!(BattleSystem_GetBattleType(battleSys) & (BATTLE_TYPE_LINK | BATTLE_TYPE_FRONTIER))
+        && BattleTiming_ExitDelay(30) < 30) {
+        BattleScript_Iter(battleCtx, jump);
+    }
+    return FALSE;
+}
+
 static BOOL BtlCmd_GoTo(BattleSystem *battleSys, BattleContext *battleCtx)
 {
     BattleScript_Iter(battleCtx, 1);
@@ -8538,6 +8578,9 @@ static BOOL BtlCmd_ChangeForm(BattleSystem *battleSys, BattleContext *battleCtx)
  */
 static BOOL BtlCmd_SetBattleBackground(BattleSystem *battleSys, BattleContext *battleCtx)
 {
+#ifdef SDK_PORT
+    BwAdapter_EndIntro();
+#endif
     BattleScript_Iter(battleCtx, 1);
 
     BattleController_EmitUpdateBG(battleSys, BATTLER_US);
@@ -9379,6 +9422,10 @@ static BOOL BtlCmd_WaitTime(BattleSystem *battleSys, BattleContext *battleCtx)
 {
     BattleScript_Iter(battleCtx, 1);
     int wait = BattleScript_Read(battleCtx);
+    if (!(BattleSystem_GetBattleType(battleSys) & BATTLE_TYPE_LINK)) {
+        wait = BattleTiming_PresentationDelay(wait);
+    }
+
 
     int inc;
     if ((battleSys->battleType & BATTLE_TYPE_LINK)
@@ -9811,7 +9858,7 @@ static void BattleScript_GetExpTask(SysTask *task, void *inData)
             msg.params[0] = expBattler | (slot << 8);
             msg.params[1] = totalExp;
             data->tmpData[GET_EXP_MSG_INDEX] = BattleMessage_Print(data->battleSys, msgLoader, &msg, BattleSystem_GetTextSpeed(data->battleSys));
-            data->tmpData[GET_EXP_MSG_DELAY] = 30 / 4;
+            data->tmpData[GET_EXP_MSG_DELAY] = BattleTiming_PresentationDelay(30 / 4);
             data->seqNum++;
         } else {
             data->seqNum = SEQ_GET_EXP_CHECK_DONE;
@@ -10926,7 +10973,7 @@ static void BattleScript_CatchMonTask(SysTask *task, void *inData)
             if (data->tmpData[CATCH_MON_REMAINING_SHAKES]) {
                 data->seqNum = SEQ_CATCH_MON_PRINT_TRAINER_BLOCKED_BALL;
             } else if (data->tmpData[CATCH_MON_TOTAL_SHAKES] == BALL_3_SHAKES_SUCCESS) {
-                Sound_PlayPannedEffect(SEQ_SE_DP_GETTING_sseq, BATTLE_SOUND_PAN_RIGHT);
+                // BW2's capture effect already played the successful catch click.
                 data->seqNum = SEQ_CATCH_MON_PRINT_POKEMON_WAS_CAUGHT;
             } else {
                 data->seqNum = SEQ_CATCH_MON_POKEMON_BREAK_FREE;

@@ -28,6 +28,9 @@
 #include "sys_task.h"
 #include "sys_task_manager.h"
 #include "port/battle_timing.h"
+#ifdef SDK_PORT
+#include "port/sim_config_prj.h"
+#endif
 #include "text.h"
 #include "unk_0208C098.h"
 
@@ -922,9 +925,6 @@ void HealthBox_CalcHP(HealthBox *healthbox, int damage) // CLEANUP: all calls pa
 
 s32 Healthbox_DrawHPBar(HealthBox *healthbox)
 {
-    if (!BattleTiming_ShouldTick(BATTLE_TIMING_UI)) {
-        return 0; // Still active; do not signal completion on an intermediate frame.
-    }
     s32 result = HealthBox_DrawGauge(healthbox, HEALTHBOX_GAUGE_HP);
 
     if (result == -1) {
@@ -962,9 +962,6 @@ void HealthBox_CalcExp(HealthBox *healthbox, int expReward)
 
 s32 Healthbox_DrawExpBar(HealthBox *healthbox)
 {
-    if (!BattleTiming_ShouldTick(BATTLE_TIMING_UI)) {
-        return 0; // Still active; do not signal completion on an intermediate frame.
-    }
     s32 result = HealthBox_DrawGauge(healthbox, HEALTHBOX_GAUGE_EXP);
 
     if (result == -1) {
@@ -1464,6 +1461,16 @@ static s32 HealthBox_DrawGauge(HealthBox *healthbox, enum HealthBoxGaugeType gau
     s32 result;
     s32 fillOffset;
 
+#ifdef SDK_PORT
+    s32 *temp = gaugeType == HEALTHBOX_GAUGE_HP ? &healthbox->hpTemp : &healthbox->expTemp;
+    BOOL *skipNext = gaugeType == HEALTHBOX_GAUGE_HP ? &healthbox->portHPSkipNext : &healthbox->portExpSkipNext;
+    if (*temp == S32_MIN) *skipNext = FALSE;
+    BOOL skip = SIM_Config_prj_GetConfig()->battleBarSpeed == PORT_SPEED_NORMAL && *skipNext;
+    *skipNext = SIM_Config_prj_GetConfig()->battleBarSpeed == PORT_SPEED_NORMAL && !skip;
+    if (skip) {
+        result = gaugeType == HEALTHBOX_GAUGE_HP ? healthbox->portShownHP : healthbox->portShownExp;
+    } else
+#endif
     if (gaugeType == HEALTHBOX_GAUGE_HP) {
         result = UpdateGauge(healthbox->maxHP, healthbox->curHP, healthbox->damage, &healthbox->hpTemp, HEALTHBOX_HP_CELL_COUNT, 1);
     } else {
@@ -1610,6 +1617,16 @@ static void DrawGauge(HealthBox *healthbox, u8 gaugeType)
 static s32 UpdateGauge(s32 max, s32 cur, s32 diff, s32 *temp, u8 size, u16 fillOffset)
 {
     s32 updated, final, ratio;
+    s32 step = fillOffset;
+#ifdef SDK_PORT
+    PortSpeed speed = SIM_Config_prj_GetConfig()->battleBarSpeed;
+    if (speed == PORT_SPEED_FASTER) {
+        // Four times the native step, capped at 30 updates for large changes.
+        s32 minimum = (abs(diff) + 29) / 30;
+        step *= 4;
+        if (step < minimum) step = minimum;
+    }
+#endif
 
     u8 corrected = size * HEALTHBOX_NAME_BLOCK_COUNT_X;
 
@@ -1641,6 +1658,13 @@ static s32 UpdateGauge(s32 max, s32 cur, s32 diff, s32 *temp, u8 size, u16 fillO
 
     if (max < corrected) {
         ratio = max * 0x100 / corrected;
+#ifdef SDK_PORT
+        if (speed == PORT_SPEED_FASTER) {
+            s32 minimum = (abs(diff) * 0x100 + 29) / 30;
+            ratio *= 4;
+            if (ratio < minimum) ratio = minimum;
+        }
+#endif
 
         if (diff < 0) {
             *temp += ratio;
@@ -1665,13 +1689,13 @@ static s32 UpdateGauge(s32 max, s32 cur, s32 diff, s32 *temp, u8 size, u16 fillO
         }
     } else {
         if (diff < 0) {
-            *temp += fillOffset;
+            *temp += step;
 
             if (*temp > updated) {
                 *temp = updated;
             }
         } else {
-            *temp -= fillOffset;
+            *temp -= step;
 
             if (*temp < updated) {
                 *temp = updated;

@@ -360,6 +360,14 @@ void ParticleSystem_SetResource(ParticleSystem *particleSystem, void *resource, 
 
     particleSystem->resource = resource;
 
+#ifdef SDK_PORT
+    // Turbo can run the next animation step before post-VBlank tasks execute.
+    // Emitters dereference these resources immediately, so initialize animation
+    // resources now. PC VRAM uploads do not require the DS VBlank window.
+    if (BattleTiming_GetDomain() == BATTLE_TIMING_ANIMATION) {
+        uploadImmediately = TRUE;
+    }
+#endif
     if (uploadImmediately == TRUE) {
         ParticleSystem_UploadResourcesInternal(particleSystem);
     } else {
@@ -432,6 +440,9 @@ void ParticleSystem_RegisterPaletteKey(NNSGfdPlttKey key)
 
 void ParticleSystem_Draw(ParticleSystem *particleSystem)
 {
+    if (BattleTiming_IsExtraAnimationStep()) {
+        return;
+    }
     if (particleSystem->camera != NULL) {
         Camera_ComputeProjectionMatrix(particleSystem->cameraProjection, particleSystem->camera);
         Camera_SetAsActive(particleSystem->camera);
@@ -458,12 +469,19 @@ void ParticleSystem_Draw(ParticleSystem *particleSystem)
 
 void ParticleSystem_Update(ParticleSystem *particleSystem)
 {
+    int steps = 1;
 #ifdef SDK_PORT
-    if (!BattleTiming_ShouldTick(particleSystem->timingDomain)) {
-        return;
-    }
+    steps = BattleTiming_StepCount(particleSystem->timingDomain);
 #endif
-    SPLManager_Update(particleSystem->manager);
+    for (int step = 0; step < steps; step++) {
+#ifdef SDK_PORT
+        BattleTimingDomain previous = BattleTiming_SetDomain(particleSystem->timingDomain);
+#endif
+        SPLManager_Update(particleSystem->manager);
+#ifdef SDK_PORT
+        BattleTiming_SetDomain(previous);
+#endif
+    }
 }
 
 int ParticleSystem_GetActiveAmount(void)

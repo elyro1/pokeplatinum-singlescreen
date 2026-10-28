@@ -349,8 +349,12 @@ static void BattleControllerPlayer_CommandSelectionInput(BattleSystem *battleSys
                 break;
             }
 
-            // Don't let slow AI processing delay the player from picking their action for the turn
-            if (BattlerData_GetBootState(BattleSystem_GetBattlerData(battleSys, i)) == BATTLER_BOOT_STATE_AI || battleCtx->totalTurns) {
+            // In fast openings, let the player choose while the opponent picks its first action.
+            if (BattlerData_GetBootState(BattleSystem_GetBattlerData(battleSys, i)) == BATTLER_BOOT_STATE_AI || battleCtx->totalTurns
+#ifdef SDK_PORT
+                || BwAdapter_UsedFastIntro()
+#endif
+            ) {
                 BattleController_EmitSetCommandSelection(battleSys, battleCtx, i, battleCtx->selectedPartySlot[i]);
                 battleCtx->curCommandState[i] = COMMAND_SELECTION_SELECT;
             } else {

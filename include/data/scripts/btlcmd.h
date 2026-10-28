@@ -228,6 +228,8 @@ ScriptCommand(BTLCMD_CHECKCURMOVEISTYPE,          BtlCmd_CheckCurMoveIsType)
 ScriptCommand(BTLCMD_LOADARCHIVEDMONDATA,         BtlCmd_LoadArchivedMonData)
 ScriptCommand(BTLCMD_REFRESHMONDATA,              BtlCmd_RefreshMonData)
 ScriptCommand(BTLCMD_END,                         BtlCmd_End)
+ScriptCommand(BTLCMD_JUMPIFFASTINTRO,             BtlCmd_JumpIfFastIntro)
+ScriptCommand(BTLCMD_JUMPIFFASTEXIT,              BtlCmd_JumpIfFastExit)
 
 // clang-format on
 

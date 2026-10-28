@@ -25,13 +25,14 @@ Status: implemented with the clean dark style. TAB opens one centered panel with
 
 | Category | Contents |
 | --- | --- |
-| General | Fullscreen/windowed, internal resolution, menu scale, master volume, fast-forward multiplier, ROM information and BW2 battle visuals |
-| Graphics | VSync, frame cap, 30/60 FPS, battle pacing and UI timing, day/night lighting, atmosphere, model lighting, character shadows, particles, water, weather and bloom |
+| General | Fullscreen/windowed, menu scale, master volume, ROM information and BW2 battle visuals |
+| Graphics | Internal resolution, VSync, frame cap, day/night lighting, atmosphere, model lighting, character shadows, particles, water, weather and bloom |
+| Speed & text | Fast-forward multiplier, fast wild battle intros, battle pacing, independent text and HP/EXP speeds |
 | Controls | Keyboard and controller subpages; DS button names with their actions; primary/secondary directions; deadzone; PC shortcuts |
-| Gameplay | All 23 gameplay config values, descriptions, explicit Save/Reload/Defaults, and restart status |
+| Gameplay | All 24 gameplay config values, descriptions, explicit Save/Reload/Defaults, and restart status |
 | Cheats & tools | Existing cheats, Pokétch unlocks, Pokémon creation, item creation, map jumping as subpages within the panel |
 | Multiplayer | Existing host/connect controls and connection state |
-| Developer | Screen layout and screen swap, Frame/GPU/water timings, renderer information, emission view, lighting preview/reload, assertions, build hashes, ImGui demo |
+| Developer | 30/60 FPS, screen layout and screen swap, Frame/GPU/water timings, renderer information, emission view, lighting preview/reload, assertions, build hashes, ImGui demo |
 
 The current runtime exposes only master volume; separate music/effects mixers do not exist.
 
@@ -105,11 +106,11 @@ Prioritize the single panel, scale, and grouping first. Those directly address t
 ## Implementation and validation
 
 The project pages use the shared SDK panel through SIM::GUI::ProjectPage.
-The SDK changes are tracked in subprojects/packagefiles/libntr/tab-menu.patch
-and applied by subprojects/libntr.wrap on fresh dependency checkouts.
+The shared menu and its category changes are included in the SDK revision pinned
+by subprojects/libntr.wrap.
 
 Run **python3 tools/scripts/test_menu_gui.py --build build_linux** after building.
-It exercises real SDL/OpenGL/ImGui code offscreen without a ROM, checks all nine
+It exercises real SDL/OpenGL/ImGui code offscreen without a ROM, checks all
 categories at four window sizes and six scale modes, and covers config migration,
 invalid scale values, input capture, binding cancellation, key repeat, and pause
 ownership/network policy. The existing controller regression suite remains

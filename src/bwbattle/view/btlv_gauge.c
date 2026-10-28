@@ -90,6 +90,11 @@ typedef struct {
     s32 hpDots;     // 0x38  the HP bar's pixels
     u32 status;     // 0x3c  the status icon's sequence, in mode 2
     TCB *slideTask; // 0x40
+#ifdef BWBATTLE
+    BOOL hpSyncMoving;
+    BOOL hpSyncDamage;
+    BOOL hpSyncFlash;
+#endif
 } BtlvGaugeMon;
 
 // A battler's gauge, 0x84 bytes
@@ -182,6 +187,7 @@ static void BtlvGauge_FlashTask(TCB *tcb, void *data);
 static void BtlvGauge_PauseBgm(BOOL paused);
 static u32 BtlvGauge_CalcFill(u32 value, u32 max, u32 width);
 static void BtlvGauge_ShowHpParts(BtlvGauge *gauge, int index, BOOL visible);
+static void BtlvGauge_UpdateDamageBlink(BtlvGaugeEntry *entry, BOOL showNumbers, int index);
 
 BtlvGauge *BtlvGauge_Create(Font *font, u32 mode, HeapID heapId) {
     BtlvGauge *gauge = GFL_HeapAllocate(heapId, sizeof(BtlvGauge), TRUE, "btlv_gauge.c", 340);
@@ -273,19 +279,7 @@ void BtlvGauge_Update(BtlvGauge *gauge) {
         if (gauge->entries[i].mon.shaking) {
             BtlvGauge_UpdateShake(gauge, i);
         }
-        if (gauge->entries[i].damageActor != NULL && gauge->entries[i].mon.blinking) {
-            if (gauge->entries[i].mon.blinkCount == 0 || !gauge->entries[i].mon.shown ||
-                !gauge->entries[i].mon.visible) {
-                func_0204c124(gauge->entries[i].damageActor, FALSE);
-                gauge->entries[i].mon.blinking = FALSE;
-            } else {
-                func_0204c124(gauge->entries[i].damageActor, gauge->entries[i].mon.blinkCount & 1);
-                gauge->entries[i].mon.blinkCount--;
-            }
-            if (gauge->showNumbers && !(i & 1)) {
-                func_0204c124(gauge->entries[i].damageActor, FALSE);
-            }
-        }
+        BtlvGauge_UpdateDamageBlink(&gauge->entries[i], gauge->showNumbers, i);
     }
     if (!gauge->noPinchBgm && gauge->mode == 0) {
         BtlvGauge_UpdatePinchBgm(gauge);
@@ -724,6 +718,40 @@ void BtlvGauge_SetHpAtOnce(BtlvGauge *gauge, int index, s32 hp) {
 }
 
 #ifdef BWBATTLE
+void BtlvGauge_SyncHp(BtlvGauge *gauge, int index, s32 hp, BOOL moving) {
+    BtlvGaugeEntry *entry = &gauge->entries[index];
+
+    hp = hp < 0 ? 0 : (hp > entry->mon.maxHp ? entry->mon.maxHp : hp);
+    if (!entry->mon.hpSyncMoving) {
+        entry->mon.hpSyncDamage = FALSE;
+        entry->mon.blinking = FALSE;
+        entry->mon.blinkCount = 0;
+        if (entry->damageActor != NULL) {
+            func_0204c124(entry->damageActor, FALSE);
+        }
+    }
+    // Keep the damage strip's origin at the HP before the hit, across all samples.
+    if (hp < entry->mon.hp && !entry->mon.hpSyncDamage) {
+        BtlvGauge_SetHpTarget(gauge, entry, hp);
+        entry->mon.hpSyncDamage = TRUE;
+        entry->mon.hpSyncFlash = TRUE;
+    }
+    entry->mon.hpDelta = entry->mon.hp - hp;
+    entry->mon.hpAnim = GAUGE_ANIM_START;
+    BtlvGauge_StepGauge(entry->mon.maxHp, entry->mon.hp, entry->mon.hpDelta, &entry->mon.hpAnim, 6, 0);
+    BtlvGauge_DrawBar(gauge, index, 0);
+    BtlvGauge_DrawHpNumbers(gauge, entry, hp);
+    entry->mon.hp = hp;
+    entry->mon.hpDelta = 0;
+    // Platinum owns the drain; treating each sample as a BW drain restarts its flashes.
+    entry->mon.hpMoving = FALSE;
+    entry->mon.hpSyncMoving = moving;
+    if (!moving && entry->mon.hpSyncDamage) {
+        entry->mon.blinkCount = 24;
+        entry->mon.blinking = TRUE;
+    }
+}
+
 // bwbattle: shows the experience points of the level at once, as BtlvGauge_SetHpAtOnce the HP (the adapter follows
 // Platinum's healthbox with them)
 void BtlvGauge_SetExpAtOnce(BtlvGauge *gauge, int index, s32 exp) {
@@ -883,6 +911,30 @@ static void BtlvGauge_UpdateHp(BtlvGauge *gauge, int index) {
         }
     } else {
         BtlvGauge_DrawHpNumbers(gauge, entry, hp);
+    }
+}
+
+static void BtlvGauge_UpdateDamageBlink(BtlvGaugeEntry *entry, BOOL showNumbers, int index) {
+    if (entry->damageActor == NULL || !entry->mon.blinking) {
+        return;
+    }
+    if (entry->mon.blinkCount == 0 || !entry->mon.shown || !entry->mon.visible) {
+        func_0204c124(entry->damageActor, FALSE);
+        entry->mon.blinking = FALSE;
+        return;
+    }
+#ifdef BWBATTLE
+    // Damage feedback follows the ambient clock, even when quick effects take extra steps.
+    if (!BtlvEffect_ShouldTickIdle()) {
+        return;
+    }
+    func_0204c124(entry->damageActor, (entry->mon.blinkCount >> 2) & 1);
+#else
+    func_0204c124(entry->damageActor, entry->mon.blinkCount & 1);
+#endif
+    entry->mon.blinkCount--;
+    if (showNumbers && !(index & 1)) {
+        func_0204c124(entry->damageActor, FALSE);
     }
 }
 
@@ -1571,6 +1623,46 @@ static void BtlvGauge_FlashTask(TCB *tcb, void *data) {
     const u32 masks[8] = { 1 << 0, 1 << 1, 1 << 0, 1 << 1, 1 << 2, 1 << 3, 1 << 4, 1 << 5 };
     int i;
 
+#ifdef BWBATTLE
+    // HP samples do not run BW's drain task. Latch one flash per hit instead of
+    // relying on hpMoving, and blend on the ambient clock in both pacing modes.
+    if (!BtlvEffect_ShouldTickIdle()
+        || (PaletteFade_GetActiveMask(BtlvEffect_GetPaletteFade()) & (1 << PALFADE_BUFFER_MAIN_OBJ))) {
+        return;
+    }
+    if (work->seq == 0) {
+        work->paletteMask = 0;
+        for (i = 0; i < 8; i++) {
+            BtlvGaugeMon *mon = &work->gauge->entries[i].mon;
+            if (mon->hpSyncFlash || (mon->hpMoving && mon->hpDelta > 0)) {
+                work->paletteMask |= masks[i];
+                mon->hpSyncFlash = FALSE;
+            }
+        }
+        if (work->paletteMask == 0) {
+            return;
+        }
+        work->count = 0;
+        work->seq = 1;
+    }
+    if (work->seq == 1) {
+        // Three red pulses, each eight 60 Hz ticks, including a return to the original palette.
+        u32 phase = (work->count + 1) % 8;
+        u8 fraction = phase <= 4 ? phase * 2 : (8 - phase) * 2;
+        PaletteFade_BlendPalettes(BtlvEffect_GetPaletteFade(), PALFADE_BUFFER_MAIN_OBJ, work->paletteMask,
+                                 fraction, 0x10);
+        if (++work->count == 24) {
+            work->seq = 2;
+        }
+    } else {
+        for (i = 0; i < 8; i++) {
+            if (work->gauge->entries[i].mon.hpMoving) {
+                return;
+            }
+        }
+        work->seq = 0;
+    }
+#else
     switch (work->seq) {
     case 0:
         work->paletteMask = 0;
@@ -1613,6 +1705,7 @@ static void BtlvGauge_FlashTask(TCB *tcb, void *data) {
         }
         break;
     }
+#endif
 }
 
 static void BtlvGauge_PauseBgm(BOOL paused) {

@@ -351,10 +351,18 @@ typedef struct MonShowData {
     u8 isShiny;
     u8 shadowSize;
     u16 isQuickSendOut;
+    BOOL fastBreakout;
     u8 delay;
     u8 formNum;
     int isSubstitute;
 } MonShowData;
+
+static BOOL BattleDisplay_ShouldShortenBreakout(BattleSystem *battleSys, BOOL isQuickSendOut)
+{
+    return isQuickSendOut
+        && !(BattleSystem_GetBattleType(battleSys) & BATTLE_TYPE_LINK)
+        && BattleTiming_ExitDelay(30) < 30;
+}
 
 void BattleDisplay_InitTaskShowEncounter(BattleSystem *battleSys, BattlerData *battlerData, MonShowMessage *message)
 {
@@ -449,6 +457,7 @@ void BattleDisplay_InitTaskShowPokemon(BattleSystem *battleSys, BattlerData *bat
     monShowData->capturedBall = message->capturedBall;
     monShowData->isShiny = message->isShiny;
     monShowData->isQuickSendOut = message->isQuickSendOut;
+    monShowData->fastBreakout = BattleDisplay_ShouldShortenBreakout(battleSys, message->isQuickSendOut);
     monShowData->delay = 0;
     monShowData->isSubstitute = message->isSubstitute;
 
@@ -948,23 +957,28 @@ static void BattleDisplay_StartMenuFade(BattleSystem *battleSys, int initialAlph
 {
     PaletteData *paletteData = BattleSystem_GetPaletteData(battleSys);
 #ifdef SDK_PORT
-    // Match the quick submenu fades, including Pokémon and their shadows.
-    const int paletteWait = -8;
-    const int spriteDelay = -8;
+    // Fade scene layers, Pokémon and shadows together. Turbo completes in two updates.
+    const BOOL turbo = !(BattleSystem_GetBattleType(battleSys) & BATTLE_TYPE_LINK)
+        && BattleTiming_ExitDelay(16) == 2;
+    // Palette steps have four bits: -14 would wrap step 16 to zero.
+    const int paletteWait = turbo ? -13 : -8;
+    const int spriteDelay = turbo ? -14 : -8;
 #else
     const int paletteWait = 1;
     const int spriteDelay = 0;
 #endif
     PaletteData_StartFade(paletteData, PLTTBUF_MAIN_BG_F | PLTTBUF_MAIN_OBJ_F, 0xFFFF, paletteWait, initialAlpha, targetAlpha, 0);
     PokemonSpriteManager_StartFadeAll(BattleSystem_GetPokemonSpriteManager(battleSys), initialAlpha, targetAlpha, spriteDelay, 0);
-    PaletteData_StartFade(paletteData, PLTTBUF_SUB_BG_F | PLTTBUF_SUB_OBJ_F, 0xFFFF, -8, initialAlpha, targetAlpha, 0);
+    PaletteData_StartFade(paletteData, PLTTBUF_SUB_BG_F | PLTTBUF_SUB_OBJ_F, 0xFFFF, paletteWait < 0 ? paletteWait : -8, initialAlpha, targetAlpha, 0);
 }
 
 static BOOL BattleDisplay_IsSceneFadeComplete(BattleSystem *battleSys)
 {
     for (int i = 0; i < BattleSystem_GetMaxBattlers(battleSys); i++) {
         PokemonSprite *sprite = BattlerData_GetPokemonSprite(BattleSystem_GetBattlerData(battleSys, i));
-        if (sprite != NULL && PokemonSprite_IsFadeActive(sprite)) {
+        // Capture can delete a shrinking sprite before its fade finishes.
+        // Inactive sprites no longer tick their palettes and cannot finish it.
+        if (sprite != NULL && PokemonSprite_IsActive(sprite) && PokemonSprite_IsFadeActive(sprite)) {
             return FALSE;
         }
     }
@@ -1977,6 +1991,50 @@ static BOOL BattleDisplay_ShouldPlayShinyEntrance(BOOL isShiny)
     return isShiny;
 }
 
+static BOOL BattleDisplay_UpdateEncounterAnimation(MonEncounterData *data)
+{
+    if (data->state != 4) {
+        return FALSE;
+    }
+
+    // The encounter task is unscaled. Let the script own its animation steps
+    // before the task claims a single step for the entrance and animation waits.
+    BattleAnimSystem *battleAnimSys = BattleSystem_GetBattleAnimSystem(data->battleSys);
+    BattleAnimSystem_ExecuteScript(battleAnimSys);
+    if (!BattleAnimSystem_IsMoveActive(battleAnimSys)) {
+        BattleAnimSystem_FreeScriptData(battleAnimSys);
+        data->state = 0xFF;
+    }
+    return TRUE;
+}
+
+static void BattleDisplay_PlayEncounterCry(MonEncounterData *data, BOOL atEntranceStart)
+{
+    BOOL early = FALSE;
+#ifdef SDK_PORT
+    early = BwAdapter_FastIntro() && data->face == FACE_FRONT;
+#endif
+    // Fast wild Pokémon are already visible in BW2. Play their cry at the
+    // entrance start, once, instead of waiting for the hidden Platinum slide.
+    if (atEntranceStart != early) {
+        return;
+    }
+
+    u8 cryDelay = 0;
+    if (!early) {
+        PokemonSprite_LoadCryDelay(data->battlerData->narc, &cryDelay, data->species, data->battlerType);
+    }
+    Species_PlayDelayedCry(BattleSystem_GetChatotCry(data->battleSys, data->battler),
+        data->cryMod,
+        data->species,
+        data->formNum,
+        data->face == FACE_FRONT ? BATTLE_SOUND_PAN_RIGHT : BATTLE_SOUND_PAN_LEFT,
+        SOUND_VOLUME_MAX,
+        0,
+        HEAP_ID_BATTLE,
+        cryDelay);
+}
+
 static void Task_SetEncounterStep(SysTask *task, void *data)
 {
     MonEncounterData *monEncounterData = data;
@@ -1985,7 +2043,12 @@ static void Task_SetEncounterStep(SysTask *task, void *data)
 
     switch (monEncounterData->state) {
     case 0:
+        BattleDisplay_PlayEncounterCry(monEncounterData, TRUE);
+#ifdef SDK_PORT
+        monEncounterData->delay = BwAdapter_FastIntro() ? 1 : 28;
+#else
         monEncounterData->delay = 28;
+#endif
         monEncounterData->state++;
     case 1:
         if (--monEncounterData->delay) {
@@ -2028,17 +2091,7 @@ static void Task_SetEncounterStep(SysTask *task, void *data)
                 PokemonSprite_SetAttribute(monEncounterData->sprite, MON_SPRITE_X_CENTER, monEncounterData->targetPos);
                 PokemonSprite_LoadAnim(monEncounterData->battlerData->narc, BattleSystem_GetPokemonAnimManager(monEncounterData->battleSys), monEncounterData->sprite, monEncounterData->species, monEncounterData->face, 0, monEncounterData->battler);
 
-                u8 cryDelay;
-                PokemonSprite_LoadCryDelay(monEncounterData->battlerData->narc, &cryDelay, monEncounterData->species, monEncounterData->battlerType);
-                Species_PlayDelayedCry(BattleSystem_GetChatotCry(monEncounterData->battleSys, monEncounterData->battler),
-                    monEncounterData->cryMod,
-                    monEncounterData->species,
-                    monEncounterData->formNum,
-                    BATTLE_SOUND_PAN_RIGHT,
-                    SOUND_VOLUME_MAX,
-                    0,
-                    HEAP_ID_BATTLE,
-                    cryDelay);
+                BattleDisplay_PlayEncounterCry(monEncounterData, FALSE);
 
                 if (monEncounterData->battlerType == BATTLER_TYPE_SOLO_ENEMY || monEncounterData->battlerType == BATTLER_TYPE_ENEMY_SIDE_SLOT_1) {
                     ManagedSprite_SetPositionXY(monEncounterData->terrain->managedSprite, 24 * 8, 8 * 11);
@@ -2082,18 +2135,7 @@ static void Task_SetEncounterStep(SysTask *task, void *data)
                     0,
                     monEncounterData->battler);
 
-                u8 cryDelay;
-
-                PokemonSprite_LoadCryDelay(monEncounterData->battlerData->narc, &cryDelay, monEncounterData->species, monEncounterData->battlerType);
-                Species_PlayDelayedCry(BattleSystem_GetChatotCry(monEncounterData->battleSys, monEncounterData->battler),
-                    monEncounterData->cryMod,
-                    monEncounterData->species,
-                    monEncounterData->formNum,
-                    BATTLE_SOUND_PAN_LEFT,
-                    SOUND_VOLUME_MAX,
-                    0,
-                    HEAP_ID_BATTLE,
-                    cryDelay);
+                BattleDisplay_PlayEncounterCry(monEncounterData, FALSE);
 
                 if (monEncounterData->battlerType == BATTLER_TYPE_SOLO_PLAYER || monEncounterData->battlerType == BATTLER_TYPE_PLAYER_SIDE_SLOT_1) {
                     ManagedSprite_SetPositionXY(monEncounterData->terrain->managedSprite, 64, 128 + 8);
@@ -2104,6 +2146,14 @@ static void Task_SetEncounterStep(SysTask *task, void *data)
         }
         break;
     case 3:
+#ifdef SDK_PORT
+        // Platinum's sprite is hidden in the BW view; do not wait for its separate entrance animation.
+        if (BwAdapter_FastIntro()) {
+            PokemonAnimManager_DeleteAnim(BattleSystem_GetPokemonAnimManager(monEncounterData->battleSys), monEncounterData->battler);
+            monEncounterData->state = 0xFF;
+            break;
+        }
+#endif
         if (PokemonAnimManager_HasAnimCompleted(BattleSystem_GetPokemonAnimManager(monEncounterData->battleSys), monEncounterData->battler) == TRUE
             && PokemonSprite_IsAnimActive(monEncounterData->sprite) == FALSE) {
             if (BattleDisplay_ShouldPlayShinyEntrance(monEncounterData->isShiny)) {
@@ -2121,14 +2171,6 @@ static void Task_SetEncounterStep(SysTask *task, void *data)
             }
         }
         break;
-    case 4:
-        BattleAnimSystem_ExecuteScript(battleAnimSys);
-
-        if (BattleAnimSystem_IsMoveActive(battleAnimSys) == FALSE) {
-            BattleAnimSystem_FreeScriptData(battleAnimSys);
-            monEncounterData->state = 0xFF;
-        }
-        break;
     default:
         Sound_Set2PokemonCriesAllowed(FALSE);
         BattleController_EmitClearCommand(monEncounterData->battleSys, monEncounterData->battler, monEncounterData->command);
@@ -2143,6 +2185,9 @@ static void Task_SetEncounter(SysTask *task, void *data)
     MonEncounterData *monEncounterData = data;
     if (monEncounterData->state >= 3) {
         PokemonSprite_SetBattleSmoothingEnabled(monEncounterData->sprite, TRUE);
+    }
+    if (BattleDisplay_UpdateEncounterAnimation(monEncounterData)) {
+        return;
     }
     // The entrance delay and platform slide share the fast clock on both sides.
     // Once in position, Pokemon/trainer animation waits use the animation clock.
@@ -2197,18 +2242,7 @@ static void Task_SetGiratinaEncounterStep(SysTask *task, void *data)
                 0,
                 monEncounterData->battler);
 
-            u8 cryDelay;
-
-            PokemonSprite_LoadCryDelay(monEncounterData->battlerData->narc, &cryDelay, monEncounterData->species, monEncounterData->battlerType);
-            Species_PlayDelayedCry(BattleSystem_GetChatotCry(monEncounterData->battleSys, monEncounterData->battler),
-                monEncounterData->cryMod,
-                monEncounterData->species,
-                monEncounterData->formNum,
-                BATTLE_SOUND_PAN_RIGHT,
-                SOUND_VOLUME_MAX,
-                0,
-                HEAP_ID_BATTLE,
-                cryDelay);
+            BattleDisplay_PlayEncounterCry(monEncounterData, FALSE);
 
             ManagedSprite_SetPositionXY(monEncounterData->terrain->managedSprite, 24 * 8, 8 * 11);
             PokemonSprite_StartFade(monEncounterData->sprite, 8, 0, 0, 0);
@@ -2234,14 +2268,6 @@ static void Task_SetGiratinaEncounterStep(SysTask *task, void *data)
             }
         }
         break;
-    case 4:
-        BattleAnimSystem_ExecuteScript(battleAnimSys);
-
-        if (BattleAnimSystem_IsMoveActive(battleAnimSys) == FALSE) {
-            BattleAnimSystem_FreeScriptData(battleAnimSys);
-            monEncounterData->state = 0xFF;
-        }
-        break;
     default:
         Sound_Set2PokemonCriesAllowed(FALSE);
         BattleController_EmitClearCommand(monEncounterData->battleSys, monEncounterData->battler, monEncounterData->command);
@@ -2256,6 +2282,9 @@ static void Task_SetGiratinaEncounter(SysTask *task, void *data)
     MonEncounterData *monEncounterData = data;
     if (monEncounterData->state >= 3) {
         PokemonSprite_SetBattleSmoothingEnabled(monEncounterData->sprite, TRUE);
+    }
+    if (BattleDisplay_UpdateEncounterAnimation(monEncounterData)) {
+        return;
     }
     // The entrance delay and platform slide share the fast clock on both sides.
     // Once in position, Pokemon/trainer animation waits use the animation clock.
@@ -2314,6 +2343,15 @@ static void Task_ShowEncounter(SysTask *task, void *data)
         monShowData->state++;
         break;
     case 1:
+#ifdef SDK_PORT
+        // BW renders the visible ball effect. Do not start a second, hidden Platinum
+        // particle system whose lifetime would hold the command queue after the throw.
+        if (BwAdapter_FastIntro()) {
+            monShowData->ballCapsuleSealEffect = NULL;
+            monShowData->state++;
+            break;
+        }
+#endif
         BallCapsuleConfig ballCapCfg = { 0 };
 
         ballCapCfg.battlerType = monShowData->battlerType;
@@ -2328,7 +2366,7 @@ static void Task_ShowEncounter(SysTask *task, void *data)
             break;
         }
 
-        if (ov12_02236374(monShowData->ballCapsuleSealEffect) != 1) {
+        if (monShowData->ballCapsuleSealEffect != NULL && ov12_02236374(monShowData->ballCapsuleSealEffect) != 1) {
             break;
         }
 
@@ -2369,7 +2407,9 @@ static void Task_ShowEncounter(SysTask *task, void *data)
             PokemonSprite_StartFade(monShowData->battlerData->monSprite, 16, 16, 0, sFadeColors[monShowData->capturedBall]);
             PokemonSprite_SetAttribute(monShowData->battlerData->monSprite, MON_SPRITE_HIDE, FALSE);
 
-            ov12_022363B4(monShowData->ballCapsuleSealEffect);
+            if (monShowData->ballCapsuleSealEffect != NULL) {
+                ov12_022363B4(monShowData->ballCapsuleSealEffect);
+            }
 
 #ifdef SDK_PORT
             // BW2's send-out plays its own sound of the ball opening (BwAdapter_OnShowMon)
@@ -2397,7 +2437,7 @@ static void Task_ShowEncounter(SysTask *task, void *data)
             monShowData->state++;
         }
     case 4:
-        if (PokemonSprite_GetAttribute(monShowData->battlerData->monSprite, MON_SPRITE_SCALE_X) == 0x100 && ov12_022363C4(monShowData->ballCapsuleSealEffect) == 0) {
+        if (PokemonSprite_GetAttribute(monShowData->battlerData->monSprite, MON_SPRITE_SCALE_X) == 0x100 && (monShowData->ballCapsuleSealEffect == NULL || ov12_022363C4(monShowData->ballCapsuleSealEffect) == 0)) {
             if (monShowData->face == FACE_FRONT) {
                 PokemonSprite_InitAnim(monShowData->battlerData->monSprite, 1);
                 PokemonSprite_SetAttribute(monShowData->battlerData->monSprite, MON_SPRITE_SHADOW_IS_AFFINE, FALSE);
@@ -2451,16 +2491,29 @@ static void Task_ShowEncounter(SysTask *task, void *data)
         }
         break;
     case 5:
-        if (ov12_022363C4(monShowData->ballCapsuleSealEffect) == 0) {
+        if (monShowData->ballCapsuleSealEffect == NULL || ov12_022363C4(monShowData->ballCapsuleSealEffect) == 0) {
             monShowData->state = 6;
         }
         break;
     case 6:
+#ifdef SDK_PORT
+        // BW's visible send-out has its own timing. Finish the hidden Platinum animation now,
+        // while retaining ball/capsule cleanup. BW also owns the visible shiny sparkles.
+        if (BwAdapter_FastIntro()) {
+            PokemonAnimManager_DeleteAnim(BattleSystem_GetPokemonAnimManager(monShowData->battleSys), monShowData->battler);
+        }
+        if (BwAdapter_FastIntro()
+            || (PokemonAnimManager_HasAnimCompleted(BattleSystem_GetPokemonAnimManager(monShowData->battleSys), monShowData->battler) == TRUE
+                && PokemonSprite_IsAnimActive(monShowData->battlerData->monSprite) == FALSE)) {
+#else
         if (PokemonAnimManager_HasAnimCompleted(BattleSystem_GetPokemonAnimManager(monShowData->battleSys), monShowData->battler) == TRUE
             && PokemonSprite_IsAnimActive(monShowData->battlerData->monSprite) == FALSE) {
+#endif
             ov12_0223783C(monShowData->battlerData->ballRotation);
             monShowData->battlerData->ballRotation = NULL;
-            ov12_02236428(monShowData->ballCapsuleSealEffect);
+            if (monShowData->ballCapsuleSealEffect != NULL) {
+                ov12_02236428(monShowData->ballCapsuleSealEffect);
+            }
 
             if (BattleDisplay_ShouldPlayShinyEntrance(monShowData->isShiny)) {
                 MoveAnimation moveAnim;
@@ -2505,6 +2558,24 @@ const u8 sBallThrowTypes[] = {
     5
 };
 
+static void BattleDisplay_StartBreakoutEntrance(MonShowData *monShowData)
+{
+    if (monShowData->face == FACE_FRONT) {
+        PokemonSprite_SetAttribute(monShowData->battlerData->monSprite, MON_SPRITE_SHADOW_IS_AFFINE, FALSE);
+    }
+    BattleDisplay_PlaySendOutCry(monShowData);
+    if (!monShowData->fastBreakout) {
+        PokemonSprite_InitAnim(monShowData->battlerData->monSprite, 1);
+        PokemonSprite_LoadAnim(monShowData->battlerData->narc,
+            BattleSystem_GetPokemonAnimManager(monShowData->battleSys),
+            monShowData->battlerData->monSprite,
+            monShowData->species,
+            monShowData->face,
+            0,
+            monShowData->battler);
+    }
+}
+
 static void Task_ShowPokemon(SysTask *task, void *data)
 {
     MonShowData *monShowData = data;
@@ -2529,7 +2600,11 @@ static void Task_ShowPokemon(SysTask *task, void *data)
             ballThrow.mode = BALL_THROW_MODE_SEND_OUT;
         }
 
-        monShowData->ballRotation = ov12_02237728(&ballThrow);
+        BOOL fastBwBreakout = FALSE;
+#ifdef SDK_PORT
+        fastBwBreakout = monShowData->fastBreakout && BwAdapter_IsDrawing();
+#endif
+        monShowData->ballRotation = fastBwBreakout ? NULL : ov12_02237728(&ballThrow);
         PokemonSpriteManager *monSpriteMan = BattleSystem_GetPokemonSpriteManager(monShowData->battleSys);
         SpriteAnimFrame animFrames[MAX_ANIMATION_FRAMES];
 
@@ -2548,6 +2623,13 @@ static void Task_ShowPokemon(SysTask *task, void *data)
             &animFrames[0],
             NULL);
 
+        if (fastBwBreakout) {
+            // BW2 has already shown the breakout. Restore Platinum's backing
+            // sprite without replaying a hidden ball, seals and entrance animation.
+            BattleDisplay_PlaySendOutCry(monShowData);
+            monShowData->state = 8;
+            break;
+        }
         PokemonSprite_SetAttribute(monShowData->battlerData->monSprite, MON_SPRITE_SCALE_X, 0);
         PokemonSprite_SetAttribute(monShowData->battlerData->monSprite, MON_SPRITE_SCALE_Y, 0);
         PokemonSprite_SetAttribute(monShowData->battlerData->monSprite, MON_SPRITE_SHADOW_SHOULD_FOLLOW_Y, FALSE);
@@ -2608,48 +2690,14 @@ static void Task_ShowPokemon(SysTask *task, void *data)
         }
     case 4:
         if (PokemonSprite_GetAttribute(monShowData->battlerData->monSprite, MON_SPRITE_SCALE_X) == 0x100 && ov12_022363C4(monShowData->ballCapsuleSealEffect) == 0) {
-            if (monShowData->face == FACE_FRONT) {
-                PokemonSprite_InitAnim(monShowData->battlerData->monSprite, 1);
-                PokemonSprite_SetAttribute(monShowData->battlerData->monSprite, MON_SPRITE_SHADOW_IS_AFFINE, FALSE);
-
-                BattleDisplay_PlaySendOutCry(monShowData);
-            } else {
-                PokemonSprite_InitAnim(monShowData->battlerData->monSprite, 1);
-
-                BattleDisplay_PlaySendOutCry(monShowData);
-            }
-
-            PokemonSprite_LoadAnim(monShowData->battlerData->narc,
-                BattleSystem_GetPokemonAnimManager(monShowData->battleSys),
-                monShowData->battlerData->monSprite,
-                monShowData->species,
-                monShowData->face,
-                0,
-                monShowData->battler);
+            BattleDisplay_StartBreakoutEntrance(monShowData);
             PokemonSprite_StartFade(monShowData->battlerData->monSprite, 16, 0, 0, sFadeColors[monShowData->capturedBall]);
             monShowData->state = 5;
         } else if (PokemonSprite_GetAttribute(monShowData->battlerData->monSprite, MON_SPRITE_SCALE_X) >= 0x100) {
             PokemonSprite_SetAttribute(monShowData->battlerData->monSprite, MON_SPRITE_SCALE_X, 0x100);
             PokemonSprite_SetAttribute(monShowData->battlerData->monSprite, MON_SPRITE_SCALE_Y, 0x100);
 
-            if (monShowData->face == FACE_FRONT) {
-                PokemonSprite_InitAnim(monShowData->battlerData->monSprite, 1);
-                PokemonSprite_SetAttribute(monShowData->battlerData->monSprite, MON_SPRITE_SHADOW_IS_AFFINE, FALSE);
-
-                BattleDisplay_PlaySendOutCry(monShowData);
-            } else {
-                PokemonSprite_InitAnim(monShowData->battlerData->monSprite, 1);
-
-                BattleDisplay_PlaySendOutCry(monShowData);
-            }
-
-            PokemonSprite_LoadAnim(monShowData->battlerData->narc,
-                BattleSystem_GetPokemonAnimManager(monShowData->battleSys),
-                monShowData->battlerData->monSprite,
-                monShowData->species,
-                monShowData->face,
-                0,
-                monShowData->battler);
+            BattleDisplay_StartBreakoutEntrance(monShowData);
             PokemonSprite_StartFade(monShowData->battlerData->monSprite, 16, 0, 1, sFadeColors[monShowData->capturedBall]);
             monShowData->state = 5;
         } else {
@@ -2664,8 +2712,9 @@ static void Task_ShowPokemon(SysTask *task, void *data)
         }
         break;
     case 6:
-        if (PokemonAnimManager_HasAnimCompleted(BattleSystem_GetPokemonAnimManager(monShowData->battleSys), monShowData->battler) == TRUE
-            && PokemonSprite_IsAnimActive(monShowData->battlerData->monSprite) == FALSE) {
+        if (monShowData->fastBreakout
+            || (PokemonAnimManager_HasAnimCompleted(BattleSystem_GetPokemonAnimManager(monShowData->battleSys), monShowData->battler) == TRUE
+                && PokemonSprite_IsAnimActive(monShowData->battlerData->monSprite) == FALSE)) {
             ov12_0223783C(monShowData->ballRotation);
             ov12_02236428(monShowData->ballCapsuleSealEffect);
 
@@ -2905,7 +2954,13 @@ static void Task_SetTrainerEncounterStep(SysTask *task, void *data)
             ManagedSprite_SetAnim(trainerEncounterData->managedSprite, 2);
         }
 
+#ifdef SDK_PORT
+        // BW2 already presents the entrance. Match the shortened wild Pokémon setup
+        // instead of retaining the full entrance pause in this hidden task.
+        trainerEncounterData->delay = BwAdapter_FastIntro() ? 1 : 28;
+#else
         trainerEncounterData->delay = 28;
+#endif
         trainerEncounterData->state = 1;
     case 1:
         if (--trainerEncounterData->delay) {
@@ -3178,16 +3233,20 @@ static void Task_ThrowTrainerBall(SysTask *task, void *data)
             ManagedSprite_OffsetPositionXY(trainerThrowBallData->battlerData->managedSprite, 5, 0);
             ManagedSprite_GetPositionXY(trainerThrowBallData->battlerData->managedSprite, &x, &y);
 
-            if (x >= (256 - 48) - 48 && ov12_02237890(trainerThrowBallData->battlerData->ballRotation) != 0) {
+            // A fast send-out can free the ball before the trainer has left the screen.
+            if (x >= (256 - 48) - 48 && trainerThrowBallData->battlerData->ballRotation != NULL
+                && ov12_02237890(trainerThrowBallData->battlerData->ballRotation) != 0) {
                 ov12_02237E0C(trainerThrowBallData->battlerData->ballRotation, 1);
                 ov12_0223786C(trainerThrowBallData->battlerData->ballRotation, 0);
 
                 if (battleType & BATTLE_TYPE_DOUBLES && (battleType & BATTLE_TYPE_2vs2) == 0) {
                     BattlerData *battlerData = BattleSystem_GetBattlerData(trainerThrowBallData->battleSys, BattleSystem_GetPartner(trainerThrowBallData->battleSys, trainerThrowBallData->battler));
 
-                    ov12_02237E0C(battlerData->ballRotation, 1);
-                    ov12_0223786C(battlerData->ballRotation, 0);
-                    ov12_02237E4C(battlerData->ballRotation, 12);
+                    if (battlerData->ballRotation != NULL) {
+                        ov12_02237E0C(battlerData->ballRotation, 1);
+                        ov12_0223786C(battlerData->ballRotation, 0);
+                        ov12_02237E4C(battlerData->ballRotation, 12);
+                    }
                 }
             } else if (x >= (256 + 40)) {
                 SpriteManager *spriteMan = BattleSystem_GetSpriteManager(trainerThrowBallData->battleSys);
@@ -3225,10 +3284,12 @@ static void Task_ThrowTrainerBall(SysTask *task, void *data)
                     if (battleType & BATTLE_TYPE_DOUBLES && (battleType & BATTLE_TYPE_2vs2) == 0) {
                         BattlerData *battlerData = BattleSystem_GetBattlerData(trainerThrowBallData->battleSys, BattleSystem_GetPartner(trainerThrowBallData->battleSys, trainerThrowBallData->battler));
 
-                        ov12_02237E18(battlerData->ballRotation, x + v5[trainerThrowBallData->backSpriteIdx][animFrame][0], y + v5[trainerThrowBallData->backSpriteIdx][animFrame][1]);
-                        ov12_02237E0C(battlerData->ballRotation, 1);
-                        ov12_0223786C(battlerData->ballRotation, 0);
-                        ov12_02237E30(battlerData->ballRotation, 1);
+                        if (battlerData->ballRotation != NULL) {
+                            ov12_02237E18(battlerData->ballRotation, x + v5[trainerThrowBallData->backSpriteIdx][animFrame][0], y + v5[trainerThrowBallData->backSpriteIdx][animFrame][1]);
+                            ov12_02237E0C(battlerData->ballRotation, 1);
+                            ov12_0223786C(battlerData->ballRotation, 0);
+                            ov12_02237E30(battlerData->ballRotation, 1);
+                        }
                     }
                 }
             }
@@ -4337,7 +4398,7 @@ static void Task_PlayerShowBagMenu(SysTask *task, void *data)
         MessageLoader *msgLoader = BattleSystem_GetMessageLoader(bagMenuData->battleSys);
 
         bagMenuData->msgIdx = BattleMessage_Print(bagMenuData->battleSys, msgLoader, &battleMsg, BattleSystem_GetTextSpeed(bagMenuData->battleSys));
-        bagMenuData->delay = 30;
+        bagMenuData->delay = BattleTiming_PresentationDelay(30);
         bagMenuData->state++;
         break;
     case 10:
@@ -4438,7 +4499,7 @@ static void Task_PlayerShowBagMenu(SysTask *task, void *data)
 
         MessageLoader *msgLoader = BattleSystem_GetMessageLoader(bagMenuData->battleSys);
         bagMenuData->msgIdx = BattleMessage_Print(bagMenuData->battleSys, msgLoader, &battleMsg, BattleSystem_GetTextSpeed(bagMenuData->battleSys));
-        bagMenuData->delay = 30;
+        bagMenuData->delay = BattleTiming_PresentationDelay(30);
     }
         bagMenuData->state++;
         break;
@@ -4504,7 +4565,7 @@ static void Task_PlayerShowBagMenu(SysTask *task, void *data)
         }
 
         bagMenuData->msgIdx = BattleMessage_Print(bagMenuData->battleSys, msgLoader, &battleMsg, BattleSystem_GetTextSpeed(bagMenuData->battleSys));
-        bagMenuData->delay = 30;
+        bagMenuData->delay = BattleTiming_PresentationDelay(30);
 
         bagMenuData->state++;
     } break;
@@ -4592,7 +4653,7 @@ static void Task_PlayerShowBagMenu(SysTask *task, void *data)
 
         MessageLoader *msgLoader = BattleSystem_GetMessageLoader(bagMenuData->battleSys);
         bagMenuData->msgIdx = BattleMessage_Print(bagMenuData->battleSys, msgLoader, &battleMsg, BattleSystem_GetTextSpeed(bagMenuData->battleSys));
-        bagMenuData->delay = 30;
+        bagMenuData->delay = BattleTiming_PresentationDelay(30);
     }
         bagMenuData->state++;
         break;
@@ -5450,10 +5511,23 @@ static void Task_FadeOut(SysTask *task, void *data)
 
     switch (fadeOutData->state) {
     case 0:
+        int paletteWait = 1;
+        int spriteDelay = 0;
+        int fadeFrames = 16;
+        if (!(BattleSystem_GetBattleType(fadeOutData->battleSys) & BATTLE_TYPE_LINK)) {
+            fadeFrames = BattleTiming_ExitDelay(fadeFrames);
+            if (fadeFrames < 16) {
+                // Palette wait 0 removes alternate-frame holds; negative waits
+                // increase the blend step. Sprite fades use negative delays too.
+                // Step 15 is the largest the palette's four-bit field can hold.
+                paletteWait = fadeFrames == 8 ? 0 : -13;
+                spriteDelay = fadeFrames == 8 ? -1 : -14;
+            }
+        }
         sub_02015738(BattleSystem_GetPaletteAnimator(fadeOutData->battleSys), 1);
-        PaletteData_StartFade(paletteData, PLTTBUF_MAIN_BG_F | PLTTBUF_SUB_BG_F | PLTTBUF_MAIN_OBJ_F | PLTTBUF_SUB_OBJ_F, 0xFFFF, 1, 0, 16, 0);
-        PokemonSpriteManager_StartFadeAll(monSpriteMan, 0, 16, 0, 0);
-        Sound_FadeOutBGM(0, 16);
+        PaletteData_StartFade(paletteData, PLTTBUF_MAIN_BG_F | PLTTBUF_SUB_BG_F | PLTTBUF_MAIN_OBJ_F | PLTTBUF_SUB_OBJ_F, 0xFFFF, paletteWait, 0, 16, 0);
+        PokemonSpriteManager_StartFadeAll(monSpriteMan, 0, 16, spriteDelay, 0);
+        Sound_FadeOutBGM(0, fadeFrames);
         fadeOutData->state++;
     case 1:
         if (PaletteData_GetSelectedBuffersMask(paletteData) == 0 && BattleDisplay_IsSceneFadeComplete(fadeOutData->battleSys)) {
@@ -5605,7 +5679,7 @@ static void Task_WaitForAlertMessagePrint(SysTask *task, void *data)
         }
         break;
     case 1:
-        if (++alertMsgData->delay == 40) {
+        if (++alertMsgData->delay >= BattleTiming_PresentationDelay(40)) {
             BattleController_EmitAlertMessageAck(alertMsgData->battleSys, alertMsgData->battler);
             BattleController_EmitClearCommand(alertMsgData->battleSys, alertMsgData->battler, alertMsgData->command);
             Heap_Free(data);

@@ -77,23 +77,24 @@ The **Axis deadzone** slider applies to all mapped controller axes and saves aut
 
 ### Settings
 
-The default layout shows one screen, with 60 FPS and Smooth battle pacing enabled, and Normal Battle UI & Timing disabled by default. Speed correction is automatic at 60 FPS. Existing configuration files may override these defaults.
+The default layout shows one screen, with 60 FPS, Smooth battle pacing, Fast text, and Fast HP/EXP bars. Speed correction is automatic at 60 FPS. Existing configuration files may override these defaults.
 
 Press **Tab** to open a centered settings panel. Categories replace the current page; tools stay inside the panel instead of opening overlapping windows. The menu remembers your category and page scroll positions during the session.
 
-- **General:** fullscreen, internal rendering resolution, menu scale, master volume, fast-forward speed, and ROM information and BW2 battle visuals.
-- **Graphics:** VSync, frame cap, frame rate (30/60 FPS), battle pacing, battle UI timing, lighting, atmosphere, shadows, water, weather, and bloom. Smooth pacing keeps original animation timing with sprite interpolation; Quick speeds up battle effects. Normal Battle UI & Timing keeps HP/EXP bars, messages, and UI delays at normal speed.
+- **General:** fullscreen, menu scale, master volume and ROM information and BW2 battle visuals.
+- **Graphics:** internal rendering resolution, VSync, frame cap, lighting, atmosphere, shadows, water, weather, and bloom.
+- **Speed & text:** fast-forward speed, fast wild battle intros for BW2 visuals, independent battle pacing, text speed and HP/EXP bar speed. Smooth pacing keeps original effect timing with sprite interpolation; Quick speeds up effects; Turbo runs effects at 3× speed with minimal presentation pauses and near-instant fades. Text offers Normal, Fast, Faster, and Instant; bars offer Normal, Fast, and Faster. Text speed overrides the in-game setting in and out of battle. These controls work with Platinum and BW2 visuals; see [battle speed settings](docs/battle_speed.md).
 - **Controls:** keyboard and controller mappings, primary/secondary directions, axis deadzone, and PC shortcuts. Select a binding and press the new input; Escape cancels. Binding capture keeps the window responsive.
 - **Gameplay:** all gameplay overrides, grouped into battle rules, moves/tutors, evolution/eggs, encounters/events, and progression/prices. Edit the values, choose **Save changes**, and restart the game. **Reload / discard** reloads the file; **Defaults** stages the built-in defaults until you save. See [gameplay configuration](docs/gameplay_config.md).
 - **Cheats & tools:** cheats, Pokétch unlocks, Pokémon/item creation, and map jumping. Creation and travel require normal overworld control.
 - **Multiplayer:** host/connect settings and player information.
-- **Developer:** screen layout and screen swap, frame/GPU timings, lighting previews, assertions, build information, and the optional ImGui demo.
+- **Developer:** frame rate (30/60 FPS), screen layout and screen swap, frame/GPU timings, lighting previews, assertions, build information, and the optional ImGui demo.
 
 **Pause while open** is disabled by default. Enable it to pause the game while settings are open. Closing with Tab, Escape, or Resume clears automatic menu pause. Developer → Manual pause is independent and remains active after closing the panel. Automatic pause is suspended while hosting or connected to multiplayer; menu input is still kept out of gameplay. Escape cancels a binding/dialog or returns from a tool before closing settings.
 
 **General → Menu scale** offers Auto and 100–200% in 25% steps. Auto uses the display scale reported by SDL; use the manual override if your desktop's scale is not reported correctly. Fonts, spacing, controls, and dialogs scale together. Internal rendering resolution changes game sharpness independently. On smaller windows or at larger menu scales, categories collapse into a picker and page content scrolls.
 
-PC settings save automatically to **sim_config.ini** and **sim_config_prj.ini**. The new **[Interface]** section in sim_config.ini stores **MenuScalePercent** (0 for Auto) and **PauseWhileOpen**; existing files without these settings inherit Auto and no automatic pause. Gameplay overrides use the Gameplay page's **Save changes** button and load from **gameplay_config.ini** at startup. If performance is poor, lower the internal resolution under General.
+PC settings save automatically to **sim_config.ini** and **sim_config_prj.ini**. The new **[Interface]** section in sim_config.ini stores **MenuScalePercent** (0 for Auto) and **PauseWhileOpen**; existing files without these settings inherit Auto and no automatic pause. Gameplay overrides use the Gameplay page's **Save changes** button and load from **gameplay_config.ini** at startup. If performance is poor, lower the internal resolution under Graphics.
 
 ## Saves
 

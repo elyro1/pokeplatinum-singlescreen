@@ -11,6 +11,11 @@
 BOOL BwAdapter_IsEnabled(void);
 // Whether this battle runs BW2's view (BwAdapter_BattleCreate succeeded)
 BOOL BwAdapter_IsActive(void);
+// Whether this battle uses the shortened opening presentation.
+BOOL BwAdapter_FastIntro(void);
+// Remains true after the opening, for first-turn scheduling.
+BOOL BwAdapter_UsedFastIntro(void);
+void BwAdapter_EndIntro(void);
 // Whether the view draws the battle now: active and not waiting for Platinum (BwAdapter_SetSuspended)
 BOOL BwAdapter_IsDrawing(void);
 

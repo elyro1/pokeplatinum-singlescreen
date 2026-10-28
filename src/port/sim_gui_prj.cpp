@@ -60,6 +60,7 @@ static void ToolsContents() {
 void ProjectPage(Page page) {
     switch (page) {
     case Page::Graphics: GraphicsContents(); break;
+    case Page::SpeedText: BattleSpeedContents(); break;
     case Page::General: GeneralContentsPrj(); break;
     case Page::Gameplay: GameplayContents(); break;
     case Page::Tools: ToolsContents(); break;

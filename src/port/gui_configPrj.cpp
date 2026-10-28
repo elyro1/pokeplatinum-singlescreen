@@ -20,10 +20,10 @@ extern "C" {
 
 namespace SIM::GUI {
 
-static void ConfigCheckBox(const char *label, BOOL *configVar, bool &configChanged)
+static void ConfigCheckBox(const char *label, BOOL *configVar, bool &configChanged, bool available = true)
 {
     SettingsRow(label);
-    bool checked = *configVar != FALSE;
+    bool checked = available && *configVar != FALSE;
     ImGui::PushID(configVar);
     if (ImGui::Checkbox("##Enabled", &checked)) {
         *configVar = checked ? TRUE : FALSE;
@@ -35,36 +35,50 @@ static void ConfigCheckBox(const char *label, BOOL *configVar, bool &configChang
 static std::string sBw2ExtractMessage;
 static std::string sHgssExtractMessage;
 
-static void BattleSpeedContents() {
+void BattleSpeedContents() {
     SIM_Config_prj_type * myConfig = SIM_Config_prj_GetConfig();
     bool configChanged = false;
 
     if (!BeginSettings("BattleSpeed")) return;
-    SettingsRow("Frame rate");
-    int frameRate = myConfig->enable60fps ? 1 : 0;
-    if (ImGui::Combo("##FrameRate", &frameRate, "30 FPS\0" "60 FPS\0")) {
-        myConfig->enable60fps = frameRate == 1;
-        configChanged = true;
-    }
+    ConfigCheckBox("Fast wild battle intro", &myConfig->fastWildBattleIntro, configChanged);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Shortens eligible wild battle openings with BW2 battle visuals. Applies to the next battle.");
     ImGui::BeginDisabled(!myConfig->enable60fps);
-    SettingsRow("Battle pacing");
+    SettingsRow("Battle pacing", "Battle effects and presentation pauses.");
     int pacing = myConfig->battlePacing;
-    if (ImGui::Combo("##Pacing", &pacing, "Original\0Smooth\0Quick\0")) {
+    if (ImGui::Combo("##Pacing", &pacing, "Smooth\0Quick\0Turbo\0")) {
         myConfig->battlePacing = static_cast<BattlePacing>(pacing);
         configChanged = true;
     }
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-        ImGui::SetTooltip("Original: original animation timing.\n"
-            "Smooth: original animation timing with sprite interpolation.\n"
-            "Quick: faster battle animations.\n"
-            "UI timing is controlled separately. At 30 FPS all presets use original timing.\n"
-            "Interpolation adds up to one animation tick of visual delay.");
-    }
-    ConfigCheckBox("Normal Battle UI & Timing", &myConfig->battleUiSpeedFix, configChanged);
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-        ImGui::SetTooltip("Keep HP/EXP bars, messages and battle UI delays at normal speed at 60 FPS, independently of Battle pacing.");
+        ImGui::SetTooltip("Smooth: original effect durations with sprite interpolation.\n"
+            "Quick: 2x effects. Turbo: 3x effects, minimal pauses and near-instant fades.\n"
+            "Text and HP/EXP bar speeds are independent. Requires 60 FPS.");
     }
     ImGui::EndDisabled();
+    SettingsRow("Text speed", "Overrides the in-game text setting.");
+    const PortSpeed textSpeeds[] = { PORT_SPEED_NORMAL, PORT_SPEED_FAST, PORT_SPEED_FASTER, PORT_SPEED_INSTANT };
+    int textSpeed = myConfig->textSpeed == PORT_SPEED_NORMAL ? 0 : static_cast<int>(myConfig->textSpeed) + 1;
+    if (ImGui::Combo("##TextSpeed", &textSpeed, "Normal\0Fast\0Faster\0Instant\0")) {
+        myConfig->textSpeed = textSpeeds[textSpeed];
+        configChanged = true;
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Normal matches the in-game Normal text speed. Applies in and out of battle.\n"
+            "Faster reveals text twice as fast as Fast.\n"
+            "Instant reveals each page immediately, keeping prompts and scripted pauses.");
+    }
+    SettingsRow("HP/EXP bar speed", "Damage, healing and experience.");
+    const PortSpeed barSpeeds[] = { PORT_SPEED_NORMAL, PORT_SPEED_FAST, PORT_SPEED_FASTER };
+    int barSpeed = myConfig->battleBarSpeed == PORT_SPEED_NORMAL ? 0 : static_cast<int>(myConfig->battleBarSpeed) + 1;
+    if (ImGui::Combo("##BarSpeed", &barSpeed, "Normal\0Fast\0Faster\0")) {
+        myConfig->battleBarSpeed = barSpeeds[barSpeed];
+        configChanged = true;
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Normal: half the speed of Fast. Faster: shorter changes.\n"
+            "Independent of battle pacing and text.");
+    }
     ImGui::EndTable();
 
     if (configChanged) {
@@ -77,7 +91,7 @@ void GraphicsContents()
     SIM_Config_prj_type *myConfig = SIM_Config_prj_GetConfig();
     bool configChanged = false;
 
-    BattleSpeedContents();
+    ImGui::SeparatorText("Visual effects");
     if (!BeginSettings("GraphicsSettings")) return;
     ConfigCheckBox("Richer day/night lighting", &myConfig->enhancedDayNight, configChanged);
     ConfigCheckBox("Regional atmosphere", &myConfig->regionalAtmosphere, configChanged);
@@ -105,7 +119,7 @@ void GeneralContentsPrj()
 {
     SIM_Config_prj_type *myConfig = SIM_Config_prj_GetConfig();
     bool configChanged = false;
-    ImGui::SeparatorText("ROMs");
+    ImGui::SeparatorText("Black 2 / White 2 ROM features");
     bool ready = BwBattle_AssetsReady();
     if (BeginSettings("BattleVisuals")) {
         ImGui::BeginDisabled(!ready);
@@ -122,27 +136,31 @@ void GeneralContentsPrj()
         }
         ImGui::EndTable();
     }
-    ImGui::TextWrapped("Uses graphics from your own US Black 2 / White 2 ROM. Changes apply to the next battle.");
     if (!sBw2ExtractMessage.empty()) ImGui::TextWrapped("%s", sBw2ExtractMessage.c_str());
     if (!ready) ImGui::TextWrapped("BW2 battle graphics not extracted.");
     else if (!BwBattle_IrisAssetsReady() || !BwBattle_IrisVsReady())
         ImGui::TextWrapped("Re-extract your BW2 ROM to enable all Iris graphics.");
 
+    ImGui::SeparatorText("HeartGold / SoulSilver ROM features");
     bool hgssReady = HgssAssets_Ready();
     if (BeginSettings("OverworldPokemon")) {
         ImGui::BeginDisabled(!hgssReady);
-        ConfigCheckBox("Overworld encounters", &myConfig->overworldEncounters, configChanged);
-        ConfigCheckBox("Pokémon follower", &myConfig->pokemonFollower, configChanged);
+        ConfigCheckBox("Overworld encounters", &myConfig->overworldEncounters, configChanged, hgssReady);
         ImGui::EndDisabled();
         const char *label = hgssReady ? "Re-extract HG/SS ROM..." : "Select HG/SS ROM...";
+        const float buttonWidth = ImGui::CalcTextSize(label).x + ImGui::GetStyle().FramePadding.x * 2;
+        if (ImGui::GetContentRegionAvail().x >= ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.x + buttonWidth)
+            ImGui::SameLine();
         if (ImGui::Button(label)) {
             OpenFileDialog([](std::string path) {
                 sHgssExtractMessage = HgssAssets_Extract(path.c_str());
             });
         }
+        ImGui::BeginDisabled(!hgssReady);
+        ConfigCheckBox("Pokémon follower", &myConfig->pokemonFollower, configChanged, hgssReady);
+        ImGui::EndDisabled();
         ImGui::EndTable();
     }
-    ImGui::TextWrapped("Uses overworld Pokémon graphics from your own HeartGold / SoulSilver ROM. Changes apply when you resume the game.");
     if (!sHgssExtractMessage.empty()) ImGui::TextWrapped("%s", sHgssExtractMessage.c_str());
     if (!hgssReady) ImGui::TextWrapped("HG/SS overworld graphics not extracted.");
 
@@ -157,6 +175,16 @@ void DeveloperContentsPrj()
 {
     auto *myConfig = SIM_Config_prj_GetConfig();
     bool configChanged = false;
+    ImGui::SeparatorText("Frame rate");
+    if (BeginSettings("FrameRateSettings")) {
+        SettingsRow("Frame rate");
+        int frameRate = myConfig->enable60fps ? 1 : 0;
+        if (ImGui::Combo("##FrameRate", &frameRate, "30 FPS\0" "60 FPS\0")) {
+            myConfig->enable60fps = frameRate == 1;
+            configChanged = true;
+        }
+        ImGui::EndTable();
+    }
     ImGui::SeparatorText("Assertions");
     if (BeginSettings("Assertions")) {
         ConfigCheckBox("Enable GF_Asserts", &myConfig->enableAsserts, configChanged);

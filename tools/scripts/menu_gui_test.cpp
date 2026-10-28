@@ -8,13 +8,16 @@
 #include "imgui_internal.h"
 #include "gui_internal.hpp"
 #include "port/gameplay_config.h"
+#include "port/sim_config_prj.h"
 
 #include <cassert>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <string>
+#include <vector>
 
 static SIM_config_type config;
 static SDL_Window *window;
@@ -29,6 +32,12 @@ u64 SIM_GetFullFrameTime() { return 16666666; }
 u64 SIM_GetRenderFrameTime() { return 5000000; }
 const char *SIM_GetGraphicsRenderer() { return "Menu test"; }
 const char *SIM_GetLibntrGitHash() { return "test"; }
+const char *SIM_GetProjectGitHash() { return "test"; }
+void SIM_SetRenderGpuProfiling(BOOL) {}
+float SIM_GetRenderGpuMs() { return 0; }
+int SIM_GetRenderGpuSampleAge() { return 0; }
+void SIM_SetWaterProfiling(BOOL) {}
+float SIM_GetWaterGpuMs() { return 0; }
 void SIM_SetInternalResolutionAfterRender(int scale) { config.internalResolutionScale = scale; }
 void SIM_Audio_SetMasterVolume(int) {}
 SIM_Net_State_t SIM_Net_GetCurrentState() { return netState; }
@@ -40,7 +49,13 @@ BOOL SIM_Net_StartClient(char *) { netState = SIM_NET_STATE_CLIENT; return TRUE;
 }
 namespace SIM::GUI {
 void GameplayContents();
-void ProjectPage(Page page) { if (page == Page::Gameplay) GameplayContents(); }
+void GraphicsContents();
+void BattleSpeedContents();
+void ProjectPage(Page page) {
+    if (page == Page::Gameplay) GameplayContents();
+    if (page == Page::Graphics) GraphicsContents();
+    if (page == Page::SpeedText) BattleSpeedContents();
+}
 bool ProjectBack(Page) { if (!manualBack) return false; manualBack = false; return true; }
 }
 
@@ -55,9 +70,28 @@ static bool Key(SDL_Keycode key, bool down = true, bool repeat = false) {
 }
 
 static void Frame() {
+    glClearColor(.035f, .045f, .065f, 1);
+    glClear(GL_COLOR_BUFFER_BIT);
     SIM::GUI::NewFrame();
     SIM::GUI::Main();
     SIM::GUI::Render();
+}
+
+static void Capture(const char *name) {
+    const char *directory = std::getenv("MENU_GUI_CAPTURE_DIR");
+    if (!directory) return;
+    int width, height;
+    SDL_GL_GetDrawableSize(window, &width, &height);
+    std::vector<unsigned char> pixels(width * height * 3);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+    const std::string path = std::string(directory) + "/" + name + ".ppm";
+    FILE *file = std::fopen(path.c_str(), "wb");
+    assert(file);
+    std::fprintf(file, "P6\n%d %d\n255\n", width, height);
+    for (int y = height - 1; y >= 0; --y)
+        assert(std::fwrite(pixels.data() + y * width * 3, 3, width, file) == width);
+    assert(std::fclose(file) == 0);
 }
 
 static ImGuiWindow *Panel() {
@@ -114,9 +148,38 @@ static void StartKeyboardCapture() {
     assert(SIM::GUI::AppPadIsCapturing());
 }
 
+static void CheckBarSpeedControl() {
+    ImGuiWindow *page = nullptr;
+    for (auto *candidate : ImGui::GetCurrentContext()->Windows)
+        if (candidate->Active && candidate->ParentWindow == Panel() &&
+            std::string(candidate->Name).find("/Page_") != std::string::npos)
+            page = candidate;
+    assert(page);
+    auto *table = ImGui::GetCurrentContext()->Tables.GetByKey(page->GetID("BattleSpeed"));
+    assert(table && table->ColumnsCount == 2);
+    // HP/EXP is the last row. Use the actual table geometry, not screen coordinates.
+    float x = table->Columns[1].WorkMinX + 20;
+    float y = table->RowPosY1 + ImGui::GetStyle().CellPadding.y + ImGui::GetFrameHeight() / 2;
+    Mouse(x, y, true); Mouse(x, y, false);
+    Key(SDLK_DOWN); Frame(); Key(SDLK_DOWN, false); Frame();
+    Key(SDLK_DOWN); Frame(); Key(SDLK_DOWN, false); Frame();
+    Key(SDLK_RETURN); Frame(); Key(SDLK_RETURN, false); Frame();
+    auto *projectConfig = SIM_Config_prj_GetConfig();
+    assert(projectConfig->battleBarSpeed == PORT_SPEED_NORMAL);
+    assert(projectConfig->textSpeed == PORT_SPEED_FAST);
+    assert(projectConfig->battlePacing == BATTLE_PACING_SMOOTH);
+    // Selection automatically persists without changing the other speed controls.
+    SIM_Config_prj_LoadDefaults(projectConfig);
+    assert(SIM_Config_prj_LoadConfigFile(projectConfig));
+    assert(projectConfig->battleBarSpeed == PORT_SPEED_NORMAL);
+    assert(projectConfig->textSpeed == PORT_SPEED_FAST);
+    assert(projectConfig->battlePacing == BATTLE_PACING_SMOOTH);
+}
+
 int main() {
     using namespace SIM::GUI;
     GameplayConfig_Init();
+    SIM_Config_prj_LoadDefaults(SIM_Config_prj_GetConfig());
     SIM_Config_LoadDefaults(&config);
     assert(config.menuScalePercent == 0 && !config.pauseWhileMenuOpen);
     // Old configs inherit readable-menu defaults.
@@ -161,6 +224,11 @@ int main() {
     assert(Key(SDLK_TAB, true, true) && IsEnabled()); // Holding TAB must not flicker.
     Key(SDLK_TAB, false);
     Frame(); Frame();
+
+    SelectPage(Page::SpeedText);
+    Frame(); Frame();
+    Capture("battle-speed-1024");
+    CheckBarSpeedControl();
 
     // Both pause modes and an active connection still isolate gameplay input.
     assert(Key(SDLK_z) && Key(SDLK_z, false));

@@ -62,6 +62,7 @@ void BtlvEffect_Main(void);
 // bwbattle: a frame of the view's logic, without drawing (BtlvEffect_Main draws the frame after it)
 void BtlvEffect_Step(BOOL tickIdle);
 BOOL BtlvEffect_ShouldTickIdle(void);
+BOOL BtlvEffect_StartFastWildSendOut(void);
 #endif
 
 // Effects started by number, at positions or for a move; one started while another runs waits in a task

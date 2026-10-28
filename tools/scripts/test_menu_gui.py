@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--build', type=Path, default=ROOT / 'build_linux')
+    parser.add_argument('--capture-dir', type=Path, help='Optional directory for menu screenshots (PPM).')
     args = parser.parse_args()
     build = args.build.resolve()
     commands = json.loads((build / 'compile_commands.json').read_text())
@@ -31,18 +32,26 @@ def main():
             str(ROOT / 'subprojects/libntr/libraries/sim/src/config/sim_config.c'),
             '-o', str(config)], cwd=build, check=True)
         cpp = flags_for('/sim_gui.cpp')
+        graphics = temp / 'graphics.o'
+        subprocess.run(flags_for('/port/gui_configPrj.cpp') + [
+            '-ffunction-sections', '-fdata-sections', '-c',
+            str(ROOT / 'src/port/gui_configPrj.cpp'), '-o', str(graphics)], cwd=build, check=True)
         test = temp / 'test.o'
         subprocess.run(cpp + [f'-I{ROOT / "include"}', '-UNDEBUG', '-c', str(ROOT / 'tools/scripts/menu_gui_test.cpp'),
                              '-o', str(test)], cwd=build, check=True)
         sdl = shlex.split(subprocess.check_output(['pkg-config', '--libs', 'sdl2'], text=True))
         executable = temp / 'menu-test'
-        subprocess.run([cpp[0], str(test), str(config),
+        subprocess.run([cpp[0], str(test), str(config), str(graphics),
+                        str(build / 'main.p/src_port_sim_config_prj.c.o'),
                         str(build / 'main.p/src_port_gameplay_config.c.o'),
                         str(build / 'main.p/src_port_gameplay_config_editor.cpp.o'),
                         str(build / 'main.p/src_port_gui_gameplay.cpp.o'),
                         str(build / 'subprojects/libntr/libraries/sim/libsim.a'),
                         '-Wl,--gc-sections', *sdl, '-ldl', '-o', str(executable)], check=True)
         env = dict(os.environ, SDL_VIDEODRIVER='offscreen', SDL_AUDIODRIVER='dummy')
+        if args.capture_dir:
+            args.capture_dir.mkdir(parents=True, exist_ok=True)
+            env['MENU_GUI_CAPTURE_DIR'] = str(args.capture_dir.resolve())
         subprocess.run([str(executable)], cwd=temp, env=env, check=True, timeout=60)
 
 

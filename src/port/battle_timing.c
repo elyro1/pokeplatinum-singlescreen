@@ -5,34 +5,30 @@
 static BOOL sActive;
 static u32 sVisualEpoch = 1;
 static BOOL sSmooth;
+static BattlePacing sPacing;
+static BOOL sExtraAnimationStep;
 static u32 sFrame = 1;
 static BOOL sTick = TRUE;
-static BOOL sAnimationFix;
-static BOOL sUiFix;
 static BattleTimingDomain sDomain;
 
 static void ReadPolicy(void)
 {
     const SIM_Config_prj_type *config = SIM_Config_prj_GetConfig();
-    BOOL animationFix = config->enable60fps && config->battlePacing != BATTLE_PACING_QUICK;
-    BOOL uiFix = config->enable60fps && config->battleUiSpeedFix;
-    BOOL smooth = animationFix && config->battlePacing == BATTLE_PACING_SMOOTH;
-    if (smooth != sSmooth || animationFix != sAnimationFix || uiFix != sUiFix) {
+    BOOL smooth = config->enable60fps && config->battlePacing == BATTLE_PACING_SMOOTH;
+    if (smooth != sSmooth || config->battlePacing != sPacing) {
         sVisualEpoch++;
-    }
-    sSmooth = smooth;
-    if (animationFix != sAnimationFix || uiFix != sUiFix) {
         // A live change keeps task state and starts a fresh reference tick.
         sTick = TRUE;
     }
-    sAnimationFix = animationFix;
-    sUiFix = uiFix;
+    sSmooth = smooth;
+    sPacing = config->battlePacing;
 }
 
 void BattleTiming_SetActive(BOOL active)
 {
     sVisualEpoch++;
     sActive = active;
+    sExtraAnimationStep = FALSE;
     sTick = TRUE;
     ReadPolicy();
 }
@@ -66,17 +62,62 @@ BOOL BattleTiming_ShouldSmoothAnimations(void)
 
 BOOL BattleTiming_ShouldTick(BattleTimingDomain domain)
 {
-    if (!sActive || sTick) {
-        return TRUE;
+    return BattleTiming_StepCount(domain) != 0;
+}
+
+int BattleTiming_StepCount(BattleTimingDomain domain)
+{
+    if (sExtraAnimationStep) {
+        return domain == BATTLE_TIMING_ANIMATION;
     }
-    switch (domain) {
-    case BATTLE_TIMING_ANIMATION:
-        return !sAnimationFix;
-    case BATTLE_TIMING_UI:
-        return !sUiFix;
-    default:
-        return TRUE;
+    if (!sActive || domain != BATTLE_TIMING_ANIMATION) {
+        return 1;
     }
+    if (sSmooth) {
+        return sTick ? 1 : 0;
+    }
+    const SIM_Config_prj_type *config = SIM_Config_prj_GetConfig();
+    if (sDomain != BATTLE_TIMING_ANIMATION && config->enable60fps && sPacing == BATTLE_PACING_TURBO) {
+        return sTick ? 2 : 1;
+    }
+    return 1;
+}
+
+BOOL BattleTiming_IsExtraAnimationStep(void)
+{
+    return sExtraAnimationStep;
+}
+
+BOOL BattleTiming_SetExtraAnimationStep(BOOL extra)
+{
+    BOOL previous = sExtraAnimationStep;
+    sExtraAnimationStep = extra;
+    return previous;
+}
+
+int BattleTiming_PresentationDelay(int frames)
+{
+    const SIM_Config_prj_type *config = SIM_Config_prj_GetConfig();
+    if (sActive && config->enable60fps && config->battlePacing == BATTLE_PACING_TURBO) {
+        int delay = (frames + 3) / 4;
+        return delay > 4 ? 4 : delay;
+    }
+    return frames;
+}
+
+int BattleTiming_ExitDelay(int frames)
+{
+    const SIM_Config_prj_type *config = SIM_Config_prj_GetConfig();
+    if (sActive && config->enable60fps) {
+        if (config->battlePacing == BATTLE_PACING_QUICK) {
+            return (frames + 1) / 2;
+        }
+        if (config->battlePacing == BATTLE_PACING_TURBO) {
+            int delay = (frames + 3) / 4;
+            return delay > 2 ? 2 : delay;
+        }
+    }
+    return frames;
 }
 
 BattleTimingDomain BattleTiming_GetDomain(void)

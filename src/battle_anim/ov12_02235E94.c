@@ -118,6 +118,9 @@ typedef struct BallRotation {
     PaletteFadeContext *unk_D4;
     BattleMonOBJData *unk_D8;
     int unk_DC;
+#ifdef SDK_PORT
+    u32 completedCaptureStates;
+#endif
 } BallRotation;
 
 static void ov12_022363CC(SysTask *param0, void *param1);
@@ -1086,10 +1089,24 @@ void ov12_022368C8(BallRotation *param0, int param1)
 {
     param0->unk_00 = param1;
     param0->unk_04 = 0;
+#ifdef SDK_PORT
+    // Completion milestones must survive Turbo's second animation step until
+    // the unscaled capture controller observes them. Each new command consumes
+    // the previous milestones, including repeated shakes.
+    param0->completedCaptureStates = 0;
+#endif
 }
 
 BOOL ov12_022368D0(BallRotation *param0, int param1)
 {
+#ifdef SDK_PORT
+    static const u8 completeStates[] = { 2, 4, 6, 14, 18, 27, 22, 27 };
+    if (param0->unk_90.mode == BALL_THROW_MODE_THROW
+        && (param0->completedCaptureStates & (1u << completeStates[param0->unk_00]))) {
+        // A late first poll must not restart an already completed phase.
+        return FALSE;
+    }
+#endif
     BOOL v0 = Unk_ov12_0223AB9C[param0->unk_00](param0);
     return v0;
 }
@@ -1097,6 +1114,11 @@ BOOL ov12_022368D0(BallRotation *param0, int param1)
 static void ov12_022368E4(BallRotation *param0, int param1)
 {
     param0->unk_14 = param1;
+#ifdef SDK_PORT
+    if (param0->unk_90.mode == BALL_THROW_MODE_THROW) {
+        param0->completedCaptureStates |= 1u << param1;
+    }
+#endif
     param0->unk_08 = 0;
     param0->unk_0C = 0;
     param0->unk_10 = 0;
@@ -1997,14 +2019,23 @@ static void ov12_022376D0(SysTask *param0, void *param1)
         return;
     }
 
-    v0 = Unk_ov12_0223AB84[v1->unk_90.mode](v1);
-
-    if (v0 == 0) {
-        v1->unk_1C = 0;
+    int steps = 1;
+#ifdef SDK_PORT
+    // The BW opening owns the visible throw. Let Platinum's hidden ball finish
+    // promptly so it cannot delay the first command menu after BW has finished.
+    if (BwAdapter_FastIntro()
+        && (v1->unk_90.mode == BALL_THROW_MODE_TRAINER_SEND_OUT || v1->unk_90.mode == BALL_THROW_MODE_SEND_OUT)) {
+        steps = 4;
     }
-
-    if (v1->unk_24 == 1) {
-        ManagedSprite_TickFrame(v1->unk_30);
+#endif
+    for (int i = 0; i < steps && v1->unk_1C; i++) {
+        v0 = Unk_ov12_0223AB84[v1->unk_90.mode](v1);
+        if (v0 == 0) {
+            v1->unk_1C = 0;
+        }
+        if (v1->unk_24 == 1) {
+            ManagedSprite_TickFrame(v1->unk_30);
+        }
     }
 
     SpriteSystem_DrawSprites(v1->unk_2C);

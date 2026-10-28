@@ -13,6 +13,7 @@ _015:
     PlaySound BTLSCR_ATTACKER, 1791
     CompareVarToValue OPCODE_FLAG_SET, BTLVAR_BATTLE_TYPE, BATTLE_TYPE_FRONTIER, _065
     CompareVarToValue OPCODE_FLAG_SET, BTLVAR_BATTLE_TYPE, BATTLE_TYPE_LINK, _076
+    JumpIfFastExit _fade
     CheckAbility CHECK_HAVE, BTLSCR_ATTACKER, ABILITY_RUN_AWAY, _043
     CheckItemHoldEffect CHECK_HAVE, BTLSCR_ATTACKER, HOLD_EFFECT_FLEE, _050
     // Got away safely!
@@ -31,6 +32,8 @@ _050:
 _055:
     Wait 
     WaitButtonABTime 30
+
+_fade:
     FadeOutBattle 
     Wait 
     UpdateVar OPCODE_FLAG_ON, BTLVAR_RESULT_MASK, BATTLE_RESULT_PLAYER_FLED
