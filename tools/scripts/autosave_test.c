@@ -4,7 +4,7 @@
 #include <unistd.h>
 
 static time_t seconds, wallSeconds = 1793188800;
-static int failRename, failSync, syncCalls, failSyncAt;
+static int failRename, failSync;
 
 static int TestClock(clockid_t clock, struct timespec *value)
 {
@@ -26,8 +26,7 @@ static int TestRename(const char *from, const char *to)
 
 static int TestSync(int fd)
 {
-    syncCalls++;
-    return failSync || syncCalls == failSyncAt ? -1 : fsync(fd);
+    return failSync ? -1 : fsync(fd);
 }
 
 #define clock_gettime TestClock
@@ -57,11 +56,14 @@ BOOL FieldSystem_Save(FieldSystem *field)
 {
     saveCalls++;
     field->saveData->globalCounter++;
-    field->saveData->body.data[0]++;
+    field->saveData->blockOffsets[0] = !field->saveData->blockOffsets[0];
+    field->saveData->dataExists = TRUE;
+    field->saveData->isNewGameData = FALSE;
+    field->saveData->fullSaveRequired = FALSE;
     field->location->x++;
     FILE *file = fopen(CARD_PortSavePath, "wb");
     assert(file);
-    assert(fprintf(file, "new save %u", field->saveData->globalCounter) >= 0);
+    assert(fprintf(file, "new save %u", field->saveData->body.data[0]) >= 0);
     assert(fclose(file) == 0);
     return !failSave;
 }
@@ -121,7 +123,7 @@ static void ExpectHistory(int first, int last)
 
 int main(void)
 {
-    static SaveData save;
+    static SaveData save = { .isNewGameData = TRUE, .fullSaveRequired = TRUE };
     // Location normally points inside SaveData, and must roll back with it.
     FieldProcessManager manager = { .parent = (ApplicationManager *)1 };
     FieldSystem field = {
@@ -174,10 +176,12 @@ int main(void)
     assert(saveCalls == 0);
     moveState = PLAYER_MOVE_STATE_END;
     seconds = 150;
+    save.body.data[0] = 1; // Gameplay progress is independent of save bookkeeping.
+    SaveData snapshot = save;
     PC_AutosaveUpdate(&field);
-    assert(saveCalls == 1 && save.globalCounter == 1);
+    assert(saveCalls == 1 && memcmp(&save, &snapshot, sizeof(save)) == 0);
     assert(strcmp(CARD_PortSavePath, "save2.bin") == 0);
-    ExpectFile("save2.bin", "new save 1");
+    ExpectFile("save2.bin", "old save");
     assert(CountBackups("save2.bin.") == 1);
 
     char stamp[32], firstBackup[256];
@@ -185,7 +189,7 @@ int main(void)
     assert(localtime_r(&wallSeconds, &local));
     assert(strftime(stamp, sizeof(stamp), "%Y-%m-%d_%H-%M-%S", &local));
     snprintf(firstBackup, sizeof(firstBackup), "autosave/save2.bin.%s-0000.bak", stamp);
-    ExpectFile(firstBackup, "old save");
+    ExpectFile(firstBackup, "new save 1");
     WriteFile("autosave/save1.bin.unrelated.bak", "unrelated slot");
     WriteFile("autosave/notes.bak", "unrelated file");
 
@@ -193,30 +197,35 @@ int main(void)
     PC_AutosaveUpdate(&field);
     assert(saveCalls == 1);
     seconds = 270;
+    save.body.data[0] = 2;
     PC_AutosaveUpdate(&field);
     assert(saveCalls == 2);
-    ExpectFile(firstBackup, "old save");
+    ExpectFile(firstBackup, "new save 1");
 
     // Repeated timestamps, including a timer/process reset, cannot overwrite
     // archives or cause a new archive to be evicted because a suffix was reused.
     for (int i = 3; i <= 25; i++) {
         PC_AutosaveReset();
         seconds += 120;
+        save.body.data[0] = i;
+        snapshot = save;
         PC_AutosaveUpdate(&field);
-        assert(saveCalls == i && save.globalCounter == i);
+        assert(saveCalls == i && memcmp(&save, &snapshot, sizeof(save)) == 0);
+        assert(strcmp(CARD_PortSavePath, "save2.bin") == 0);
+        ExpectFile("save2.bin", "old save");
         assert(CountBackups("save2.bin.") == (i < 10 ? i : 10));
     }
     assert(access(firstBackup, F_OK) != 0);
-    ExpectHistory(15, 24);
+    ExpectHistory(16, 25);
     ExpectFile("autosave/save1.bin.unrelated.bak", "unrelated slot");
     ExpectFile("autosave/notes.bak", "unrelated file");
 
-    SaveData snapshot = save;
+    snapshot = save;
     failSave = TRUE;
     seconds += 120;
     PC_AutosaveUpdate(&field);
     assert(saveCalls == 26 && memcmp(&save, &snapshot, sizeof(save)) == 0);
-    ExpectFile("save2.bin", "new save 25");
+    ExpectFile("save2.bin", "old save");
     PC_AutosaveUpdate(&field);
     assert(saveCalls == 26); // Failed writes wait another two minutes to retry.
     failSave = FALSE;
@@ -230,20 +239,26 @@ int main(void)
     PC_AutosaveUpdate(&field);
     assert(saveCalls == 28 && memcmp(&save, &snapshot, sizeof(save)) == 0);
     failRename = FALSE;
-    ExpectFile("save2.bin", "new save 25");
+    ExpectFile("save2.bin", "old save");
     assert(CountBackups("save2.bin.") == 10);
-    ExpectHistory(15, 24); // Failure must not evict any successful history.
+    ExpectHistory(16, 25); // Failure must not evict any successful history.
+    assert(strcmp(CARD_PortSavePath, "save2.bin") == 0);
 
-    failSyncAt = syncCalls + 2; // Fail while flushing the reserved archive.
-    seconds += 120;
-    PC_AutosaveUpdate(&field);
-    assert(saveCalls == 29 && memcmp(&save, &snapshot, sizeof(save)) == 0);
+    // Only an explicit manual save updates the normal slot and live bookkeeping.
+    assert(FieldSystem_Save(&field));
+    assert(saveCalls == 29 && save.globalCounter == 1 && save.dataExists);
+    assert(!save.isNewGameData && !save.fullSaveRequired);
     ExpectFile("save2.bin", "new save 25");
     assert(CountBackups("save2.bin.") == 10);
-    ExpectHistory(15, 24);
+    ExpectHistory(16, 25);
 
     // A second slot rotates independently, including its first save on disk.
     CARD_PortSavePath = "save3.bin";
+    save.isNewGameData = TRUE;
+    save.dataExists = FALSE;
+    save.fullSaveRequired = TRUE;
+    save.body.data[0] = 26;
+    snapshot = save;
     PC_AutosaveReset();
     seconds += 119;
     PC_AutosaveUpdate(&field);
@@ -251,14 +266,22 @@ int main(void)
     seconds++;
     PC_AutosaveUpdate(&field);
     assert(saveCalls == 30);
-    ExpectFile("save3.bin", "new save 26");
-    assert(CountBackups("save3.bin.") == 0);
+    assert(access("save3.bin", F_OK) != 0);
+    assert(memcmp(&save, &snapshot, sizeof(save)) == 0);
+    assert(strcmp(CARD_PortSavePath, "save3.bin") == 0);
+    assert(CountBackups("save3.bin.") == 1);
+    char slot3Backup[256];
+    snprintf(slot3Backup, sizeof(slot3Backup), "autosave/save3.bin.%s-0000.bak", stamp);
+    ExpectFile(slot3Backup, "new save 26");
     for (int i = 0; i < 12; i++) {
         seconds += 120;
         PC_AutosaveUpdate(&field);
     }
     assert(CountBackups("save3.bin.") == 10);
-    ExpectHistory(15, 24);
+    assert(access("save3.bin", F_OK) != 0);
+    assert(memcmp(&save, &snapshot, sizeof(save)) == 0);
+    ExpectHistory(16, 25);
+    ExpectFile("save2.bin", "new save 25");
 
     // A non-directory autosave path fails without changing the slot or RAM.
     assert(mkdir("nested", 0700) == 0);
@@ -275,7 +298,10 @@ int main(void)
     PC_AutosaveUpdate(&field);
     char nestedBackup[256];
     snprintf(nestedBackup, sizeof(nestedBackup), "nested/autosave/save1.bin.%s-0000.bak", stamp);
-    ExpectFile(nestedBackup, "nested old save");
+    ExpectFile(nestedBackup, "new save 26");
+    ExpectFile("nested/save1.bin", "nested old save");
+    assert(memcmp(&save, &snapshot, sizeof(save)) == 0);
+    assert(strcmp(CARD_PortSavePath, "nested/save1.bin") == 0);
     ExpectFile("save.bin", "legacy save");
 
     DIR *dir = opendir(".");
@@ -285,6 +311,12 @@ int main(void)
     dir = opendir("nested");
     while ((entry = readdir(dir))) assert(strstr(entry->d_name, ".autosave-") == NULL);
     closedir(dir);
-    puts("PASS: autosave timing, field safety, ten archives per slot, collisions, nested paths and failure recovery");
+    dir = opendir("autosave");
+    while ((entry = readdir(dir))) assert(strstr(entry->d_name, ".autosave-") == NULL);
+    closedir(dir);
+    dir = opendir("nested/autosave");
+    while ((entry = readdir(dir))) assert(strstr(entry->d_name, ".autosave-") == NULL);
+    closedir(dir);
+    puts("PASS: separate autosaves, manual save preservation, timing, field safety, retention, collisions and failure recovery");
     return 0;
 }

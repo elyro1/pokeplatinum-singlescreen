@@ -20,6 +20,9 @@ def main():
     entry = next(c for c in commands if c['file'].endswith('/src/port/gameplay_config.c'))
     flags = shlex.split(entry['command'])
     flags = flags[:flags.index('-MD')]
+    # Test-only defines can invalidate the game's precompiled header.
+    flags.remove('-fpch-preprocess')
+    flags[flags.index('-include') + 1] = str(ROOT / 'include/pch/global_pch.h')
     with tempfile.TemporaryDirectory(prefix='platinum-autosave-') as directory:
         executable = Path(directory) / 'test'
         subprocess.run(flags + ['-D_POSIX_C_SOURCE=200809L', '-UNDEBUG', '-Werror=implicit-function-declaration',

@@ -106,11 +106,8 @@ static BOOL Autosave_ParseName(const char *name, const char *base, char *stamp, 
     return TRUE;
 }
 
-static BOOL Autosave_Archive(const char *path, const char *directory, const char *base, char *backup, size_t capacity)
+static BOOL Autosave_Archive(const char *temporary, const char *directory, const char *base, char *backup, size_t capacity)
 {
-    FILE *source = fopen(path, "rb");
-    if (!source) return errno == ENOENT;
-
     BOOL ok = FALSE;
     BOOL reserved = FALSE;
     time_t now = time(NULL);
@@ -148,13 +145,12 @@ static BOOL Autosave_Archive(const char *path, const char *directory, const char
             break;
         }
         reserved = TRUE;
-        ok = Autosave_Copy(source, target);
-        if (fflush(target) != 0 || !Autosave_Sync(target)) ok = FALSE;
-        if (fclose(target) != 0) ok = FALSE;
+        // Publish the completed snapshot atomically, replacing only our own
+        // reserved archive name, never the normal slot file.
+        if (fclose(target) == 0) ok = Autosave_Replace(temporary, backup);
         break;
     }
 cleanup:
-    if (fclose(source) != 0) ok = FALSE;
     if (!ok && backup[0]) {
         if (reserved) remove(backup);
         backup[0] = '\0';
@@ -234,7 +230,7 @@ static BOOL Autosave_Write(FieldSystem *fieldSystem)
 #endif
     if (result != 0 && errno != EEXIST) goto cleanup;
 
-    snprintf(temporary, capacity, "%s.autosave-XXXXXX", path);
+    snprintf(temporary, capacity, "%s/%s.autosave-XXXXXX", directory, base);
     int fd = mkstemp(temporary);
     if (fd < 0) goto cleanup;
 #ifdef _WIN32
@@ -255,7 +251,8 @@ static BOOL Autosave_Write(FieldSystem *fieldSystem)
     if (!ok) goto remove_temporary;
 
     // The normal save updates objects, location, Poketch and save counters.
-    // A failed transaction restores the live save data at its stable address.
+    // Restore live data afterwards so its counters, block offsets and dirty
+    // state continue to describe the normal slot, even after a successful autosave.
     CARD_PortSavePath = temporary;
     saved = TRUE;
     ok = FieldSystem_Save(fieldSystem);
@@ -268,19 +265,16 @@ static BOOL Autosave_Write(FieldSystem *fieldSystem)
             if (fclose(target) != 0) ok = FALSE;
         }
     }
-    if (ok) ok = Autosave_Archive(path, directory, base, backup, capacity);
-    if (ok) ok = Autosave_Replace(temporary, path);
+    if (ok) ok = Autosave_Archive(temporary, directory, base, backup, capacity);
     if (ok) {
-        fprintf(stderr, "[autosave] Saved %s (previous: %s)\n", path, backup[0] ? backup : "none");
+        fprintf(stderr, "[autosave] Saved %s\n", backup);
         if (!Autosave_Prune(directory, base, capacity)) {
             fprintf(stderr, "[autosave] Could not remove oldest archives for %s\n", path);
         }
-    } else if (backup[0]) {
-        remove(backup);
     }
 
 remove_temporary:
-    if (!ok && saved) memcpy(fieldSystem->saveData, snapshot, sizeof(*snapshot));
+    if (saved) memcpy(fieldSystem->saveData, snapshot, sizeof(*snapshot));
     remove(temporary);
 cleanup:
     free(snapshot);
