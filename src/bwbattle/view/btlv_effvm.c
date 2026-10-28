@@ -1837,6 +1837,8 @@ static BOOL BtlvEffvm_CmdCallDisplay(VM *vm, void *env) {
 #define BTLV_EFFECT_TRAINER_SLIDE_IN 0x270
 // 0x270's moves after its first, which sets the place: -22528 then +8192 across, mirrored on the opponent's side
 #define BTLV_SLIDE_IN_TRAVEL 14336
+// Move the opponent's dialogue sprite to the right of its Pokémon.
+#define BTLV_DIALOGUE_TRAINER_OFFSET 0x2000
 #endif
 
 static BOOL BtlvEffvm_CmdTrainerMove(VM *vm, void *env) {
@@ -1855,10 +1857,15 @@ static BOOL BtlvEffvm_CmdTrainerMove(VM *vm, void *env) {
     wait = VM_Read32(vm);
     times = VM_Read32(vm);
 #ifdef BWBATTLE
-    // bwbattle: the trainer's slide-in after the battle (0x270) ends where BW2 places it, 14336 right of where it
-    // starts: started that far to the left of its place, it ends on its platform, where it stood at the battle's start
+    // Start 14336 away from the destination to account for the script's remaining moves. When an opposing
+    // Pokémon is present, leave room for it; after the battle, keep the trainer's usual platform position.
     if (wk->move == BTLV_EFFECT_TRAINER_SLIDE_IN && type == 0) {
         BtlvMcss_GetDefaultPos(BtlvEffect_GetMcss(), &dest, pos);
+        if ((pos & 1) && (BtlvMcss_Exists(BtlvEffect_GetMcss(), 1)
+                || BtlvMcss_Exists(BtlvEffect_GetMcss(), 3)
+                || BtlvMcss_Exists(BtlvEffect_GetMcss(), 5))) {
+            dest.x += BTLV_DIALOGUE_TRAINER_OFFSET;
+        }
         dest.x += (pos & 1) ? -BTLV_SLIDE_IN_TRAVEL : BTLV_SLIDE_IN_TRAVEL;
     }
 #endif
