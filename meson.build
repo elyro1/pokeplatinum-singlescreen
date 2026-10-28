@@ -123,7 +123,9 @@ pokeplatinum_args = [
 
 if(build_target != 'arm')
     pokeplatinum_args += [
-        '-std=c99'
+        '-std=c99',
+        # Autosave uses monotonic time and transactional filesystem operations.
+        '-D_POSIX_C_SOURCE=200809L'
     ]
 endif
 

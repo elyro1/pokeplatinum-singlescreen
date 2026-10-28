@@ -43,6 +43,7 @@
 #ifdef SDK_PORT
 #include "map_object.h"
 #include "player_avatar.h"
+#include "port/autosave.h"
 #include "port/debug_field.h"
 #endif
 
@@ -183,6 +184,10 @@ static FieldSystem *InitFieldSystem(ApplicationManager *appMan)
     fieldSystem->pokedexMemory = PokedexMemory_New(HEAP_ID_FIELD2);
     fieldSystem->battleSubscreenCursorOn = sub_0209C370(HEAP_ID_FIELD2);
 
+#ifdef SDK_PORT
+    PC_AutosaveReset();
+#endif
+
     return fieldSystem;
 }
 
@@ -251,6 +256,10 @@ static BOOL HandleInputsEventsAndProcesses(FieldSystem *fieldSystem)
     } else if (fieldSystem->processManager->child) {
         ExecuteAndCleanupIfDone(&fieldSystem->processManager->child);
     }
+
+#ifdef SDK_PORT
+    PC_AutosaveUpdate(fieldSystem);
+#endif
 
     // Does not match with return (expression)
     if (fieldSystem->processManager->kill

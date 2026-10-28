@@ -1015,6 +1015,7 @@ pokeplatinum_c = files(
 
 if(build_target != 'arm')
 pokeplatinum_c += files(
+    'port/autosave.c',
     'port/battle_smoothing.c',
     'port/battle_timing.c',
     'port/charcode_convert.c',

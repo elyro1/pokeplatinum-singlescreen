@@ -92,6 +92,16 @@ Settings are stored locally in `sim_config.ini` and `sim_config_prj.ini`. If per
 
 The three slots use `save1.bin`, `save2.bin`, and `save3.bin` in the game folder. Save through the normal in-game Save action before quitting.
 
+The native game also autosaves the active slot every two minutes of real time.
+During dialogue, menus, battles, transitions, communication or special activities,
+it waits until normal overworld control resumes at a tile boundary. Each autosave
+archives the previous slot file in the game folder's `autosave/` directory, for
+example `autosave/save1.bin.2026-10-28_14-30-00-0000.bak`. Only the newest ten
+archives per slot are kept; older ones are deleted after a successful autosave.
+To restore one, close the game and copy it over the corresponding `save1.bin`,
+`save2.bin` or `save3.bin`. Autosaves use a temporary file and atomic replacement;
+a failed save leaves the active file intact. Manual saves work as usual.
+
 An older upstream `save.bin` is copied into slot 1 when `save1.bin` does not already exist. The original file is retained. Back up your save files before updating builds or deleting a slot.
 
 ## Building from source
