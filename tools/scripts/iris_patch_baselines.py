@@ -39,6 +39,7 @@ def resources(build, members):
                  (ROOT / 'generated/text_banks.txt').read_text().splitlines()]
         for name, source, count in [
             ('iron_island', ROOT / 'res/text/iron_island.json', 6),
+            ('scratch_off_cards_app', ROOT / 'res/text/scratch_off_cards_app.json', 13),
             ('trainer_class_names', ROOT / 'res/text/trainer_class_names.json', 105),
             ('trainer_class_names_with_articles', ROOT / 'res/text/trainer_class_names_with_articles.json', 105),
             ('npc_trainer_names', build / 'res/trainers/npc_trainer_names.json', 928),

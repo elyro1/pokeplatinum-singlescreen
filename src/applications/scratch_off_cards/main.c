@@ -3,6 +3,10 @@
 #include <nitro.h>
 #include <string.h>
 
+#ifndef SDK_BUILD_ARM
+#include <simulator/sim.h>
+#endif
+
 #include "constants/graphics.h"
 #include "generated/items.h"
 
@@ -117,10 +121,22 @@ typedef struct ScratchOffCardApp {
     u8 scratchedOffCellIdxs[NUM_CELLS_TO_SCRATCH];
     u8 cellIsRevealed[NUM_SCRATCH_CELLS];
     u32 unused6[2];
+    BOOL singleScreen;
+    BOOL showingPrizes;
+    u8 selectedCard;
+    u8 selectedCell;
+    int controlsMessage;
+    Window controlsWindow;
+    Window prizeControlsWindow;
+    ScratchOffCardsAppSprite *selectionBox;
     TouchPadDataBuffer tpBuffer;
     u8 scratchedPixels[SCRATCH_REGION_WIDTH * SCRATCH_REGION_HEIGHT];
 } ScratchOffCardApp;
 
+static BOOL IsSingleScreen(void);
+static void UpdateSingleScreenUI(ScratchOffCardApp *app, int state);
+static int HandleCellButtons(ScratchOffCardApp *app);
+static u32 ProcessStopMenuInput(ScratchOffCardApp *app);
 static BOOL State_FadeInApp(ScratchOffCardApp *app);
 static BOOL State_BringInSelectableCards(ScratchOffCardApp *app);
 static BOOL State_SelectCard(ScratchOffCardApp *app);
@@ -309,6 +325,108 @@ static const CoordinatesS16 sScratchCellPixelRegions[NUM_SCRATCH_CELLS] = {
     { .x = 189, .y = 120 }
 };
 
+static BOOL IsSingleScreen(void)
+{
+#ifndef SDK_BUILD_ARM
+    return SIM_GetConfigPtr()->screenLayout == SIM_CONFIG_SCREEN_LAYOUT_TOP_ONLY;
+#else
+    return FALSE;
+#endif
+}
+
+static void UpdateSingleScreenUI(ScratchOffCardApp *app, int state)
+{
+    if (!app->singleScreen) {
+        return;
+    }
+
+    int message = -1;
+    BOOL selectingCell = state == 5 && app->subState == 3;
+    if (state == 2 && app->subState == 1) {
+        message = ScratchOffCardsApp_Text_SelectControls;
+    } else if (selectingCell) {
+        message = app->currentCard == NUM_CARDS_TO_PLAY - 1 ? ScratchOffCardsApp_Text_LastCardControls : ScratchOffCardsApp_Text_ScratchControls;
+    } else if (state == 5 && (app->subState == 9 || app->subState == 10)) {
+        message = ScratchOffCardsApp_Text_StopControls;
+    }
+
+    ScratchOffCardsAppSprite_SetDrawFlag(app->selectionBox, selectingCell && !app->showingPrizes);
+    if (selectingCell) {
+        ScratchOffCardsAppSprite_SetPosition(app->selectionBox, sScratchMonPositions[app->selectedCell].x - 36, sScratchMonPositions[app->selectedCell].y - 10);
+    }
+
+    if (message != app->controlsMessage) {
+        if (message < 0) {
+            Window_ClearAndCopyToVRAM(&app->controlsWindow);
+        } else {
+            PrintMessage(app, &app->controlsWindow, message, 4, 0, TEXT_SPEED_INSTANT, 1, 2, 15, FONT_SYSTEM);
+            Window_CopyToVRAM(&app->controlsWindow);
+            GXLayers_EngineAToggleLayers(GX_PLANEMASK_BG2, TRUE);
+        }
+        app->controlsMessage = message;
+    }
+}
+
+static int HandleCellButtons(ScratchOffCardApp *app)
+{
+    if (app->showingPrizes) {
+        if (JOY_NEW(PAD_BUTTON_B | PAD_BUTTON_X)) {
+            app->showingPrizes = FALSE;
+        }
+        return TOUCHSCREEN_INPUT_NONE;
+    }
+
+    if (JOY_NEW(PAD_BUTTON_X)) {
+        app->showingPrizes = TRUE;
+        Sound_StopEffect(SEQ_SE_PL_KEZURI_sseq, 0);
+        PrintMessage(app, &app->prizeControlsWindow, ScratchOffCardsApp_Text_PrizeControls, 4, 0, TEXT_SPEED_INSTANT, 1, 2, 15, FONT_SYSTEM);
+        Window_CopyToVRAM(&app->prizeControlsWindow);
+        return TOUCHSCREEN_INPUT_NONE;
+    }
+
+    int row = app->selectedCell / 3;
+    int column = app->selectedCell % 3;
+    if (JOY_REPEAT(PAD_KEY_LEFT)) {
+        column = (column + 2) % 3;
+    } else if (JOY_REPEAT(PAD_KEY_RIGHT)) {
+        column = (column + 1) % 3;
+    } else if (JOY_REPEAT(PAD_KEY_UP)) {
+        row = (row + 2) % 3;
+    } else if (JOY_REPEAT(PAD_KEY_DOWN)) {
+        row = (row + 1) % 3;
+    }
+    app->selectedCell = row * 3 + column;
+
+    int cell = app->selectedCell;
+    if (!JOY_NEW(PAD_BUTTON_A) || app->cellIsRevealed[cell]
+        || (!app->cellIsScratched[cell] && GetNumCellsScratched(app) >= NUM_CELLS_TO_SCRATCH)) {
+        return TOUCHSCREEN_INPUT_NONE;
+    }
+
+    // Reveal the selected cell through the same pixel mask and result checks as touch.
+    for (int y = sScratchCellScreenPixelRegions[cell].top; y <= sScratchCellScreenPixelRegions[cell].bottom; y++) {
+        for (int x = sScratchCellScreenPixelRegions[cell].left; x <= sScratchCellScreenPixelRegions[cell].right; x++) {
+            ScratchPixelsAtPosition(app, x, y);
+            app->scratchedPixels[y * SCRATCH_REGION_WIDTH + x] = TRUE;
+        }
+    }
+    Bg_LoadTiles(app->bgConfig, BG_LAYER_MAIN_0, app->scratchCellsDataBackup, app->scratchCellsCharData->szByte, 0);
+    return cell;
+}
+
+static u32 ProcessStopMenuInput(ScratchOffCardApp *app)
+{
+    if (app->singleScreen) {
+        if (JOY_NEW(PAD_BUTTON_A)) {
+            return YES_NO_TOUCH_MENU_YES;
+        }
+        if (JOY_NEW(PAD_BUTTON_B)) {
+            return YES_NO_TOUCH_MENU_NO;
+        }
+    }
+    return YesNoTouchMenu_ProcessInputInstant(app->yesNoMenu);
+}
+
 BOOL ScratchOffCardApp_Init(ApplicationManager *appMan, int *state)
 {
     InitGraphicsPlane();
@@ -317,6 +435,8 @@ BOOL ScratchOffCardApp_Init(ApplicationManager *appMan, int *state)
     ScratchOffCardApp *app = ApplicationManager_NewData(appMan, sizeof(ScratchOffCardApp), HEAP_ID_SCRATCH_OFF_CARD_APP);
     memset(app, 0, sizeof(ScratchOffCardApp));
 
+    app->singleScreen = IsSingleScreen();
+    app->controlsMessage = -1;
     app->bgConfig = BgConfig_New(HEAP_ID_SCRATCH_OFF_CARD_APP);
     app->appMan = appMan;
 
@@ -404,6 +524,7 @@ BOOL ScratchOffCardApp_Main(ApplicationManager *appMan, int *state)
         break;
     }
 
+    UpdateSingleScreenUI(app, *state);
     SpriteList_Update(app->spriteMan.spriteList);
 
     return FALSE;
@@ -419,8 +540,11 @@ BOOL ScratchOffCardApp_Exit(ApplicationManager *appMan, int *state)
 
     FreeAssets(app);
 
-    ApplicationManager_FreeData(appMan);
     SetVBlankCallback(NULL, NULL);
+    if (app->singleScreen) {
+        GX_SetDispSelect(GX_DISP_SELECT_SUB_MAIN);
+    }
+    ApplicationManager_FreeData(appMan);
     Heap_Destroy(HEAP_ID_SCRATCH_OFF_CARD_APP);
 
     return TRUE;
@@ -494,13 +618,31 @@ static BOOL State_SelectCard(ScratchOffCardApp *app)
         break;
     case 1:
         if (app->subStateTimer == 0) {
-            GXLayers_EngineAToggleLayers(GX_PLANEMASK_BG2, FALSE);
+            if (!app->singleScreen) {
+                GXLayers_EngineAToggleLayers(GX_PLANEMASK_BG2, FALSE);
+            }
             ScratchOffCardsAppSprite_SetDrawFlag(app->centerMessageBoxSprite, FALSE);
         } else {
             app->subStateTimer--;
         }
 
         int selectedCard = TouchScreen_CheckRectangleHeld(sSelectableCardHitBoxes);
+
+        if (app->singleScreen) {
+            if (JOY_REPEAT(PAD_KEY_LEFT)) {
+                app->selectedCard = (app->selectedCard + NUM_CARDS_TO_PICK - 1) % NUM_CARDS_TO_PICK;
+            } else if (JOY_REPEAT(PAD_KEY_RIGHT)) {
+                app->selectedCard = (app->selectedCard + 1) % NUM_CARDS_TO_PICK;
+            }
+
+            for (int i = 0; i < NUM_CARDS_TO_PICK; i++) {
+                ScratchOffCardsAppSprite_SetPosition(app->cardSprites[i], sSelectableCardPositions[i].x, sSelectableCardPositions[i].y - (i == app->selectedCard ? 8 : 0));
+            }
+
+            if (JOY_NEW(PAD_BUTTON_A)) {
+                selectedCard = app->selectedCard;
+            }
+        }
 
         if (selectedCard != TOUCHSCREEN_INPUT_NONE) {
             GXLayers_EngineAToggleLayers(GX_PLANEMASK_BG2, FALSE);
@@ -514,6 +656,9 @@ static BOOL State_SelectCard(ScratchOffCardApp *app)
             TouchScreen_GetHoldState(&x, &y);
             Window_EraseMessageBox(&app->windows[SCRATCH_WINDOW_SELECT_CARD], FALSE);
             GXLayers_EngineBToggleLayers(GX_PLANEMASK_BG0, FALSE);
+            if (app->singleScreen) {
+                Window_ClearAndCopyToVRAM(&app->windows[SCRATCH_WINDOW_SELECT_CARD]);
+            }
             app->subState = 2;
         }
         break;
@@ -608,6 +753,7 @@ static BOOL State_SetupScratchCard(ScratchOffCardApp *app)
         }
 
         app->numRevealedCells = 0;
+        app->selectedCell = 0;
 
         ClearScratchCellValues(app);
         PlaceValuesInScratchCells(app, app->dummy3[app->currentCard]);
@@ -678,7 +824,10 @@ static BOOL State_ScratchCard(ScratchOffCardApp *app)
 {
     switch (app->subState) {
     case 0:
-        if (app->currentCard == NUM_CARDS_TO_PLAY - 1) {
+        if (app->singleScreen) {
+            Window_ClearAndCopyToVRAM(&app->windows[SCRATCH_WINDOW_NEXT_CARD]);
+            Window_ClearAndCopyToVRAM(&app->windows[SCRATCH_WINDOW_CANCEL]);
+        } else if (app->currentCard == NUM_CARDS_TO_PLAY - 1) {
             Window_ClearAndCopyToVRAM(&app->windows[SCRATCH_WINDOW_NEXT_CARD]);
             PrintCancelButton(app);
             ScratchOffCardsAppSprite_SetPosition(app->skipCardButtonSprite, sCancelButtonPosition.x, sCancelButtonPosition.y);
@@ -697,7 +846,7 @@ static BOOL State_ScratchCard(ScratchOffCardApp *app)
             PrintItemNameOnTopScreen(app, i);
         }
 
-        ScratchOffCardsAppSprite_SetDrawFlag(app->skipCardButtonSprite, TRUE);
+        ScratchOffCardsAppSprite_SetDrawFlag(app->skipCardButtonSprite, !app->singleScreen);
         ScratchOffCardsAppSprite_SetAnimateFlag(app->skipCardButtonSprite, FALSE);
         Sound_PlayEffect(SEQ_SE_PL_UG_020_sseq);
         app->subState = 1;
@@ -721,15 +870,27 @@ static BOOL State_ScratchCard(ScratchOffCardApp *app)
         WriteAutoSamplingDataToBuffer(&app->tpBuffer, TOUCH_PAD_EXTERNAL_BUFFER_WRITE_METHOD_ALL_DATA_WITHOUT_WRAPPING, 2);
         int touchedCell = TouchScreen_CheckRectangleHeld(sScratchCellHitboxes);
 
+        if (app->singleScreen) {
+            BOOL wasShowingPrizes = app->showingPrizes;
+            touchedCell = HandleCellButtons(app);
+            if (wasShowingPrizes || app->showingPrizes) {
+                break;
+            }
+        }
+
         if (touchedCell != TOUCHSCREEN_INPUT_NONE) {
             if (GetNumCellsScratched(app) < NUM_CELLS_TO_SCRATCH) {
                 app->cellIsScratched[touchedCell] = TRUE;
             }
 
             if (app->cellIsScratched[touchedCell] == TRUE) {
-                MarkScratchedOffPixels(app);
+                if (!app->singleScreen) {
+                    MarkScratchedOffPixels(app);
+                }
                 CheckIfCellIsRevealed(app, touchedCell);
-                RemoveScratchedOffPixelsOnCell(app, touchedCell);
+                if (!app->singleScreen) {
+                    RemoveScratchedOffPixelsOnCell(app, touchedCell);
+                }
 
                 if (!Sound_IsEffectPlaying(SEQ_SE_PL_KEZURI_sseq)) {
                     Sound_PlayEffect(SEQ_SE_PL_KEZURI_sseq);
@@ -778,7 +939,7 @@ static BOOL State_ScratchCard(ScratchOffCardApp *app)
         if (app->currentCard == NUM_CARDS_TO_PLAY - 1) {
             touchedCell = TouchScreen_CheckRectanglePressed(sCancelButtonHitbox);
 
-            if (touchedCell != TOUCHSCREEN_INPUT_NONE) {
+            if (touchedCell != TOUCHSCREEN_INPUT_NONE || (app->singleScreen && JOY_NEW(PAD_BUTTON_B))) {
                 ScratchOffCardsAppSprite_SetAnimateFlag(app->skipCardButtonSprite, TRUE);
                 PrintStopScratchingMessage(app);
 
@@ -793,7 +954,7 @@ static BOOL State_ScratchCard(ScratchOffCardApp *app)
         } else {
             touchedCell = TouchScreen_CheckRectanglePressed(sNextCardButtonHitbox);
 
-            if (touchedCell != TOUCHSCREEN_INPUT_NONE) {
+            if (touchedCell != TOUCHSCREEN_INPUT_NONE || (app->singleScreen && JOY_NEW(PAD_BUTTON_B))) {
                 ScratchOffCardsAppSprite_SetAnimateFlag(app->skipCardButtonSprite, TRUE);
                 PrintStopScratchingMessage(app);
 
@@ -859,7 +1020,7 @@ static BOOL State_ScratchCard(ScratchOffCardApp *app)
         }
         break;
     case 9: {
-        u32 input = YesNoTouchMenu_ProcessInputInstant(app->yesNoMenu);
+        u32 input = ProcessStopMenuInput(app);
 
         if (input == YES_NO_TOUCH_MENU_YES) {
             ScratchOffCardsAppSprite_SetAnimateFlag(app->skipCardButtonSprite, FALSE);
@@ -877,7 +1038,7 @@ static BOOL State_ScratchCard(ScratchOffCardApp *app)
         }
     } break;
     case 10: {
-        u32 input = YesNoTouchMenu_ProcessInputInstant(app->yesNoMenu);
+        u32 input = ProcessStopMenuInput(app);
 
         if (input == YES_NO_TOUCH_MENU_YES) {
             ScratchOffCardsAppSprite_SetAnimateFlag(app->skipCardButtonSprite, FALSE);
@@ -1053,6 +1214,12 @@ static void FreeAssets(ScratchOffCardApp *app)
         ScratchOffCardsAppSprite_Free(app->winPopupSprite);
     }
 
+    if (app->singleScreen) {
+        ScratchOffCardsAppSprite_Free(app->selectionBox);
+        Window_Remove(&app->controlsWindow);
+        Window_Remove(&app->prizeControlsWindow);
+    }
+
     Font_Free(FONT_SUBSCREEN);
     PaletteData_FreeBuffer(app->plttData, PLTTBUF_MAIN_OBJ);
     PaletteData_FreeBuffer(app->plttData, PLTTBUF_MAIN_BG);
@@ -1108,6 +1275,13 @@ static void LoadAssets(ScratchOffCardApp *app)
 
     app->specialChars = FontSpecialChars_Init(15, 14, 0, HEAP_ID_SCRATCH_OFF_CARD_APP);
     ScratchOffCardsApp_InitWindows(app->bgConfig, app->windows);
+    if (app->singleScreen) {
+        // Keep the prompt above the cards; the footer describes the controls.
+        Window_Remove(&app->windows[SCRATCH_WINDOW_SELECT_CARD]);
+        Window_Add(app->bgConfig, &app->windows[SCRATCH_WINDOW_SELECT_CARD], BG_LAYER_MAIN_2, 2, 1, 27, 4, 12, 1);
+        Window_Add(app->bgConfig, &app->controlsWindow, BG_LAYER_MAIN_2, 0, 20, 32, 4, 13, 504);
+        Window_Add(app->bgConfig, &app->prizeControlsWindow, BG_LAYER_SUB_0, 0, 0, 32, 2, 13, 504);
+    }
     app->paletteAnimator = sub_0201567C(NULL, 1, 12, HEAP_ID_SCRATCH_OFF_CARD_APP);
 
     LoadScratchCellsCharData(app);
@@ -1127,6 +1301,10 @@ static void LoadAssets(ScratchOffCardApp *app)
     }
 
     InitBottomScreenBoxSprites(app);
+    if (app->singleScreen) {
+        app->selectionBox = ScratchOffCardsAppSprite_New(&app->spriteMan, RESOURCE_ID_BOX_SPRITES, ANIM_ID_MATCHING_CELL_BOX, 0, 0, FALSE, 0, 0);
+        ScratchOffCardsAppSprite_SetDrawFlag(app->selectionBox, FALSE);
+    }
 
     for (int i = 0; i < NUM_CARDS_TO_PICK; i++) {
         app->cardSprites[i] = ScratchOffCardsAppSprite_New(&app->spriteMan, RESOURCE_ID_CARD_SPRITES, 0 + i, sSelectableCardPositions[i].x, sSelectableCardPositions[i].y, FALSE, 1, 0);
@@ -1138,7 +1316,7 @@ static void LoadAssets(ScratchOffCardApp *app)
     app->winPopupSprite = ScratchOffCardsAppSprite_New(&app->spriteMan, RESOURCE_ID_WIN_POPUP_SPRITE, 0, sWinPopupSpritePosition.x, sWinPopupSpritePosition.y, FALSE, 0, 10);
     ScratchOffCardsAppSprite_SetDrawFlag(app->winPopupSprite, FALSE);
 
-    GX_SetDispSelect(GX_DISP_SELECT_SUB_MAIN);
+    GX_SetDispSelect(app->singleScreen ? GX_DISP_SELECT_MAIN_SUB : GX_DISP_SELECT_SUB_MAIN);
 
     EnableTouchPad();
     InitializeTouchPad(1);
@@ -1223,6 +1401,10 @@ static void VBlankCallback(void *data)
     Bg_RunScheduledUpdates(app->bgConfig);
     VramTransfer_Process();
     RenderOam_Transfer();
+
+    if (app->singleScreen) {
+        GX_SetDispSelect(app->showingPrizes ? GX_DISP_SELECT_SUB_MAIN : GX_DISP_SELECT_MAIN_SUB);
+    }
 
     OS_SetIrqCheckFlag(OS_IE_V_BLANK);
 }
@@ -1445,7 +1627,7 @@ static u8 PrintStopScratchingMessage(ScratchOffCardApp *app)
 static u8 PrintSelectCardMessage(ScratchOffCardApp *app)
 {
     SetNumberInTemplate(app, 0, app->currentCard + 1);
-    u8 printerID = PrintMessage(app, &app->windows[SCRATCH_WINDOW_SELECT_CARD], ScratchOffCardsApp_Text_SelectCard, 1, 1, TEXT_SPEED_INSTANT, 1, 2, 15, FONT_MESSAGE);
+    u8 printerID = PrintMessage(app, &app->windows[SCRATCH_WINDOW_SELECT_CARD], app->singleScreen ? ScratchOffCardsApp_Text_SelectCardButtons : ScratchOffCardsApp_Text_SelectCard, 1, 1, TEXT_SPEED_INSTANT, 1, 2, 15, FONT_MESSAGE);
     Window_ScheduleCopyToVRAM(&app->windows[SCRATCH_WINDOW_SELECT_CARD]);
 
     return printerID;
