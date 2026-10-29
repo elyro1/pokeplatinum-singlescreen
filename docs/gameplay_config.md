@@ -1,6 +1,16 @@
 # Gameplay configuration
 
-The PC port creates `gameplay_config.ini` with its built-in defaults on first start, then reads gameplay overrides from it at startup. Existing files are never overwritten. Built-in defaults preserve original Platinum gameplay: every boolean modifier is off, BP prices are unchanged, and all multipliers are 1. You do not need to rebuild the game to change these settings.
+The PC port creates `gameplay_config.ini` with its built-in defaults on first start, then reads gameplay overrides from it at startup. Existing files are preserved on startup. Built-in defaults preserve original Platinum gameplay: every boolean modifier is off, BP prices are unchanged, and all multipliers are 1. You do not need to rebuild the game to change these settings.
+
+## Edit through the TAB menu
+
+Open **Tab → Gameplay** to change all 23 options. The page groups them into battle rules, moves and tutors, evolution and eggs, encounters and events, and progression and prices. Each option includes its description; numeric inputs stay within the ranges below.
+
+Choose **Save changes**, then restart the game to apply the saved rules. The page displays **Unsaved changes** while you edit and **Saved changes apply after restart** when the file differs from the running game. Draft values remain available when switching categories or closing and reopening TAB during the session.
+
+**Reload / discard** discards the draft and reads the file again. **Defaults** stages the built-in defaults; choose Save changes to store them. The action buttons stay visible while the options scroll.
+
+Saving updates known options while preserving comments, unknown options, unrelated sections, and line endings. It updates duplicate known keys consistently and adds missing options. If another program changes the file after it was loaded, saving stops and asks you to reload. A malformed file remains intact and must be repaired before editing through the menu. A failed save keeps the previous file.
 
 ## Create and use a config
 
@@ -33,7 +43,7 @@ Set your hack's defaults in `GameplayConfig_LoadDefaults` in [`src/port/gameplay
     // GameplayConfig_LoadFile();
 ```
 
-The game then uses only your code defaults. It neither generates nor reads `gameplay_config.ini`, so even an existing or manually created file cannot override your settings. Leave `GameplayConfig_LoadDefaults(&sGameplayConfig);` enabled. The libntr menu no longer contains a gameplay config generation button.
+The game then uses only your code defaults. It neither generates nor reads `gameplay_config.ini`, so even an existing or manually created file cannot override your settings. Leave `GameplayConfig_LoadDefaults(&sGameplayConfig);` enabled. The Gameplay page reports that file overrides are disabled and cannot edit the file in these builds.
 
 ## File format and loading rules
 
@@ -90,4 +100,5 @@ The authoritative defaults, option names, ranges, parser, template generator, an
 
 ```sh
 python3 tools/scripts/test_gameplay_config.py --build build_linux
+python3 tools/scripts/test_gameplay_config_editor.py --build build_linux
 ```

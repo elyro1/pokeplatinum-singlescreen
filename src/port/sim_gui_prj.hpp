@@ -3,6 +3,7 @@
 namespace SIM::GUI {
 void CheatsContents();
 void GameSpeedContents();
+void GameplayContents();
 void GraphicsContents();
 void DeveloperContentsPrj();
 void CreateItemInit();

@@ -10,6 +10,7 @@
 #include "constants/items.h"
 
 static GameplayConfig sGameplayConfig;
+static BOOL sUsesFileOverrides;
 
 void GameplayConfig_LoadDefaults(GameplayConfig *config)
 {
@@ -110,38 +111,90 @@ typedef struct {
     ConfigFieldType type;
     unsigned int maximum;
     const char *description;
+    const char *label;
+    const char *group;
 } ConfigField;
 
-#define FIELD(name, type, maximum, description) { #name, offsetof(GameplayConfig, name), type, maximum, description }
+#define FIELD(name, type, maximum, description, label, group) { #name, offsetof(GameplayConfig, name), type, maximum, description, label, group }
 
 // Shared by the reader and template writer so every option has the same name and range.
 static const ConfigField sConfigFields[] = {
-    FIELD(prohibitBattleItems, CONFIG_BOOL, 1, "Block player Bag items in battle except Poke Balls; held and opponent items are unaffected."),
-    FIELD(forceSetBattleStyle, CONFIG_BOOL, 1, "Always use Set battle style, regardless of the saved Options selection."),
-    FIELD(unlimitedVitaminEVs, CONFIG_BOOL, 1, "Vitamins work past 100 EVs; normal per-stat and total EV limits still apply."),
-    FIELD(bpPricePercent, CONFIG_U16, 65535, "Global BP price percentage, rounded up: 100 = original, 0 = free."),
-    FIELD(rareCandyBPPrice, CONFIG_U16, 65535, "Exact Rare Candy BP price, overriding the percentage: 0 = free."),
-    FIELD(forgettableHMs, CONFIG_BOOL, 1, "Allow HM moves to be replaced when learning another move."),
-    FIELD(unlearnedHMs, CONFIG_BOOL, 1, "Use HMs with compatible party Pokemon without teaching them; badge and location restrictions still apply."),
-    FIELD(freeMoveRelearning, CONFIG_BOOL, 1, "The Move Maniac requires no Heart Scale."),
-    FIELD(freeMoveTutors, CONFIG_BOOL, 1, "Shard move tutors require no shards."),
-    FIELD(mainStoryMoveTutors, CONFIG_BOOL, 1, "The Route 212 tutor offers all three shard tutors' move lists."),
-    FIELD(unlimitedGreatMarshSteps, CONFIG_BOOL, 1, "Disable the Great Marsh step limit; entry fee and Safari Ball limit still apply."),
-    FIELD(zeroEggCycles, CONFIG_BOOL, 1, "New and existing eggs become ready to hatch at the next hatch check."),
-    FIELD(instantHoneyTrees, CONFIG_BOOL, 1, "Skip the Honey Tree wait; normal encounter chances and expiration still apply."),
-    FIELD(infiniteTMs, CONFIG_BOOL, 1, "Teaching a move does not consume its TM."),
-    FIELD(levelUpHeldItemEvolutions, CONFIG_BOOL, 1, "Held-item evolutions trigger on level-up at any time of day; the item is consumed."),
-    FIELD(instantSpiritomb, CONFIG_BOOL, 1, "Skip Underground conversations for Spiritomb; an Odd Keystone is still required."),
-    FIELD(feebasWaterStoneEvolution, CONFIG_BOOL, 1, "Evolve Feebas with a Water Stone instead of Beauty."),
-    FIELD(disableOverworldPoisonDamage, CONFIG_BOOL, 1, "Skip walking poison damage; poison status and battle damage remain."),
-    FIELD(tradeEvolutionLevel, CONFIG_U8, 100, "Plain trade evolutions also trigger on level-up at this level: 1-100, or 0 to disable."),
-    FIELD(shinyRolls, CONFIG_U16, 65535, "Total shiny rolls for new eligible Pokemon: 0 and 1 preserve original odds."),
-    FIELD(friendshipGainMultiplier, CONFIG_U8, 255, "Multiply positive friendship gains: 0 and 1 preserve original gains."),
-    FIELD(eggHatchSpeedMultiplier, CONFIG_U8, 255, "Divide steps per hatch check by this value: 0 and 1 preserve original timing."),
-    FIELD(catchRateMultiplier, CONFIG_U8, 255, "Multiply final catch rate: 0 and 1 preserve original rates; trainer captures remain blocked."),
+    FIELD(prohibitBattleItems, CONFIG_BOOL, 1, "Block player Bag items in battle except Poke Balls; held and opponent items are unaffected.", "Block player battle items", "Battle rules"),
+    FIELD(forceSetBattleStyle, CONFIG_BOOL, 1, "Always use Set battle style, regardless of the saved Options selection.", "Always use Set battle style", "Battle rules"),
+    FIELD(unlimitedVitaminEVs, CONFIG_BOOL, 1, "Vitamins work past 100 EVs; normal per-stat and total EV limits still apply.", "Vitamins past 100 EVs", "Progression & prices"),
+    FIELD(bpPricePercent, CONFIG_U16, 65535, "Global BP price percentage, rounded up: 100 = original, 0 = free.", "BP price percentage", "Progression & prices"),
+    FIELD(rareCandyBPPrice, CONFIG_U16, 65535, "Exact Rare Candy BP price, overriding the percentage: 0 = free.", "Rare Candy BP price", "Progression & prices"),
+    FIELD(forgettableHMs, CONFIG_BOOL, 1, "Allow HM moves to be replaced when learning another move.", "Allow replacing HM moves", "Moves & tutors"),
+    FIELD(unlearnedHMs, CONFIG_BOOL, 1, "Use HMs with compatible party Pokemon without teaching them; badge and location restrictions still apply.", "Use HMs without teaching them", "Moves & tutors"),
+    FIELD(freeMoveRelearning, CONFIG_BOOL, 1, "The Move Maniac requires no Heart Scale.", "Free move relearning", "Moves & tutors"),
+    FIELD(freeMoveTutors, CONFIG_BOOL, 1, "Shard move tutors require no shards.", "Free shard move tutors", "Moves & tutors"),
+    FIELD(mainStoryMoveTutors, CONFIG_BOOL, 1, "The Route 212 tutor offers all three shard tutors' move lists.", "All tutor moves on Route 212", "Moves & tutors"),
+    FIELD(unlimitedGreatMarshSteps, CONFIG_BOOL, 1, "Disable the Great Marsh step limit; entry fee and Safari Ball limit still apply.", "Unlimited Great Marsh steps", "Encounters & events"),
+    FIELD(zeroEggCycles, CONFIG_BOOL, 1, "New and existing eggs become ready to hatch at the next hatch check.", "Eggs ready at next hatch check", "Evolution & eggs"),
+    FIELD(instantHoneyTrees, CONFIG_BOOL, 1, "Skip the Honey Tree wait; normal encounter chances and expiration still apply.", "Instant Honey Tree encounters", "Encounters & events"),
+    FIELD(infiniteTMs, CONFIG_BOOL, 1, "Teaching a move does not consume its TM.", "Reusable TMs", "Moves & tutors"),
+    FIELD(levelUpHeldItemEvolutions, CONFIG_BOOL, 1, "Held-item evolutions trigger on level-up at any time of day; the item is consumed.", "Held-item evolutions on level-up", "Evolution & eggs"),
+    FIELD(instantSpiritomb, CONFIG_BOOL, 1, "Skip Underground conversations for Spiritomb; an Odd Keystone is still required.", "Skip Spiritomb conversations", "Encounters & events"),
+    FIELD(feebasWaterStoneEvolution, CONFIG_BOOL, 1, "Evolve Feebas with a Water Stone instead of Beauty.", "Evolve Feebas with a Water Stone", "Evolution & eggs"),
+    FIELD(disableOverworldPoisonDamage, CONFIG_BOOL, 1, "Skip walking poison damage; poison status and battle damage remain.", "Disable walking poison damage", "Progression & prices"),
+    FIELD(tradeEvolutionLevel, CONFIG_U8, 100, "Plain trade evolutions also trigger on level-up at this level: 1-100, or 0 to disable.", "Trade evolution level", "Evolution & eggs"),
+    FIELD(shinyRolls, CONFIG_U16, 65535, "Total shiny rolls for new eligible Pokemon: 0 and 1 preserve original odds.", "Shiny rolls", "Encounters & events"),
+    FIELD(friendshipGainMultiplier, CONFIG_U8, 255, "Multiply positive friendship gains: 0 and 1 preserve original gains.", "Friendship gain multiplier", "Progression & prices"),
+    FIELD(eggHatchSpeedMultiplier, CONFIG_U8, 255, "Divide steps per hatch check by this value: 0 and 1 preserve original timing.", "Egg hatch speed multiplier", "Evolution & eggs"),
+    FIELD(catchRateMultiplier, CONFIG_U8, 255, "Multiply final catch rate: 0 and 1 preserve original rates; trainer captures remain blocked.", "Catch rate multiplier", "Encounters & events"),
 };
 
 #undef FIELD
+
+unsigned int GameplayConfig_OptionCount(void)
+{
+    return sizeof(sConfigFields) / sizeof(sConfigFields[0]);
+}
+
+BOOL GameplayConfig_GetOption(unsigned int index, GameplayConfigOption *option)
+{
+    if (index >= GameplayConfig_OptionCount() || option == NULL) return FALSE;
+    const ConfigField *field = &sConfigFields[index];
+    option->name = field->name;
+    option->label = field->label;
+    option->group = field->group;
+    option->description = field->description;
+    option->maximum = field->maximum;
+    option->isBoolean = field->type == CONFIG_BOOL;
+    return TRUE;
+}
+
+unsigned int GameplayConfig_GetOptionValue(const GameplayConfig *config, unsigned int index)
+{
+    if (config == NULL || index >= GameplayConfig_OptionCount()) return 0;
+    const ConfigField *field = &sConfigFields[index];
+    const char *source = (const char *)config + field->offset;
+    switch (field->type) {
+    case CONFIG_BOOL: return *(const BOOL *)source ? 1 : 0;
+    case CONFIG_U8: return *(const u8 *)source;
+    case CONFIG_U16: return *(const u16 *)source;
+    }
+    return 0;
+}
+
+BOOL GameplayConfig_SetOptionValue(GameplayConfig *config, unsigned int index, unsigned int value)
+{
+    if (config == NULL || index >= GameplayConfig_OptionCount()) return FALSE;
+    const ConfigField *field = &sConfigFields[index];
+    if (value > field->maximum) return FALSE;
+    char *destination = (char *)config + field->offset;
+    switch (field->type) {
+    case CONFIG_BOOL: *(BOOL *)destination = value ? TRUE : FALSE; break;
+    case CONFIG_U8: *(u8 *)destination = (u8)value; break;
+    case CONFIG_U16: *(u16 *)destination = (u16)value; break;
+    }
+    return TRUE;
+}
+
+BOOL GameplayConfig_UsesFileOverrides(void)
+{
+    return sUsesFileOverrides;
+}
 
 static int GameplayConfig_IniHandler(void *user, const char *section, const char *name, const char *value)
 {
@@ -193,6 +246,16 @@ static int GameplayConfig_IniHandler(void *user, const char *section, const char
     return 1; // Unknown keys are ignored for compatibility with newer configurations.
 }
 
+BOOL GameplayConfig_ParseText(const char *text, GameplayConfig *config)
+{
+    if (text == NULL || config == NULL) return FALSE;
+    GameplayConfig parsed;
+    GameplayConfig_LoadDefaults(&parsed);
+    if (ini_parse_string(text, GameplayConfig_IniHandler, &parsed) != 0) return FALSE;
+    *config = parsed;
+    return TRUE;
+}
+
 static BOOL GameplayConfig_GenerateFile(void)
 {
     // Exclusive creation preserves a player's existing overrides.
@@ -235,6 +298,7 @@ static BOOL GameplayConfig_GenerateFile(void)
 
 static void GameplayConfig_LoadFile(void)
 {
+    sUsesFileOverrides = TRUE;
     // Create the defaults template on first start; existing files are never overwritten.
     GameplayConfig_GenerateFile();
     GameplayConfig overrides = sGameplayConfig;
@@ -246,6 +310,7 @@ static void GameplayConfig_LoadFile(void)
 
 void GameplayConfig_Init(void)
 {
+    sUsesFileOverrides = FALSE;
     GameplayConfig_LoadDefaults(&sGameplayConfig);
 
     // Comment out this call to use only the defaults above: no file is generated or read,

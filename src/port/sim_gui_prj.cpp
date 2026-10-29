@@ -61,6 +61,7 @@ void ProjectPage(Page page) {
     switch (page) {
     case Page::Graphics: GraphicsContents(); break;
     case Page::GameSpeed: GameSpeedContents(); break;
+    case Page::Gameplay: GameplayContents(); break;
     case Page::Tools: ToolsContents(); break;
     case Page::Developer: DeveloperContentsPrj(); break;
     default: break;

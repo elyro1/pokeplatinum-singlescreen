@@ -43,6 +43,23 @@ void GameplayConfig_Init(void);
 GameplayConfig *GameplayConfig_Get(void);
 u16 GameplayConfig_GetBPPrice(u16 item, u16 originalPrice);
 
+// Shared metadata and validated values for the settings editor.
+typedef struct {
+    const char *name;
+    const char *label;
+    const char *group;
+    const char *description;
+    unsigned int maximum;
+    BOOL isBoolean;
+} GameplayConfigOption;
+
+unsigned int GameplayConfig_OptionCount(void);
+BOOL GameplayConfig_GetOption(unsigned int index, GameplayConfigOption *option);
+unsigned int GameplayConfig_GetOptionValue(const GameplayConfig *config, unsigned int index);
+BOOL GameplayConfig_SetOptionValue(GameplayConfig *config, unsigned int index, unsigned int value);
+BOOL GameplayConfig_ParseText(const char *text, GameplayConfig *config);
+BOOL GameplayConfig_UsesFileOverrides(void);
+
 #ifdef __cplusplus
 }
 #endif

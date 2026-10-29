@@ -7,6 +7,7 @@
 #include <simulator/glad/glad.h>
 #include "imgui_internal.h"
 #include "gui_internal.hpp"
+#include "port/gameplay_config.h"
 
 #include <cassert>
 #include <algorithm>
@@ -38,7 +39,8 @@ BOOL SIM_Net_StartHost() { netState = SIM_NET_STATE_HOST; return TRUE; }
 BOOL SIM_Net_StartClient(char *) { netState = SIM_NET_STATE_CLIENT; return TRUE; }
 }
 namespace SIM::GUI {
-void ProjectPage(Page) {}
+void GameplayContents();
+void ProjectPage(Page page) { if (page == Page::Gameplay) GameplayContents(); }
 bool ProjectBack(Page) { if (!manualBack) return false; manualBack = false; return true; }
 }
 
@@ -114,6 +116,7 @@ static void StartKeyboardCapture() {
 
 int main() {
     using namespace SIM::GUI;
+    GameplayConfig_Init();
     SIM_Config_LoadDefaults(&config);
     assert(config.menuScalePercent == 0 && config.pauseWhileMenuOpen);
     // Old configs inherit readable-menu defaults.

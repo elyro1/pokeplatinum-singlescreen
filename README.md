@@ -85,6 +85,7 @@ Press **Tab** to open a centered settings panel. Categories replace the current 
 - **Graphics:** lighting, atmosphere, shadows, water, weather, bloom, and BW2 battle visuals/ROM selection.
 - **Audio:** master volume.
 - **Controls:** keyboard and controller mappings, primary/secondary directions, axis deadzone, and PC shortcuts. Select a binding and press the new input; Escape cancels. Binding capture keeps the window responsive.
+- **Gameplay:** all gameplay overrides, grouped into battle rules, moves/tutors, evolution/eggs, encounters/events, and progression/prices. Edit the values, choose **Save changes**, and restart the game. **Reload / discard** reloads the file; **Defaults** stages the built-in defaults until you save. See [gameplay configuration](docs/gameplay_config.md).
 - **Game speed:** frame rate (30/60 FPS), battle pacing (Original/Smooth/Quick), the independent Normal Battle UI & Timing checkbox, frame cap, and fast-forward speed (1×–10×). Smooth keeps original animation timing with sprite interpolation; Quick speeds up battle effects. Normal Battle UI & Timing keeps HP/EXP bars, messages, and UI delays at normal speed.
 - **Cheats & tools:** cheats, Pokétch unlocks, Pokémon/item creation, and map jumping. Creation and travel require normal overworld control.
 - **Multiplayer:** host/connect settings and player information.
@@ -94,7 +95,7 @@ Press **Tab** to open a centered settings panel. Categories replace the current 
 
 **Display → Menu scale** offers Auto and 100–200% in 25% steps. Auto uses the display scale reported by SDL; use the manual override if your desktop's scale is not reported correctly. Fonts, spacing, controls, and dialogs scale together. Internal rendering resolution changes game sharpness independently. On smaller windows or at larger menu scales, categories collapse into a picker and page content scrolls.
 
-Settings save automatically to **sim_config.ini** and **sim_config_prj.ini**. The new **[Interface]** section in sim_config.ini stores **MenuScalePercent** (0 for Auto) and **PauseWhileOpen**; existing files inherit Auto and automatic pause. Gameplay overrides in gameplay_config.ini still load at startup. If performance is poor, lower the internal resolution under Display.
+PC settings save automatically to **sim_config.ini** and **sim_config_prj.ini**. The new **[Interface]** section in sim_config.ini stores **MenuScalePercent** (0 for Auto) and **PauseWhileOpen**; existing files inherit Auto and automatic pause. Gameplay overrides use the Gameplay page's **Save changes** button and load from **gameplay_config.ini** at startup. If performance is poor, lower the internal resolution under Display.
 
 ## Saves
 

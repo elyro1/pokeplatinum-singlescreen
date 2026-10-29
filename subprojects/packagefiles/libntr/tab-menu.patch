@@ -12,14 +12,14 @@ index 777383b..99de427 100644
      SIM_config_pad_settings_type padSettings; /* Input pad settings */
      NVRAMConfig osNvramConfig; /* OS NVRAM config */
 diff --git a/include/simulator/sim_gui.hpp b/include/simulator/sim_gui.hpp
-index 76d589a..eba1908 100644
+index 76d589a..568022c 100644
 --- a/include/simulator/sim_gui.hpp
 +++ b/include/simulator/sim_gui.hpp
 @@ -8,16 +8,30 @@
  
  namespace SIM::GUI {
  
-+enum class Page { Display, Graphics, Audio, Controls, GameSpeed, Tools, Multiplayer, Developer, Count };
++enum class Page { Display, Graphics, Audio, Controls, Gameplay, GameSpeed, Tools, Multiplayer, Developer, Count };
 +
  void Init(SDL_Window * window, SDL_GLContext context);
  void Main();
@@ -120,10 +120,10 @@ index 720fb0c..190e3af 100644
      fprintf(configFile, "[General]\n");
      fprintf(configFile, "InternalResolutionScale=%d\n", aConfig->internalResolutionScale);
 diff --git a/libraries/sim/src/sim_gui.cpp b/libraries/sim/src/sim_gui.cpp
-index 631b456..93b2c45 100644
+index 631b456..1da2521 100644
 --- a/libraries/sim/src/sim_gui.cpp
 +++ b/libraries/sim/src/sim_gui.cpp
-@@ -1,138 +1,373 @@
+@@ -1,138 +1,374 @@
  #include "simulator/sim.h"
  #include "simulator/sim_gui.hpp"
 -
@@ -177,12 +177,12 @@ index 631b456..93b2c45 100644
 +static std::function<void(std::string)> sFileDialogCallback;
 +
 +static const char *const sPageNames[] = {
-+    "Display", "Graphics", "Audio", "Controls", "Game speed",
++    "Display", "Graphics", "Audio", "Controls", "Gameplay", "Game speed",
 +    "Cheats & tools", "Multiplayer", "Developer"
 +};
 +
 +void __attribute__((weak)) ProjectPage(Page page) {
-+    if (page == Page::Graphics || page == Page::Tools)
++    if (page == Page::Graphics || page == Page::Tools || page == Page::Gameplay)
 +        ImGui::TextWrapped("This application does not provide additional settings here.");
  }
 +bool __attribute__((weak)) ProjectBack(Page) { return false; }
@@ -447,7 +447,7 @@ index 631b456..93b2c45 100644
 +                ImGui::TextDisabled("%s", i == 0 ? "SETTINGS" : "TOOLS");
 +            }
 +            if (ImGui::Selectable(sPageNames[i], static_cast<int>(sPage) == i, 0,
-+                                  ImVec2(0, ImGui::GetFrameHeight()))) {
++                                  ImVec2(0, ImGui::GetTextLineHeight() + style.FramePadding.y))) {
 +                SelectPage(static_cast<Page>(i));
              }
 -          }
@@ -480,10 +480,11 @@ index 631b456..93b2c45 100644
 +    }
 +    if (!stackedFooter) ImGui::SameLine();
 +    if (ImGui::Button(resume)) SetEnabled(false);
++    const char *saveHint = sPage == Page::Gameplay ? "Gameplay changes use Save" : "Settings save automatically";
 +    if (footerWidth > (stackedFooter ? resumeWidth : controlsWidth) + style.ItemSpacing.x +
-+            ImGui::CalcTextSize("Settings save automatically").x) {
++            ImGui::CalcTextSize(saveHint).x) {
 +        ImGui::SameLine();
-+        ImGui::TextDisabled("Settings save automatically");
++        ImGui::TextDisabled("%s", saveHint);
 +    }
 +    ImGui::End();
 +    if (tight) ImGui::PopStyleVar();
@@ -584,7 +585,7 @@ index 631b456..93b2c45 100644
  }
  
  void Render() {
-@@ -140,38 +375,12 @@ void Render() {
+@@ -140,38 +376,12 @@ void Render() {
      ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
  }
  

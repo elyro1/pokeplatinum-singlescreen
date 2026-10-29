@@ -29,6 +29,7 @@ Status: implemented with the clean dark style. TAB opens one centered panel with
 | Graphics | Day/night lighting, atmosphere, model lighting, character shadows, particles, water, weather, bloom, BW2 battle visuals and asset selection |
 | Audio | Existing master volume control |
 | Controls | Keyboard and controller subpages; DS button names with their actions; primary/secondary directions; deadzone; PC shortcuts |
+| Gameplay | All 23 gameplay config values, descriptions, explicit Save/Reload/Defaults, and restart status |
 | Game speed | 30/60 FPS, battle pacing, normal battle UI timing, frame cap, fast-forward multiplier |
 | Cheats & tools | Existing cheats, Pokétch unlocks, Pokémon creation, item creation, map jumping as subpages within the panel |
 | Multiplayer | Existing host/connect controls and connection state |
@@ -83,7 +84,7 @@ The redesign does not require replacing ImGui or rewriting the game renderer. Th
 
 ## Larger optional changes
 
-- **Gameplay configuration page:** expose selected options from `gameplay_config.ini`. This needs its own design for restart-only settings, preserving comments/unknown entries, and distinguishing pending values from running values. Do not silently turn startup-only options into live toggles.
+- **Gameplay configuration page — implemented:** all options from `gameplay_config.ini`, with explicit saving, restart status, comment/unknown-entry preservation, and protection against overwriting external edits. Draft and saved rules remain separate from the running game.
 - **Setting search:** useful if gameplay options expand the menu considerably. Results should navigate to the actual control and use the same page metadata.
 - **Graphics presets:** useful after establishing measured combinations and indicating when individual settings create a custom preset.
 - **Full controller navigation:** especially useful for Steam Deck/couch use. Explicitly separate navigating the menu from capturing a new binding.
@@ -110,7 +111,7 @@ The SDK changes are tracked in subprojects/packagefiles/libntr/tab-menu.patch
 and applied by subprojects/libntr.wrap on fresh dependency checkouts.
 
 Run **python3 tools/scripts/test_menu_gui.py --build build_linux** after building.
-It exercises real SDL/OpenGL/ImGui code offscreen without a ROM, checks all eight
+It exercises real SDL/OpenGL/ImGui code offscreen without a ROM, checks all nine
 categories at four window sizes and six scale modes, and covers config migration,
 invalid scale values, input capture, binding cancellation, key repeat, and pause
 ownership/network policy. The existing controller regression suite remains
@@ -118,7 +119,8 @@ ownership/network policy. The existing controller regression suite remains
 
 Actual game captures were also reviewed for the settings and tool pages. Physical
 monitor switching and Windows DPI behavior still need testing on those displays.
-The gameplay-config editor, search, presets, and additional controller shortcuts
-remain optional follow-up features.
+The gameplay editor's file behavior is covered by
+**python3 tools/scripts/test_gameplay_config_editor.py --build build_linux**.
+Search, presets, and additional controller shortcuts remain optional follow-up features.
 
 
