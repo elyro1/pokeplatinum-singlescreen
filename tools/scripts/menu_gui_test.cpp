@@ -118,11 +118,11 @@ int main() {
     using namespace SIM::GUI;
     GameplayConfig_Init();
     SIM_Config_LoadDefaults(&config);
-    assert(config.menuScalePercent == 0 && config.pauseWhileMenuOpen);
+    assert(config.menuScalePercent == 0 && !config.pauseWhileMenuOpen);
     // Old configs inherit readable-menu defaults.
     std::ofstream("sim_config.ini") << "[General]\nMasterVolume=72\n";
     SIM_Config_LoadConfigFile(&config);
-    assert(config.masterVolume == 72 && config.menuScalePercent == 0 && config.pauseWhileMenuOpen);
+    assert(config.masterVolume == 72 && config.menuScalePercent == 0 && !config.pauseWhileMenuOpen);
     for (const char *bad : {"-1", "99", "101", "174", "201", "nan", "150oops", "99999999999999999999999"}) {
         std::ofstream("sim_config.ini") << "[Interface]\nMenuScalePercent=" << bad << '\n';
         SIM_Config_LoadConfigFile(&config);
@@ -134,8 +134,13 @@ int main() {
     SIM_Config_LoadDefaults(&config);
     SIM_Config_LoadConfigFile(&config);
     assert(config.menuScalePercent == 175 && !config.pauseWhileMenuOpen);
-    config.menuScalePercent = 100;
     config.pauseWhileMenuOpen = TRUE;
+    SIM_Config_SaveConfigFile(&config);
+    SIM_Config_LoadDefaults(&config);
+    SIM_Config_LoadConfigFile(&config);
+    assert(config.pauseWhileMenuOpen);
+    config.menuScalePercent = 100;
+    config.pauseWhileMenuOpen = FALSE;
 
     assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) == 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
@@ -149,7 +154,9 @@ int main() {
     Init(window, gl);
     assert(ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard);
     assert(!IsEnabled() && !IsGameLogicPaused());
-    assert(Key(SDLK_TAB) && IsEnabled() && IsGameLogicPaused());
+    assert(Key(SDLK_TAB) && IsEnabled() && !IsGameLogicPaused());
+    config.pauseWhileMenuOpen = TRUE;
+    assert(IsGameLogicPaused());
     assert(ConsumeInputReset() && !ConsumeInputReset());
     assert(Key(SDLK_TAB, true, true) && IsEnabled()); // Holding TAB must not flicker.
     Key(SDLK_TAB, false);

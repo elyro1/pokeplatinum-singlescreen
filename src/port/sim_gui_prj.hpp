@@ -2,7 +2,7 @@
 #define SIM_GUI_PRJ_HPP
 namespace SIM::GUI {
 void CheatsContents();
-void GameSpeedContents();
+void GeneralContentsPrj();
 void GameplayContents();
 void GraphicsContents();
 void DeveloperContentsPrj();

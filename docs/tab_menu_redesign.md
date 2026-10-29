@@ -25,17 +25,15 @@ Status: implemented with the clean dark style. TAB opens one centered panel with
 
 | Category | Contents |
 | --- | --- |
-| Display | Fullscreen/windowed, screen layout, screen swap where applicable, internal resolution, VSync, menu scale |
-| Graphics | Day/night lighting, atmosphere, model lighting, character shadows, particles, water, weather, bloom, BW2 battle visuals and asset selection |
-| Audio | Existing master volume control |
+| General | Fullscreen/windowed, internal resolution, menu scale, master volume, fast-forward multiplier, ROM information and BW2 battle visuals |
+| Graphics | VSync, frame cap, 30/60 FPS, battle pacing and UI timing, day/night lighting, atmosphere, model lighting, character shadows, particles, water, weather and bloom |
 | Controls | Keyboard and controller subpages; DS button names with their actions; primary/secondary directions; deadzone; PC shortcuts |
 | Gameplay | All 23 gameplay config values, descriptions, explicit Save/Reload/Defaults, and restart status |
-| Game speed | 30/60 FPS, battle pacing, normal battle UI timing, frame cap, fast-forward multiplier |
 | Cheats & tools | Existing cheats, Pokétch unlocks, Pokémon creation, item creation, map jumping as subpages within the panel |
 | Multiplayer | Existing host/connect controls and connection state |
-| Developer | Frame/GPU/water timings, renderer information, emission view, lighting preview/reload, assertions, build hashes, ImGui demo |
+| Developer | Screen layout and screen swap, Frame/GPU/water timings, renderer information, emission view, lighting preview/reload, assertions, build hashes, ImGui demo |
 
-The Audio page is deliberately small because the current runtime exposes only master volume. Do not imply separate music/effects mixers already exist.
+The current runtime exposes only master volume; separate music/effects mixers do not exist.
 
 Keep game-state-dependent tools visible with a short availability reason where appropriate. Selecting a creation or map tool opens its content in place, with a Back action. File selection and genuine confirmations may use a focused modal.
 
@@ -76,7 +74,7 @@ The conversation concept demonstrates the first direction and grouping only. Its
 ## Implementation sequence
 
 1. **Panel foundation:** replace launcher/open-window state with active-page state. Split page contents from `ImGui::Begin/End`, introduce a small library/project page registration or callback boundary, and retain library fallback behavior for other applications. Fix the IO reference, add shared sizing and menu-scale persistence, and establish input ownership.
-2. **Migrate settings:** regroup existing controls, preserve existing config keys and immediate runtime effects, move BW2 setup into Graphics, and isolate diagnostics in Developer. Make file dialogs use the same scale and stay inside the viewport.
+2. **Migrate settings:** regroup existing controls, preserve existing config keys and immediate runtime effects, move BW2 setup into General, and isolate diagnostics in Developer. Make file dialogs use the same scale and stay inside the viewport.
 3. **Migrate tools:** embed cheats, creation forms, map jumping, and multiplayer in the same panel. Preserve initialization requirements and unsaved form state; show availability based on actual game state.
 4. **Polish and verify:** settle theme and pause defaults, add keyboard/controller navigation as agreed, update README menu paths, and test scaling, input, settings persistence, and tool behavior.
 

@@ -45,7 +45,7 @@ Use a build from this fork's [Releases](https://github.com/elyro1/pokeplatinum/r
 
 Optionally place your dumped **US Black 2 or White 2** `.nds` ROM beside the executable too. On startup, the game extracts the required battle assets into `bw2/` and automatically enables **BW2 battle visuals**, saving the setting. Existing assets are reused. While a compatible BW2 ROM remains present, startup enables the setting again; move the ROM away if you want to keep BW2 visuals disabled. Platinum is still required.
 
-Discovery checks the executable's directory first, then the working directory. Extraction uses the working directory, alongside settings and saves; normally this is the game folder. You can also select a BW2 ROM manually under **Tab → Graphics**.
+Discovery checks the executable's directory first, then the working directory. Extraction uses the working directory, alongside settings and saves; normally this is the game folder. You can also select a BW2 ROM manually under **Tab → General**.
 
 ## Default keybindings
 
@@ -81,21 +81,19 @@ The default layout shows one screen, with 60 FPS and Smooth battle pacing enable
 
 Press **Tab** to open a centered settings panel. Categories replace the current page; tools stay inside the panel instead of opening overlapping windows. The menu remembers your category and page scroll positions during the session.
 
-- **Display:** screen layout, fullscreen, internal rendering resolution, VSync, and menu scale.
-- **Graphics:** lighting, atmosphere, shadows, water, weather, bloom, and BW2 battle visuals/ROM selection.
-- **Audio:** master volume.
+- **General:** fullscreen, internal rendering resolution, menu scale, master volume, fast-forward speed, and ROM information and BW2 battle visuals.
+- **Graphics:** VSync, frame cap, frame rate (30/60 FPS), battle pacing, battle UI timing, lighting, atmosphere, shadows, water, weather, and bloom. Smooth pacing keeps original animation timing with sprite interpolation; Quick speeds up battle effects. Normal Battle UI & Timing keeps HP/EXP bars, messages, and UI delays at normal speed.
 - **Controls:** keyboard and controller mappings, primary/secondary directions, axis deadzone, and PC shortcuts. Select a binding and press the new input; Escape cancels. Binding capture keeps the window responsive.
 - **Gameplay:** all gameplay overrides, grouped into battle rules, moves/tutors, evolution/eggs, encounters/events, and progression/prices. Edit the values, choose **Save changes**, and restart the game. **Reload / discard** reloads the file; **Defaults** stages the built-in defaults until you save. See [gameplay configuration](docs/gameplay_config.md).
-- **Game speed:** frame rate (30/60 FPS), battle pacing (Original/Smooth/Quick), the independent Normal Battle UI & Timing checkbox, frame cap, and fast-forward speed (1×–10×). Smooth keeps original animation timing with sprite interpolation; Quick speeds up battle effects. Normal Battle UI & Timing keeps HP/EXP bars, messages, and UI delays at normal speed.
 - **Cheats & tools:** cheats, Pokétch unlocks, Pokémon/item creation, and map jumping. Creation and travel require normal overworld control.
 - **Multiplayer:** host/connect settings and player information.
-- **Developer:** frame/GPU timings, lighting previews, assertions, build information, and the optional ImGui demo.
+- **Developer:** screen layout and screen swap, frame/GPU timings, lighting previews, assertions, build information, and the optional ImGui demo.
 
-**Pause while open** is enabled by default. Uncheck it to preview visual changes while the game runs. Closing with Tab, Escape, or Resume clears automatic menu pause. Developer → Manual pause is independent and remains active after closing the panel. Automatic pause is suspended while hosting or connected to multiplayer; menu input is still kept out of gameplay. Escape cancels a binding/dialog or returns from a tool before closing settings.
+**Pause while open** is disabled by default. Enable it to pause the game while settings are open. Closing with Tab, Escape, or Resume clears automatic menu pause. Developer → Manual pause is independent and remains active after closing the panel. Automatic pause is suspended while hosting or connected to multiplayer; menu input is still kept out of gameplay. Escape cancels a binding/dialog or returns from a tool before closing settings.
 
-**Display → Menu scale** offers Auto and 100–200% in 25% steps. Auto uses the display scale reported by SDL; use the manual override if your desktop's scale is not reported correctly. Fonts, spacing, controls, and dialogs scale together. Internal rendering resolution changes game sharpness independently. On smaller windows or at larger menu scales, categories collapse into a picker and page content scrolls.
+**General → Menu scale** offers Auto and 100–200% in 25% steps. Auto uses the display scale reported by SDL; use the manual override if your desktop's scale is not reported correctly. Fonts, spacing, controls, and dialogs scale together. Internal rendering resolution changes game sharpness independently. On smaller windows or at larger menu scales, categories collapse into a picker and page content scrolls.
 
-PC settings save automatically to **sim_config.ini** and **sim_config_prj.ini**. The new **[Interface]** section in sim_config.ini stores **MenuScalePercent** (0 for Auto) and **PauseWhileOpen**; existing files inherit Auto and automatic pause. Gameplay overrides use the Gameplay page's **Save changes** button and load from **gameplay_config.ini** at startup. If performance is poor, lower the internal resolution under Display.
+PC settings save automatically to **sim_config.ini** and **sim_config_prj.ini**. The new **[Interface]** section in sim_config.ini stores **MenuScalePercent** (0 for Auto) and **PauseWhileOpen**; existing files without these settings inherit Auto and no automatic pause. Gameplay overrides use the Gameplay page's **Save changes** button and load from **gameplay_config.ini** at startup. If performance is poor, lower the internal resolution under General.
 
 ## Saves
 

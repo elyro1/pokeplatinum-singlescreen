@@ -33,7 +33,7 @@ static void ConfigCheckBox(const char *label, BOOL *configVar, bool &configChang
 
 static std::string sBw2ExtractMessage;
 
-void GameSpeedContents() {
+static void BattleSpeedContents() {
     SIM_Config_prj_type * myConfig = SIM_Config_prj_GetConfig();
     bool configChanged = false;
 
@@ -75,6 +75,7 @@ void GraphicsContents()
     SIM_Config_prj_type *myConfig = SIM_Config_prj_GetConfig();
     bool configChanged = false;
 
+    BattleSpeedContents();
     if (!BeginSettings("GraphicsSettings")) return;
     ConfigCheckBox("Richer day/night lighting", &myConfig->enhancedDayNight, configChanged);
     ConfigCheckBox("Regional atmosphere", &myConfig->regionalAtmosphere, configChanged);
@@ -95,18 +96,29 @@ void GraphicsContents()
     ConfigCheckBox("Night window and lamp glow", &myConfig->nightGlows, configChanged);
     ConfigCheckBox("Emissive bloom", &myConfig->emissiveBloom, configChanged);
     ImGui::EndTable();
-    ImGui::SeparatorText("Battle visuals");
+    if (configChanged) SIM_Config_prj_SaveConfigFile(myConfig);
+}
+
+void GeneralContentsPrj()
+{
+    SIM_Config_prj_type *myConfig = SIM_Config_prj_GetConfig();
+    bool configChanged = false;
+    ImGui::SeparatorText("ROMs");
     bool ready = BwBattle_AssetsReady();
     if (BeginSettings("BattleVisuals")) {
         ImGui::BeginDisabled(!ready);
         ConfigCheckBox("BW2 battle visuals", &myConfig->bw2BattleVisuals, configChanged);
         ImGui::EndDisabled();
+        const char *buttonLabel = ready ? "Re-extract BW2 ROM..." : "Select BW2 ROM...";
+        const float buttonWidth = ImGui::CalcTextSize(buttonLabel).x + ImGui::GetStyle().FramePadding.x * 2;
+        if (ImGui::GetContentRegionAvail().x >= ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.x + buttonWidth)
+            ImGui::SameLine();
+        if (ImGui::Button(buttonLabel)) {
+            OpenFileDialog([](std::string path) {
+                sBw2ExtractMessage = BwBattle_ExtractResultMessage(BwBattle_ExtractAssets(path.c_str()));
+            });
+        }
         ImGui::EndTable();
-    }
-    if (ImGui::Button(ready ? "Re-extract BW2 ROM..." : "Select BW2 ROM...")) {
-        OpenFileDialog([](std::string path) {
-            sBw2ExtractMessage = BwBattle_ExtractResultMessage(BwBattle_ExtractAssets(path.c_str()));
-        });
     }
     ImGui::TextWrapped("Uses graphics from your own US Black 2 / White 2 ROM. Changes apply to the next battle.");
     if (!sBw2ExtractMessage.empty()) ImGui::TextWrapped("%s", sBw2ExtractMessage.c_str());
