@@ -1966,6 +1966,17 @@ void BattleDisplay_PlayMusic(BattleSystem *battleSys, BattlerData *battlerData, 
     BattleController_EmitClearCommand(battleSys, battlerData->battler, message->command);
 }
 
+// BW2's entrance effects already play the shiny sparkle for the displayed Pokémon.
+static BOOL BattleDisplay_ShouldPlayShinyEntrance(BOOL isShiny)
+{
+#ifdef SDK_PORT
+    if (BwAdapter_IsDrawing()) {
+        return FALSE;
+    }
+#endif
+    return isShiny;
+}
+
 static void Task_SetEncounterStep(SysTask *task, void *data)
 {
     MonEncounterData *monEncounterData = data;
@@ -2095,7 +2106,7 @@ static void Task_SetEncounterStep(SysTask *task, void *data)
     case 3:
         if (PokemonAnimManager_HasAnimCompleted(BattleSystem_GetPokemonAnimManager(monEncounterData->battleSys), monEncounterData->battler) == TRUE
             && PokemonSprite_IsAnimActive(monEncounterData->sprite) == FALSE) {
-            if (monEncounterData->isShiny) {
+            if (BattleDisplay_ShouldPlayShinyEntrance(monEncounterData->isShiny)) {
                 MoveAnimation moveAnim;
 
                 #ifdef SDK_BUILD_ARM
@@ -2208,7 +2219,7 @@ static void Task_SetGiratinaEncounterStep(SysTask *task, void *data)
     case 3:
         if (PokemonAnimManager_HasAnimCompleted(BattleSystem_GetPokemonAnimManager(monEncounterData->battleSys), monEncounterData->battler) == TRUE
             && PokemonSprite_IsAnimActive(monEncounterData->sprite) == FALSE) {
-            if (monEncounterData->isShiny) {
+            if (BattleDisplay_ShouldPlayShinyEntrance(monEncounterData->isShiny)) {
                 MoveAnimation moveAnim;
 
                 #ifdef SDK_BUILD_ARM
@@ -2451,7 +2462,7 @@ static void Task_ShowEncounter(SysTask *task, void *data)
             monShowData->battlerData->ballRotation = NULL;
             ov12_02236428(monShowData->ballCapsuleSealEffect);
 
-            if (monShowData->isShiny) {
+            if (BattleDisplay_ShouldPlayShinyEntrance(monShowData->isShiny)) {
                 MoveAnimation moveAnim;
 
                 monShowData->battleAnimSys = BattleAnimSystem_New(HEAP_ID_BATTLE);
@@ -2658,7 +2669,7 @@ static void Task_ShowPokemon(SysTask *task, void *data)
             ov12_0223783C(monShowData->ballRotation);
             ov12_02236428(monShowData->ballCapsuleSealEffect);
 
-            if (monShowData->isShiny) {
+            if (BattleDisplay_ShouldPlayShinyEntrance(monShowData->isShiny)) {
                 MoveAnimation moveAnim;
 
                 #ifdef SDK_BUILD_ARM
