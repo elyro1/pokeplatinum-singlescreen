@@ -7,11 +7,14 @@
 
 #include "field/field_system.h"
 #include "overlay005/field_effect_manager.h"
+#include "overlay005/ov5_021ECC20.h"
+#include "overlay005/surf_mount_renderer.h"
 
 #include "fx_util.h"
 #include "map_object.h"
 #include "map_object_move.h"
 #include "overworld_anim_manager.h"
+#include "overworld_pokemon.h"
 #include "simple3d.h"
 #include "sys_task_manager.h"
 
@@ -39,6 +42,10 @@ typedef struct {
     int unk_08;
     int unk_0C;
     UnkStruct_ov5_021F28F4 unk_10;
+    PokemonMountVisual *pokemon;
+    int playerLocalID;
+    int playerMapHeaderID;
+    BOOL followerSuppressed;
 } UnkStruct_ov5_021F2974;
 
 static void ov5_021F2874(UnkStruct_ov5_021F2874 *param0);
@@ -52,7 +59,7 @@ static const OverworldAnimManagerFuncs Unk_ov5_022004B0;
 
 void *ov5_021F2850(FieldEffectManager *param0)
 {
-    UnkStruct_ov5_021F2874 *v0 = FieldEffectManager_HeapAllocInit(param0, (sizeof(UnkStruct_ov5_021F2874)), 0, 0);
+    UnkStruct_ov5_021F2874 *v0 = FieldEffectManager_HeapAllocInit(param0, sizeof(UnkStruct_ov5_021F2874), 0, 0);
     v0->unk_10 = param0;
 
     return v0;
@@ -137,6 +144,24 @@ OverworldAnimManager *ov5_021F28F4(MapObject *param0, int param1, int param2, in
     return v1;
 }
 
+void RockClimbMount_SetPokemon(OverworldAnimManager *animMan, Pokemon *mon)
+{
+    UnkStruct_ov5_021F2974 *renderer = OverworldAnimManager_GetFuncsContext(animMan);
+    PokemonMountVisual_Free(renderer->pokemon);
+    renderer->pokemon = NULL;
+    if (mon == NULL || Pokemon_GetValue(mon, MON_DATA_IS_EGG, NULL)) {
+        return;
+    }
+    OverworldPokemonAppearance appearance;
+    appearance.species = Pokemon_GetValue(mon, MON_DATA_SPECIES, NULL);
+    appearance.form = Pokemon_GetValue(mon, MON_DATA_FORM, NULL);
+    appearance.gender = Pokemon_GetGender(mon);
+    appearance.shiny = Pokemon_IsShiny(mon);
+    renderer->pokemon = PokemonMountVisual_New(renderer->unk_10.unk_10,
+        OverworldPokemonAssets_Resolve(&appearance),
+        FALSE);
+}
+
 void ov5_021F2974(OverworldAnimManager *param0, int param1)
 {
     UnkStruct_ov5_021F2974 *v0 = OverworldAnimManager_GetFuncsContext(param0);
@@ -151,6 +176,9 @@ static int ov5_021F2980(OverworldAnimManager *param0, void *param1)
     v0->unk_10 = *v1;
     v0->unk_04 = v1->unk_00;
     v0->unk_0C = OverworldAnimManager_GetUserInt(param0);
+    v0->playerLocalID = MapObject_GetLocalID(v1->unk_10);
+    v0->playerMapHeaderID = MapObject_GetMapHeaderID(v1->unk_10);
+    v0->followerSuppressed = FollowingPokemon_Suppress(v1->fieldSystem, FOLLOWING_POKEMON_SUPPRESS_FIELD_MOVE);
 
     ov5_021F28D4(v0->unk_10.unk_0C);
     ov5_021F2874(v0->unk_10.unk_0C);
@@ -162,6 +190,14 @@ static void ov5_021F29BC(OverworldAnimManager *param0, void *param1)
 {
     UnkStruct_ov5_021F2974 *v0 = param1;
 
+    PokemonMountVisual_Free(v0->pokemon);
+    if (sub_02062764(v0->unk_10.unk_10, v0->playerLocalID, v0->playerMapHeaderID)) {
+        VecFx32 offset = { 0, 0, 0 };
+        MapObject_SetSpritePosOffset(v0->unk_10.unk_10, &offset);
+    }
+    if (v0->followerSuppressed) {
+        FollowingPokemon_Resume(v0->unk_10.fieldSystem, FOLLOWING_POKEMON_SUPPRESS_FIELD_MOVE);
+    }
     ov5_021F287C(v0->unk_10.unk_0C);
     ov5_021F28E4(v0->unk_10.unk_0C);
 }
@@ -171,12 +207,17 @@ static void ov5_021F29D0(OverworldAnimManager *param0, void *param1)
     UnkStruct_ov5_021F2974 *v0 = param1;
     MapObject *v1 = v0->unk_10.unk_10;
 
+    if (!sub_02062764(v1, v0->playerLocalID, v0->playerMapHeaderID)) {
+        FieldEffectManager_FinishAnimManager(param0);
+        return;
+    }
+    PokemonMountVisual_Tick(v0->pokemon, ov5_021ECD38(v1));
     if (v0->unk_0C == 0) {
         return;
     }
 
     {
-        VecFx32 v2 = { 0, 0, 0 };
+        VecFx32 v2 = { 0, PokemonMountVisual_RiderHeight(v0->pokemon), 0 };
         MapObject_SetSpritePosOffset(v1, &v2);
     }
 
@@ -192,6 +233,13 @@ static void ov5_021F29D0(OverworldAnimManager *param0, void *param1)
 static void ov5_021F2A04(OverworldAnimManager *param0, void *param1)
 {
     UnkStruct_ov5_021F2974 *v0 = param1;
+
+    if (v0->pokemon != NULL) {
+        VecFx32 position;
+        OverworldAnimManager_GetPosition(param0, &position);
+        PokemonMountVisual_Render(v0->pokemon, &position, v0->unk_04, v0->unk_00 != 1 && !MapObject_IsHidden(v0->unk_10.unk_10));
+        return;
+    }
 
     if (v0->unk_00 == 1) {
         return;

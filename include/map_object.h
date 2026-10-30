@@ -73,6 +73,8 @@ void MapObjectMan_Delete(MapObjectManager *mapObjMan);
 void sub_0206184C(MapObjectManager *mapObjMan, enum MapHeaderID oldMapHeaderID, enum MapHeaderID newMapHeaderID, int objEventCount, const ObjectEvent *objectEvent);
 MapObject *MapObjectMan_AddMapObjectFromHeader(const MapObjectManager *mapObjMan, const ObjectEvent *objectEvent, enum MapHeaderID mapHeaderID);
 MapObject *MapObjectMan_AddMapObject(const MapObjectManager *mapObjMan, int x, int z, int initialDir, int graphicsID, int movementType, enum MapHeaderID mapHeaderID);
+MapObject *MapObjectMan_AddPokemonActor(const MapObjectManager *mapObjMan, const ObjectEvent *event, enum MapHeaderID mapHeaderID, u32 actorHandle);
+u32 MapObject_GetPokemonActorHandle(const MapObject *mapObj);
 MapObject *MapObjectMan_AddMapObjectFromLocalID(const MapObjectManager *mapObjMan, int param1, int objEventCount, enum MapHeaderID mapHeaderID, const ObjectEvent *objectEvent);
 void sub_02061AB4(MapObject *mapObj, int graphicsID);
 void sub_02061AD4(MapObject *mapObj, int param1);

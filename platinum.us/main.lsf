@@ -100,6 +100,11 @@ Static main
 	Object main.nef.p/src_string_gf.c.o
 	Object main.nef.p/src_touch_screen_actions.c.o
 	Object main.nef.p/src_billboard_gfx_sequence.c.o
+	Object main.nef.p/src_overworld_pokemon_assets.c.o
+	Object main.nef.p/src_overworld_pokemon.c.o
+	Object main.nef.p/src_overworld_encounters.c.o
+	Object main.nef.p/src_pokemon_mood.c.o
+	Object main.nef.p/src_following_pokemon_interaction.c.o
 	Object main.nef.p/src_unk_0202419C.c.o
 	Object main.nef.p/src_hardware_palette.c.o
 	Object main.nef.p/src_g3d_pipeline.c.o

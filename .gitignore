@@ -3,6 +3,7 @@
 /build_linux/
 /build_win64/
 /build_nx/
+/build_ds_follower/
 
 # MSys2
 /msys2/
@@ -142,3 +143,6 @@ compile_commands.json
 
 # Optional resources extracted from the player's BW2 ROM
 /bw2/
+
+# Optional resources extracted from the player's HG/SS ROM
+/hgss/

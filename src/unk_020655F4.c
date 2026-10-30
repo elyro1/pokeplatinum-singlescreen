@@ -17,6 +17,7 @@
 #include "map_object.h"
 #include "map_object_move.h"
 #include "overworld_anim_manager.h"
+#include "overworld_pokemon.h"
 #include "sound.h"
 #include "sound_playback.h"
 #include "sys_task.h"
@@ -37,6 +38,8 @@ typedef struct MoveAnimData {
     int count;
     MapObject *mapObj;
     const MapObjectAnimCmd *animCmd;
+    FieldSystem *actorField;
+    OverworldPokemonHandle actorHandle;
 } MoveAnimData;
 
 typedef struct WalkMovementData {
@@ -208,6 +211,10 @@ SysTask *MapObject_StartAnimation(MapObject *mapObj, const MapObjectAnimCmd *ani
 
     data->mapObj = mapObj;
     data->animCmd = animCmd;
+    data->actorHandle = MapObject_GetPokemonActorHandle(mapObj);
+    if (data->actorHandle != 0) {
+        data->actorField = MapObject_FieldSystem(mapObj);
+    }
 
     return task;
 }
@@ -222,9 +229,10 @@ void MapObject_FinishAnimation(SysTask *task)
 {
     MoveAnimData *data = SysTask_GetParam(task);
 
-    GF_ASSERT(LocalMapObj_CheckAnimationFinished(data->mapObj) == TRUE);
-
-    sub_020656AC(data->mapObj);
+    if (data->actorHandle == 0 || OverworldPokemon_GetObject(data->actorField, data->actorHandle) == data->mapObj) {
+        GF_ASSERT(LocalMapObj_CheckAnimationFinished(data->mapObj) == TRUE);
+        sub_020656AC(data->mapObj);
+    }
     Heap_FreeExplicit(HEAP_ID_FIELD1, data);
     SysTask_Done(task);
 }
@@ -257,6 +265,12 @@ static BOOL (*const sMovementAnimationFuncs[])(MoveAnimData *) = {
 static void MapObject_DoAnimation(SysTask *task, void *data)
 {
     MoveAnimData *animData = data;
+    if (animData->actorHandle != 0 && OverworldPokemon_GetObject(animData->actorField, animData->actorHandle) != animData->mapObj) {
+        // The script waiter still owns the task/data. Finish its wait without
+        // touching a removed actor or a new object that reused the same slot.
+        animData->ended = TRUE;
+        return;
+    }
     while (sMovementAnimationFuncs[animData->state](animData) == TRUE) {}
 }
 

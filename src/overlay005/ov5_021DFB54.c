@@ -634,6 +634,7 @@ void FieldTask_StartUseSurf(FieldTask *task, int direction, int partySlot)
     FieldSystem *fieldSystem = FieldTask_GetFieldSystem(task);
     Pokemon *partyMon = GetPokemonByIndex(fieldSystem, partySlot);
 
+    SurfMountRenderer_SelectPokemon(fieldSystem, partySlot);
     MonRideTask_Init(fieldSystem, partyMon, &monRideTask);
     SurfTask_Start(fieldSystem, direction, &monRideTask);
 }
@@ -1081,6 +1082,7 @@ static int SubTask_RockClimb_CreateMount(RockClimbTaskEnv *taskEnv)
     int zPos = PlayerAvatar_GetZPos(taskEnv->playerAvatar) + MapObject_GetDzFromDir(taskEnv->direction);
 
     taskEnv->unk_18 = ov5_021F28F4(taskEnv->playerObject, xPos, zPos, taskEnv->direction, 0);
+    RockClimbMount_SetPokemon(taskEnv->unk_18, taskEnv->monRideTask.partyMon);
     taskEnv->unk_2C = ov6_0224892C(taskEnv->fieldSystem);
 
     Sound_PlayEffect(SEQ_SE_DP_UG_023_sseq);

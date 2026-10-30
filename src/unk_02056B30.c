@@ -29,6 +29,7 @@
 #include "map_header.h"
 #include "map_object.h"
 #include "map_tile_behavior.h"
+#include "overworld_pokemon.h"
 #include "player_avatar.h"
 #include "screen_fade.h"
 #include "sound_playback.h"
@@ -431,6 +432,7 @@ static BOOL sub_02057050(FieldTask *taskMan)
         u8 v4;
         MapObject *v5 = PlayerAvatar_GetMapObject(fieldSystem->playerAvatar);
 
+        FollowingPokemon_OnDoorExit(fieldSystem);
         v4 = TerrainCollisionManager_GetTileBehavior(fieldSystem, PlayerAvatar_GetXPos(fieldSystem->playerAvatar), PlayerAvatar_GetZPos(fieldSystem->playerAvatar));
 
         if (TileBehavior_IsDoor(v4)) {

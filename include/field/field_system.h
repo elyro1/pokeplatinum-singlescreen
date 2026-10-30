@@ -34,6 +34,7 @@
 #include "map_header_data.h"
 #include "map_matrix.h"
 #include "overlay_manager.h"
+#include "overworld_pokemon.h"
 #include "player_avatar.h"
 #include "pokedex_memory.h"
 #include "pokeradar.h"
@@ -133,6 +134,15 @@ typedef struct FieldSystem_t {
     MtxFx43 npcSceneViewMatrix;
     MtxFx44 npcSceneProjectionMatrix;
 #endif
+    struct OverworldPokemonManager *overworldPokemon;
+    struct OverworldEncounterManager *overworldEncounters;
+    u32 nextPokemonActorHandle;
+    u16 followingPokemonSuppression[FOLLOWING_POKEMON_SUPPRESS_COUNT];
+    struct FollowerInteraction *followerInteraction;
+    // Runtime identity of the Pokemon activating Surf, independent of party order.
+    BOOL surfMountPokemonSelected;
+    u32 surfMountPersonality;
+    u32 surfMountOTID;
 } FieldSystem;
 
 #endif // POKEPLATINUM_FIELD_SYSTEM_H

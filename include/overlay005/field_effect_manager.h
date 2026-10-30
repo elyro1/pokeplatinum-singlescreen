@@ -51,6 +51,8 @@ void *FieldEffectManager_AllocAndReadNARCWholeMember(FieldEffectManager *fieldEf
 OverworldAnimManager *FieldEffectManager_InitAnimManager(const FieldEffectManager *fieldEffMan, const OverworldAnimManagerFuncs *funcs, const VecFx32 *initialPos, int userInt, const void *userData, int sysTaskPriority);
 void FieldEffectManager_FinishAnimManager(OverworldAnimManager *animMan);
 Billboard *ov5_021DF7F8(FieldEffectManager *param0, const BillboardResources *param1, const VecFx32 *param2);
+// Optional visuals can fall back when the effect billboard pool is full.
+Billboard *FieldEffectManager_TryAddBillboard(FieldEffectManager *manager, const BillboardResources *resources, const VecFx32 *position);
 Billboard *ov5_021DF84C(FieldEffectManager *param0, u32 param1, const VecFx32 *param2);
 BillboardResources *ov5_021DF864(FieldEffectManager *param0, u32 param1, u32 param2, u32 param3, u32 param4, int param5, const BillboardAnim *param6);
 void ov5_021DF9D4(FieldEffectManager *param0, u32 param1);

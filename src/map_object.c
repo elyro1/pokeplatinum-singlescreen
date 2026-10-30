@@ -27,6 +27,8 @@
 #include "map_header_data.h"
 #include "map_object_move.h"
 #include "narc.h"
+#include "overworld_pokemon.h"
+#include "overworld_encounters.h"
 #include "script_manager.h"
 #include "sys_task.h"
 #include "sys_task_manager.h"
@@ -100,6 +102,7 @@ typedef struct MapObject {
     BOOL streamedNeighbor;
     u16 trainerMovementScript;
 #endif
+    u32 pokemonActorHandle;
 } MapObject;
 
 typedef struct {
@@ -123,6 +126,7 @@ static BOOL MapObjectMan_AddMoveTask(const MapObjectManager *mapObjMan, MapObjec
 static void sub_020621E8(MapObject *mapObj, const ObjectEvent *objectEvent, FieldSystem *fieldSystem);
 static void sub_020622B8(MapObject *mapObj, const ObjectEvent *objectEvent);
 static void sub_0206234C(MapObject *mapObj, const MapObjectManager *mapObjMan);
+static MapObject *MapObjectMan_CreateObject(const MapObjectManager *mapObjMan, const ObjectEvent *event, enum MapHeaderID mapHeaderID, u32 actorHandle);
 static void sub_0206239C(MapObject *mapObj);
 static void sub_020623D4(MapObject *mapObj);
 static void sub_0206243C(MapObject *mapObj);
@@ -175,12 +179,15 @@ MapObjectManager *MapObjectMan_New(FieldSystem *fieldSystem, int maxObjs, int ta
     MapObjectMan_SetFieldSystem(mapObjMan, fieldSystem);
     MapObjectMan_SetMaxObjects(mapObjMan, maxObjs);
     MapObjectMan_SetTaskBasePriority(mapObjMan, taskBasePriority);
+    OverworldPokemon_Init(fieldSystem);
 
     return mapObjMan;
 }
 
 void MapObjectMan_Delete(MapObjectManager *mapObjMan)
 {
+    OverworldEncounters_Free(MapObjectMan_FieldSystem(mapObjMan));
+    OverworldPokemon_Free(MapObjectMan_FieldSystem(mapObjMan));
     Heap_FreeExplicit(HEAP_ID_FIELD2, MapObjectMan_GetMapObject(mapObjMan));
     Heap_FreeExplicit(HEAP_ID_FIELD2, mapObjMan);
 }
@@ -191,6 +198,11 @@ void sub_0206184C(MapObjectManager *mapObjMan, enum MapHeaderID oldMapHeaderID, 
     MapObject *mapObj = MapObjectMan_GetMapObject(mapObjMan);
 
     while (maxObjects) {
+        if (mapObj->pokemonActorHandle != 0) {
+            mapObj++;
+            maxObjects--;
+            continue;
+        }
         if (sub_02062CF8(mapObj) == TRUE) {
             int v0 = sub_0206244C(mapObj, newMapHeaderID, objEventCount, objectEvent);
 
@@ -281,7 +293,29 @@ MapObject *MapObjectMan_AddMapObjectFromHeader(const MapObjectManager *mapObjMan
         }
     }
 
-    mapObj = sub_02062120(mapObjMan);
+    return MapObjectMan_CreateObject(mapObjMan, v2, mapHeaderID, 0);
+}
+
+MapObject *MapObjectMan_AddPokemonActor(const MapObjectManager *mapObjMan, const ObjectEvent *event, enum MapHeaderID mapHeaderID, u32 actorHandle)
+{
+    return MapObjectMan_CreateObject(mapObjMan, event, mapHeaderID, actorHandle);
+}
+
+u32 MapObject_GetPokemonActorHandle(const MapObject *mapObj)
+{
+    return mapObj->pokemonActorHandle;
+}
+
+static MapObject *MapObjectMan_CreateObject(const MapObjectManager *mapObjMan, const ObjectEvent *v2, enum MapHeaderID mapHeaderID, u32 actorHandle)
+{
+    MapObject *mapObj = sub_02062120(mapObjMan);
+    BOOL canReclaimActor = actorHandle == 0;
+#ifdef SDK_PORT
+    canReclaimActor &= !MapHeaderData_IsStreamedObject(MapObjectMan_FieldSystem(mapObjMan), v2);
+#endif
+    if (mapObj == NULL && canReclaimActor && OverworldPokemon_MakeRoom(MapObjectMan_FieldSystem(mapObjMan))) {
+        mapObj = sub_02062120(mapObjMan);
+    }
 
     if (mapObj == NULL) {
         return mapObj;
@@ -289,8 +323,9 @@ MapObject *MapObjectMan_AddMapObjectFromHeader(const MapObjectManager *mapObjMan
 
     sub_020621E8(mapObj, v2, MapObjectMan_FieldSystem(mapObjMan));
     sub_0206234C(mapObj, mapObjMan);
+    mapObj->pokemonActorHandle = actorHandle;
 #ifdef SDK_PORT
-    mapObj->streamedNeighbor = streamedNeighbor;
+    mapObj->streamedNeighbor = actorHandle == 0 && MapHeaderData_IsStreamedObject(MapObjectMan_FieldSystem(mapObjMan), v2);
 #endif
     MapObject_SetMapHeaderID(mapObj, mapHeaderID);
     // Reserve the task before initializing movement or graphics resources.
@@ -370,6 +405,7 @@ void sub_02061AD4(MapObject *mapObj, int param1)
 void MapObject_Delete(MapObject *mapObj)
 {
     const MapObjectManager *mapObjMan = MapObject_MapObjectManager(mapObj);
+    OverworldPokemon_OnObjectDeleted(mapObj);
 
     if (MapObjectMan_IsDrawInitialized(mapObjMan) == TRUE) {
         sub_02062B7C(mapObj);
@@ -474,6 +510,9 @@ void MapObjectMan_SaveAll(FieldSystem *fieldSystem, const MapObjectManager *mapO
     MapObject *mapObj;
 
     while (MapObjectMan_FindObjectWithStatus(mapObjMan, &mapObj, &v0, MAP_OBJ_STATUS_0)) {
+        if (mapObj->pokemonActorHandle != 0) {
+            continue;
+        }
 #ifdef SDK_PORT
         // Extra neighboring objects are reconstructed when the field loads;
         // keep the original 64-entry save layout and prioritize actual objects.
@@ -499,6 +538,23 @@ void MapObjectMan_LoadAllObjects(const MapObjectManager *mapObjMan, MapObjectSav
 
     while (size) {
         if (mapObjSave->status & MAP_OBJ_STATUS_0) {
+            // Save snapshots can retain removed custom NPCs from older builds.
+            // Such objects have neither render callbacks nor a valid movement
+            // table in this executable. Keep supported story objects intact.
+            BOOL supported = mapObjSave->graphicsID == OBJ_EVENT_GFX_INVISIBLE
+                || OverworldPokemonAssets_IsGraphicsID(mapObjSave->graphicsID)
+                || mapObjSave->movementType == MOVEMENT_TYPE_PLAYER;
+            const ObjectEventGfxRendererEntry *renderer = gObjectEventGfxRenderersTable + OVERWORLD_POKEMON_VARIANTS * 2;
+            while (!supported && renderer->graphicsID != OBJ_EVENT_GFX_SENTINEL_ID) {
+                supported = renderer->graphicsID == mapObjSave->graphicsID;
+                renderer++;
+            }
+            if (!supported || mapObjSave->movementType >= MAX_MOVEMENT_TYPE
+                || mapObjSave->movementType == MOVEMENT_TYPE_FOLLOW_PARTY_POKEMON) {
+                mapObjSave++;
+                size--;
+                continue;
+            }
             mapObj = sub_02062120(mapObjMan);
             GF_ASSERT(mapObj != NULL);
 
@@ -734,6 +790,7 @@ static BOOL MapObjectMan_AddMoveTask(const MapObjectManager *mapObjMan, MapObjec
     SysTask *task;
 
     if (movementType == MOVEMENT_TYPE_FOLLOW_PLAYER
+        || movementType == MOVEMENT_TYPE_FOLLOW_PARTY_POKEMON
         || movementType == MOVEMENT_TYPE_FOLLOW_PARTNER_TRAINER) {
         v0 += 2;
     }
@@ -2526,7 +2583,7 @@ static int ObjectEvent_GetHiddenFlagNoScript(const ObjectEvent *objectEvent)
 
 static const UnkStruct_020EDF0C *sub_0206320C(u32 param0)
 {
-    GF_ASSERT(param0 < 0x44);
+    GF_ASSERT(param0 < MAX_MOVEMENT_TYPE);
     return Unk_020EE3A8[param0];
 }
 
@@ -2573,6 +2630,10 @@ static UnkFuncPtr_ov5_021FB0F0_4 sub_02063240(const UnkStruct_ov5_021FB0F0 *para
 static const UnkStruct_ov5_021FB0F0 *sub_02063244(u32 param0)
 {
     const ObjectEventGfxRendererEntry *v0 = gObjectEventGfxRenderersTable;
+    if (OverworldPokemonAssets_IsGraphicsID(param0)) {
+        return v0[param0 - OVERWORLD_POKEMON_GFX_BASE].renderer;
+    }
+    v0 += OVERWORLD_POKEMON_VARIANTS * 2;
 
     do {
         if (v0->graphicsID == param0) {

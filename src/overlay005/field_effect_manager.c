@@ -404,6 +404,13 @@ static void ov5_021DF7C4(FieldEffectManager *fieldEffMan)
 
 Billboard *ov5_021DF7F8(FieldEffectManager *param0, const BillboardResources *param1, const VecFx32 *param2)
 {
+    Billboard *billboard = FieldEffectManager_TryAddBillboard(param0, param1, param2);
+    GF_ASSERT(billboard != NULL);
+    return billboard;
+}
+
+Billboard *FieldEffectManager_TryAddBillboard(FieldEffectManager *param0, const BillboardResources *param1, const VecFx32 *param2)
+{
     BillboardTemplate v0;
     Billboard *v1;
     BillboardList *v2;
@@ -417,8 +424,6 @@ Billboard *ov5_021DF7F8(FieldEffectManager *param0, const BillboardResources *pa
     v0.scale = v3;
 
     v1 = BillboardList_Append(&v0);
-    GF_ASSERT(v1 != NULL);
-
     if (v1 != NULL) {
         NNS_G3dMdlSetMdlFogEnableFlagAll(Billboard_GetModel(v1), 1);
         AreaLight_UseGlobalModelAttributes(Billboard_GetModel(v1));

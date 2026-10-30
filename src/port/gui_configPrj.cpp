@@ -6,6 +6,7 @@
 #include "sim_gui_prj.hpp"
 
 #include "port/sim_config_prj.h"
+#include "port/hgss_assets.h"
 #include "port/field_lights.h"
 #include "port/field_visuals.h"
 #include "port/field_visual_effects.h"
@@ -32,6 +33,7 @@ static void ConfigCheckBox(const char *label, BOOL *configVar, bool &configChang
 }
 
 static std::string sBw2ExtractMessage;
+static std::string sHgssExtractMessage;
 
 static void BattleSpeedContents() {
     SIM_Config_prj_type * myConfig = SIM_Config_prj_GetConfig();
@@ -125,6 +127,24 @@ void GeneralContentsPrj()
     if (!ready) ImGui::TextWrapped("BW2 battle graphics not extracted.");
     else if (!BwBattle_IrisAssetsReady() || !BwBattle_IrisVsReady())
         ImGui::TextWrapped("Re-extract your BW2 ROM to enable all Iris graphics.");
+
+    bool hgssReady = HgssAssets_Ready();
+    if (BeginSettings("OverworldPokemon")) {
+        ImGui::BeginDisabled(!hgssReady);
+        ConfigCheckBox("Overworld encounters", &myConfig->overworldEncounters, configChanged);
+        ConfigCheckBox("Pokémon follower", &myConfig->pokemonFollower, configChanged);
+        ImGui::EndDisabled();
+        const char *label = hgssReady ? "Re-extract HG/SS ROM..." : "Select HG/SS ROM...";
+        if (ImGui::Button(label)) {
+            OpenFileDialog([](std::string path) {
+                sHgssExtractMessage = HgssAssets_Extract(path.c_str());
+            });
+        }
+        ImGui::EndTable();
+    }
+    ImGui::TextWrapped("Uses overworld Pokémon graphics from your own HeartGold / SoulSilver ROM. Changes apply when you resume the game.");
+    if (!sHgssExtractMessage.empty()) ImGui::TextWrapped("%s", sHgssExtractMessage.c_str());
+    if (!hgssReady) ImGui::TextWrapped("HG/SS overworld graphics not extracted.");
 
     if(configChanged) {
         SIM_Config_prj_SaveConfigFile(myConfig);

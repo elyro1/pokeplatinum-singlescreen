@@ -1,0 +1,28 @@
+{
+  "format": 1,
+  "sources": {
+    "files/a/2/2/0": "cb485461c656c1feb6219b5583db610870d9177e95502fb55227ee872d053447",
+    "files/a/2/2/1": "ef26df849cc5a59347ac34365e5c7c81cf7b787ecdcc9f038da1cd87ff595f09",
+    "files/a/2/2/2": "f2eb692d2c50f60bf794931d4c70b64cb7e460ed21cb88a93fa20a5c17e3b913",
+    "files/a/2/3/1": "0583c5513a482a796dc80b7df6215337f3797b9721f9cd27686dc26b42934907",
+    "files/msgdata/msg/msg_0265.gmm": "5ebfc2ac2e6ad5376a3d9effcb02c98dc04bdef3d75e0cdf9358145ccd128d7b",
+    "files/msgdata/msg/msg_0040.gmm": "2fc71ca4134b1bf3c98d0c27639689e5d9a23ce73c26a5b33ca8b9fd29b1890b",
+    "files/a/1/0/3": "45486a7c13c393fb8ad420c794a072903417a661f04c894422aa4d35a5d32061"
+  },
+  "generated": {
+    "reactions.inc": "bf864842d981f591d575307fc413ca9e34cdd403881c00b641907184a1c5c2a5",
+    "reaction_emotes.inc": "ed9b835fc495bcdc688c795c9ee7d9c2ff7df0c4a57b5ab7c8dfa4ecd5da6c55"
+  },
+  "text_sha256": "0b6b0d0da1a0c02b704cf06d8e7ac7241d046147b406ab81f52e4f567e9abd64",
+  "actions": 1023,
+  "animations": 108,
+  "messages": 761,
+  "pools": [
+    null,
+    127,
+    177,
+    210,
+    214,
+    203
+  ]
+}

@@ -50,9 +50,13 @@ typedef struct WildEncounters {
 
 #include "field_battle_data_transfer.h"
 #include "field_task.h"
+#include "overworld_encounters.h"
 
 void WildEncounters_ReplaceTimedEncounters(const WildEncounters *encounterData, int *param1, int *param2);
 BOOL WildEncounters_TryWildEncounter(FieldSystem *fieldSystem);
+BOOL WildEncounters_TryRadarEncounter(FieldSystem *fieldSystem);
+BOOL WildEncounters_GenerateVisiblePokemon(FieldSystem *fieldSystem, int x, int z, OverworldEncounterPokemon *encounter);
+void WildEncounters_StartVisibleBattle(FieldSystem *fieldSystem, const OverworldEncounterPokemon *encounter);
 BOOL WildEncounters_TryFishingEncounter(FieldSystem *fieldSystem, enum EncounterFishingRodType fishingRodType, FieldBattleDTO **param2);
 BOOL WildEncounters_TrySweetScentEncounter(FieldSystem *fieldSystem, FieldTask *param1);
 BOOL WildEncounters_TryMudEncounter(FieldSystem *fieldSystem, FieldBattleDTO **param1);

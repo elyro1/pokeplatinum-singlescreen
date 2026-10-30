@@ -8,6 +8,7 @@
 #include "constants/game_options.h"
 #include "constants/heap.h"
 #include "constants/items.h"
+#include "pokemon_mood.h"
 #include "constants/rtc.h"
 #include "generated/abilities.h"
 #include "generated/battle_backgrounds.h"
@@ -764,6 +765,7 @@ BOOL BattleSystem_UseBagItem(BattleSystem *battleSys, int battler, int partySlot
         }
     }
 
+    if (result) PokemonMood_OnItem(mon, item);
     return result;
 }
 

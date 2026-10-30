@@ -5,6 +5,7 @@
 
 #include "constants/map_object.h"
 #include "generated/movement_types.h"
+#include "generated/object_events_gfx.h"
 
 #include "struct_decls/map_object.h"
 #include "struct_decls/map_object_manager.h"
@@ -24,6 +25,8 @@
 #include "overlay005/ov5_021F3A50.h"
 
 #include "map_object.h"
+#include "overworld_pokemon.h"
+#include "overworld_pokemon_assets.h"
 #include "map_tile_behavior.h"
 #include "terrain_collision_manager.h"
 #include "unk_020655F4.h"
@@ -533,21 +536,36 @@ static void sub_02063CFC(MapObject *mapObj, u8 currTileBehavior, u8 prevTileBeha
     }
 }
 
+static BOOL MapObject_UsesWaterReflections(const MapObject *mapObj)
+{
+    u32 graphicsID = MapObject_GetGraphicsID(mapObj);
+    // Surf riders and their Pokemon must agree on lake/sea water as well as
+    // the original river tiles. Walking trainers retain Platinum's policy.
+    return OverworldPokemonAssets_IsGraphicsID(graphicsID)
+        || graphicsID == OBJ_EVENT_GFX_PLAYER_M_SURF
+        || graphicsID == OBJ_EVENT_GFX_PLAYER_F_SURF;
+}
+
 static void sub_02063D30(MapObject *mapObj, u8 currTileBehavior, u8 prevTileBehavior, const ObjectEventGfxRenderDetailsEntry *renderDetails)
 {
     if (renderDetails->hasReflection == 0) {
         return;
     }
 
+    BOOL waterReflection = MapObject_UsesWaterReflections(mapObj);
+    if (waterReflection && MapObject_IsStatusOnElevatedBridge(mapObj)) {
+        return;
+    }
+
     if (sub_02062F64(mapObj) == FALSE) {
         u8 tileBehavior = GetNullTileBehaviorID();
 
-        if (TileBehavior_HasReflectiveSurface(currTileBehavior) == TRUE) {
+        if (waterReflection ? PokemonReflection_IsSurface(currTileBehavior) : TileBehavior_HasReflectiveSurface(currTileBehavior)) {
             tileBehavior = currTileBehavior;
         } else {
             u8 southTileBehavior = MapObject_GetTileBehaviorFromDir(mapObj, DIR_SOUTH);
 
-            if (TileBehavior_HasReflectiveSurface(southTileBehavior) == TRUE) {
+            if (waterReflection ? PokemonReflection_IsSurface(southTileBehavior) : TileBehavior_HasReflectiveSurface(southTileBehavior)) {
                 tileBehavior = southTileBehavior;
             }
         }
@@ -577,6 +595,14 @@ static void sub_02063DA8(MapObject *mapObj, u8 currTileBehavior, u8 prevTileBeha
     }
 
     u8 southTileBehavior = MapObject_GetTileBehaviorFromDir(mapObj, DIR_SOUTH);
+
+    if (MapObject_UsesWaterReflections(mapObj)) {
+        if (MapObject_IsStatusOnElevatedBridge(mapObj)
+            || (!PokemonReflection_IsSurface(currTileBehavior) && !PokemonReflection_IsSurface(southTileBehavior))) {
+            sub_02062F48(mapObj, 0);
+        }
+        return;
+    }
 
     if (TileBehavior_HasReflectiveSurface(southTileBehavior) == FALSE) {
         sub_02062F48(mapObj, 0);
@@ -655,7 +681,8 @@ int sub_02063F00(const MapObject *mapObj, int x, int y, int z)
     do {
         if (v4 != mapObj
             && MapObject_CheckStatus(v4, MAP_OBJ_STATUS_0)
-            && !MapObject_CheckStatus(v4, MAP_OBJ_STATUS_18)) {
+            && !MapObject_CheckStatus(v4, MAP_OBJ_STATUS_18)
+            && !FollowingPokemon_IgnoreCollision(mapObj, v4)) {
             objX = MapObject_GetX(v4);
             objZ = MapObject_GetZ(v4);
 

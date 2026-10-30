@@ -1,4 +1,5 @@
 #include "pokemon.h"
+#include "pokemon_mood.h"
 
 #include <nitro.h>
 #include <string.h>
@@ -2662,6 +2663,7 @@ int Pokemon_ScaleFriendshipGain(int change)
 
 void Pokemon_UpdateFriendship(Pokemon *mon, u8 friendshipEvent, u16 mapID)
 {
+    PokemonMood_OnFriendshipEvent(mon, friendshipEvent);
     if (friendshipEvent == FRIENDSHIP_EVENT_WALK_CYCLE) {
         if (LCRNG_Next() & 1) {
             return;

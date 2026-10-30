@@ -79,6 +79,8 @@
 #include "narc.h"
 #include "overlay_manager.h"
 #include "overworld_map_history.h"
+#include "overworld_pokemon.h"
+#include "overworld_encounters.h"
 #include "persisted_map_features.h"
 #include "player_avatar.h"
 #include "pltt_transfer.h"
@@ -276,6 +278,10 @@ static BOOL FieldMap_Main(ApplicationManager *appMan, int *param1)
         FieldMap_ChangeZone(fieldSystem);
     }
 
+    if (fieldSystem->runningFieldMap) {
+        OverworldPokemon_Update(fieldSystem);
+        OverworldEncounters_Update(fieldSystem);
+    }
     ov5_021D134C(fieldSystem, fieldSystem->unk_C0);
     PC_PROFILE_END(fieldProfile, SIM_PROFILE_FIELD_NS);
 
@@ -293,6 +299,8 @@ static BOOL FieldMap_Exit(ApplicationManager *appMan, int *param1)
 
     switch (*param1) {
     case 0:
+        OverworldPokemon_OnFieldExit(fieldSystem);
+        OverworldEncounters_Clear(fieldSystem);
 #ifdef SDK_PORT
         SIM_SetFieldWidescreen(FALSE);
 #endif

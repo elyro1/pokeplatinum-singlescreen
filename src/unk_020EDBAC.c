@@ -8,6 +8,7 @@
 
 #include "berry_patch_graphics.h"
 #include "map_object.h"
+#include "overworld_pokemon.h"
 #include "unk_0206450C.h"
 #include "unk_020655F4.h"
 #include "unk_02069BE0.h"
@@ -412,6 +413,14 @@ static const UnkStruct_020EDF0C Unk_020EDE30 = {
     sub_020633EC
 };
 
+static const UnkStruct_020EDF0C sPartyPokemonMovement = {
+    0x3,
+    FollowingPokemon_MovementInit,
+    FollowingPokemon_MovementUpdate,
+    sub_020633E8,
+    sub_020633EC
+};
+
 static const UnkStruct_020EDF0C Unk_020EDF48 = {
     0x3,
     sub_02069BE0,
@@ -624,7 +633,8 @@ const UnkStruct_020EDF0C *const Unk_020EE3A8[] = {
     &Unk_020EE088,
     &Unk_020EE09C,
     &Unk_020EE0D8,
-    &Unk_020EE2B8
+    &Unk_020EE2B8,
+    &sPartyPokemonMovement
 };
 
 BOOL (*const *const gMovementActionFuncs[MAX_MOVEMENT_ACTION])(MapObject *) = {

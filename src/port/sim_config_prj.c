@@ -61,6 +61,8 @@ static int IniHandler(void* user, const char* section, const char* name,
     if (MATCH("General", "BW2BattleVisuals")) {
         config->bw2BattleVisuals = StringToBool(value);
     }
+    if (MATCH("General", "OverworldEncounters")) config->overworldEncounters = StringToBool(value);
+    if (MATCH("General", "PokemonFollower")) config->pokemonFollower = StringToBool(value);
     if(MATCH("General", "EnableAsserts")) {
         config->enableAsserts = StringToBool(value);
     }
@@ -124,6 +126,8 @@ void SIM_Config_prj_LoadDefaults(SIM_Config_prj_type * aConfig)
   aConfig->battlePacing = BATTLE_PACING_SMOOTH;
   aConfig->battleUiSpeedFix = FALSE;
   aConfig->bw2BattleVisuals = FALSE;
+  aConfig->overworldEncounters = TRUE;
+  aConfig->pokemonFollower = TRUE;
   aConfig->enableAsserts = FALSE;
   aConfig->breakDebuggerOnGfAssert = FALSE;
   aConfig->enhancedDayNight = TRUE;
@@ -174,6 +178,8 @@ void SIM_Config_prj_SaveConfigFile(SIM_Config_prj_type * aConfig)
     fprintf(configFile, "BattlePacing=%s\n", sBattlePacingNames[aConfig->battlePacing]);
     fprintf(configFile, "BattleUiSpeedFix=%s\n", BoolToString(aConfig->battleUiSpeedFix));
     fprintf(configFile, "BW2BattleVisuals=%s\n", BoolToString(aConfig->bw2BattleVisuals));
+    fprintf(configFile, "OverworldEncounters=%s\n", BoolToString(aConfig->overworldEncounters));
+    fprintf(configFile, "PokemonFollower=%s\n", BoolToString(aConfig->pokemonFollower));
     fprintf(configFile, "EnableAsserts=%s\n", BoolToString(aConfig->enableAsserts));
     fprintf(configFile, "BreakDebuggerOnAssert=%s\n", BoolToString(aConfig->breakDebuggerOnGfAssert));
     fprintf(configFile, "\n");

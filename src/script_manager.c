@@ -1,4 +1,5 @@
 #include "script_manager.h"
+#include "overworld_pokemon.h"
 
 #include <nitro.h>
 #include <string.h>
@@ -153,6 +154,9 @@ static BOOL FieldTask_RunScript(FieldTask *taskManager)
                 fieldSystem->npcSceneNativeViewLocks--;
             }
 #endif
+            if (scriptManager->followingPokemonSuppressed) {
+                FollowingPokemon_Resume(fieldSystem, FOLLOWING_POKEMON_SUPPRESS_SCRIPT);
+            }
             scriptFunction = scriptManager->function;
             StringTemplate_Free(scriptManager->strTemplate);
             String_Free(scriptManager->msgBuf);
@@ -417,6 +421,14 @@ void ScriptManager_UseNativeNpcView(FieldSystem *fieldSystem)
     }
 }
 #endif
+
+void ScriptManager_SuppressFollowingPokemon(ScriptContext *ctx)
+{
+    ScriptManager *manager = FieldTask_GetEnv(ctx->task);
+    if (!manager->followingPokemonSuppressed) {
+        manager->followingPokemonSuppressed = FollowingPokemon_Suppress(ctx->fieldSystem, FOLLOWING_POKEMON_SUPPRESS_SCRIPT);
+    }
+}
 
 void FieldSystem_ShowStartMenu(FieldSystem *fieldSystem)
 {

@@ -232,7 +232,9 @@ static void WildEncounters_ReplaceTrophyGardenEncounters(FieldSystem *fieldSyste
     }
 }
 
-BOOL WildEncounters_TryWildEncounter(FieldSystem *fieldSystem)
+// Visible spawns use the same slot, level, ability, form and personality rules
+// as stepping encounters, but do not roll a battle or mutate a Radar chain.
+static FieldBattleDTO *GenerateWalkingEncounter(FieldSystem *fieldSystem, int playerX, int playerZ, BOOL visible, BOOL radarOnly)
 {
     FieldBattleDTO *battleParams;
     Pokemon *firstPartyMon;
@@ -246,14 +248,12 @@ BOOL WildEncounters_TryWildEncounter(FieldSystem *fieldSystem)
     EncounterSlot encounterTable[MAX_GRASS_ENCOUNTERS];
     WildEncounters_FieldParams encounterFieldParams;
 
-    int playerX = PlayerAvatar_GetXPos(fieldSystem->playerAvatar);
-    int playerZ = PlayerAvatar_GetZPos(fieldSystem->playerAvatar);
     tileBehavior = TerrainCollisionManager_GetTileBehavior(fieldSystem, playerX, playerZ);
 
     u8 encounterRate = GetTileEncounterRateAndType(fieldSystem, tileBehavior, &encounterType);
 
     if (encounterRate == 0) {
-        return FALSE;
+        return NULL;
     }
 
     Party *party = SaveData_GetParty(fieldSystem->saveData);
@@ -262,7 +262,9 @@ BOOL WildEncounters_TryWildEncounter(FieldSystem *fieldSystem)
 
     InitEncounterFieldParams(fieldSystem, firstPartyMon, encounterData, &encounterFieldParams);
 
-    if (!SpecialEncounter_RepelStepsEmpty(SaveData_GetSpecialEncounters(fieldSystem->saveData))) {
+    // Visible encounters remain present under Repel. Check their stored level
+    // at contact instead of filtering their creation.
+    if (!visible && !SpecialEncounter_RepelStepsEmpty(SaveData_GetSpecialEncounters(fieldSystem->saveData))) {
         Pokemon *firstLiveMon = Party_FindFirstEligibleBattler(party);
         encounterFieldParams.repelActive = TRUE;
         encounterFieldParams.firstBattlerLevel = Pokemon_GetValue(firstLiveMon, MON_DATA_LEVEL, NULL);
@@ -273,7 +275,7 @@ BOOL WildEncounters_TryWildEncounter(FieldSystem *fieldSystem)
     ModifyEncounterRateWithFlute(fieldSystem, &encounterRate);
     ModifyEncounterRateWithHeldItem(firstPartyMon, &encounterRate);
 
-    if (ShouldGetRandomEncounter(fieldSystem, encounterRate, tileBehavior)) {
+    if (visible || (!radarOnly && ShouldGetRandomEncounter(fieldSystem, encounterRate, tileBehavior))) {
         gettingEncounter = TRUE;
     } else {
         gettingEncounter = FALSE;
@@ -281,7 +283,7 @@ BOOL WildEncounters_TryWildEncounter(FieldSystem *fieldSystem)
 
     memset(&radarData, 0, sizeof(RadarEncounterData));
 
-    if (!PokeRadar_ShouldDoRadarEncounter(playerX, playerZ, fieldSystem, fieldSystem->chain, &radarData.shakeType, &radarData.preserveChain, &radarData.isShiny)) {
+    if (visible || !PokeRadar_ShouldDoRadarEncounter(playerX, playerZ, fieldSystem, fieldSystem->chain, &radarData.shakeType, &radarData.preserveChain, &radarData.isShiny)) {
         radarData.isRadarEncounter = FALSE;
     } else {
         radarData.isRadarEncounter = TRUE;
@@ -289,7 +291,7 @@ BOOL WildEncounters_TryWildEncounter(FieldSystem *fieldSystem)
     }
 
     if (!gettingEncounter) {
-        return FALSE;
+        return NULL;
     }
 
     if (SystemFlag_CheckHasPartner(SaveData_GetVarsFlags(fieldSystem->saveData))) {
@@ -308,11 +310,9 @@ BOOL WildEncounters_TryWildEncounter(FieldSystem *fieldSystem)
 
                 FieldBattleDTO_Init(battleParams, fieldSystem);
                 AddRoamerToEnemyParty(encounterFieldParams.trainerID, roamer, battleParams);
-                RadarChain_Clear(fieldSystem->chain);
-                Encounter_NewVsWild(fieldSystem, battleParams);
-                return TRUE;
+                return battleParams;
             } else {
-                return FALSE;
+                return NULL;
             }
         }
     }
@@ -343,7 +343,9 @@ BOOL WildEncounters_TryWildEncounter(FieldSystem *fieldSystem)
         if (!withPartner) {
             WildEncounters_ReplaceGreatMarshDailyEncounters(fieldSystem, safariGameActive, nationalDexObtained, encounterTable);
 
-            encounterSuccess = TryGenerateGrassEncounter_WithRadar(fieldSystem, firstPartyMon, battleParams, encounterData, encounterTable, &encounterFieldParams, &radarData);
+            encounterSuccess = visible
+                ? TryGenerateWildMon(firstPartyMon, 0xff, &encounterFieldParams, encounterTable, ENCOUNTER_TYPE_GRASS, BATTLER_ENEMY_1, battleParams)
+                : TryGenerateGrassEncounter_WithRadar(fieldSystem, firstPartyMon, battleParams, encounterData, encounterTable, &encounterFieldParams, &radarData);
         } else {
             battleParams->trainerIDs[BATTLER_PLAYER_2] = SystemVars_GetPartnerTrainerID(SaveData_GetVarsFlags(fieldSystem->saveData));
             Trainer_Encounter(battleParams, fieldSystem->saveData, HEAP_ID_FIELD2);
@@ -360,12 +362,10 @@ BOOL WildEncounters_TryWildEncounter(FieldSystem *fieldSystem)
     } else {
         GF_ASSERT(FALSE);
         FieldBattleDTO_Free(battleParams);
-        return FALSE;
+        return NULL;
     }
 
-    if (encounterSuccess) {
-        Encounter_NewVsWild(fieldSystem, battleParams);
-    } else {
+    if (!encounterSuccess) {
         gettingEncounter = FALSE;
     }
 
@@ -374,11 +374,74 @@ BOOL WildEncounters_TryWildEncounter(FieldSystem *fieldSystem)
 
     if (!gettingEncounter) {
         FieldBattleDTO_Free(battleParams);
+        return NULL;
     }
 
-    fieldSystem->wildBattleMetadata.encounterAttempts = 0;
+    return battleParams;
+}
 
-    return gettingEncounter;
+BOOL WildEncounters_TryWildEncounter(FieldSystem *fieldSystem)
+{
+    FieldBattleDTO *dto = GenerateWalkingEncounter(fieldSystem, PlayerAvatar_GetXPos(fieldSystem->playerAvatar), PlayerAvatar_GetZPos(fieldSystem->playerAvatar), FALSE, FALSE);
+    if (dto == NULL) {
+        return FALSE;
+    }
+    if (dto->battleType & BATTLE_TYPE_ROAMER) {
+        RadarChain_Clear(fieldSystem->chain);
+    }
+    fieldSystem->wildBattleMetadata.encounterAttempts = 0;
+    Encounter_NewVsWild(fieldSystem, dto);
+    return TRUE;
+}
+
+BOOL WildEncounters_TryRadarEncounter(FieldSystem *fieldSystem)
+{
+    FieldBattleDTO *dto = GenerateWalkingEncounter(fieldSystem, PlayerAvatar_GetXPos(fieldSystem->playerAvatar), PlayerAvatar_GetZPos(fieldSystem->playerAvatar), FALSE, TRUE);
+    if (dto == NULL) {
+        return FALSE;
+    }
+    fieldSystem->wildBattleMetadata.encounterAttempts = 0;
+    Encounter_NewVsWild(fieldSystem, dto);
+    return TRUE;
+}
+
+BOOL WildEncounters_GenerateVisiblePokemon(FieldSystem *fieldSystem, int x, int z, OverworldEncounterPokemon *encounter)
+{
+    if (Party_GetCurrentCount(SaveData_GetParty(fieldSystem->saveData)) == 0) {
+        return FALSE;
+    }
+    FieldBattleDTO *dto = GenerateWalkingEncounter(fieldSystem, x, z, TRUE, FALSE);
+    if (dto == NULL) {
+        return FALSE;
+    }
+    memset(encounter, 0, sizeof(*encounter));
+    encounter->battleType = dto->battleType;
+    Pokemon_Copy(Party_GetPokemonBySlotIndex(dto->parties[BATTLER_ENEMY_1], 0), &encounter->mons[0]);
+    if (dto->battleType & BATTLE_TYPE_AI_PARTNER) {
+        Pokemon_Copy(Party_GetPokemonBySlotIndex(dto->parties[BATTLER_ENEMY_2], 0), &encounter->mons[1]);
+    }
+    FieldBattleDTO_Free(dto);
+    return TRUE;
+}
+
+void WildEncounters_StartVisibleBattle(FieldSystem *fieldSystem, const OverworldEncounterPokemon *encounter)
+{
+    FieldBattleDTO *dto;
+    if (encounter->battleType & BATTLE_TYPE_SAFARI) {
+        CreateWildSingleBattle(fieldSystem, TRUE, &dto);
+    } else {
+        dto = FieldBattleDTO_New(HEAP_ID_FIELD2, encounter->battleType);
+    }
+    FieldBattleDTO_Init(dto, fieldSystem);
+    FieldBattleDTO_AddPokemonToBattler(dto, (Pokemon *)&encounter->mons[0], BATTLER_ENEMY_1);
+    if (encounter->battleType & BATTLE_TYPE_AI_PARTNER) {
+        dto->trainerIDs[BATTLER_PLAYER_2] = SystemVars_GetPartnerTrainerID(SaveData_GetVarsFlags(fieldSystem->saveData));
+        Trainer_Encounter(dto, fieldSystem->saveData, HEAP_ID_FIELD2);
+        FieldBattleDTO_AddPokemonToBattler(dto, (Pokemon *)&encounter->mons[1], BATTLER_ENEMY_2);
+    }
+    RadarChain_Clear(fieldSystem->chain);
+    fieldSystem->wildBattleMetadata.encounterAttempts = 0;
+    Encounter_NewVsWild(fieldSystem, dto);
 }
 
 BOOL WildEncounters_TryFishingEncounter(FieldSystem *fieldSystem, enum EncounterFishingRodType fishingRodType, FieldBattleDTO **battleParams)

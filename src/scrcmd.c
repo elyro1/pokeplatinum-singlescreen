@@ -2100,6 +2100,7 @@ static BOOL ScrCmd_SetMenuYOriginSide(ScriptContext *ctx)
 
 static BOOL ScrCmd_ApplyMovementWidescreen(ScriptContext *ctx)
 {
+    ScriptManager_SuppressFollowingPokemon(ctx);
     u16 localID = ScriptContext_GetVar(ctx);
     s32 offset = ScriptContext_ReadWord(ctx);
     const MapObjectAnimCmd *native = (const MapObjectAnimCmd *)(ctx->scriptPtr + offset);
@@ -2122,6 +2123,7 @@ static BOOL ScrCmd_ApplyMovementWidescreen(ScriptContext *ctx)
 
 static BOOL ApplyScriptMovement(ScriptContext *ctx, BOOL safeExit)
 {
+    ScriptManager_SuppressFollowingPokemon(ctx);
     u16 localID = ScriptContext_GetVar(ctx);
     #ifdef SDK_BUILD_ARM
     u32 movementOffset = ScriptContext_ReadWord(ctx);
@@ -2159,6 +2161,7 @@ static BOOL ScrCmd_ApplyMovementSafeExit(ScriptContext *ctx)
 
 static BOOL ScrCmd_Unused_2A1(ScriptContext *ctx)
 {
+    ScriptManager_SuppressFollowingPokemon(ctx);
     u16 v5 = ScriptContext_GetVar(ctx);
     u16 v6 = ScriptContext_GetVar(ctx);
     u16 v7 = ScriptContext_GetVar(ctx);
@@ -4773,6 +4776,7 @@ static BOOL ScrCmd_SetObjectEventPos(ScriptContext *ctx)
 
 static BOOL ScrCmd_SetPosition(ScriptContext *ctx)
 {
+    ScriptManager_SuppressFollowingPokemon(ctx);
     u16 localID = ScriptContext_GetVar(ctx);
     u16 x = ScriptContext_GetVar(ctx);
     u16 y = ScriptContext_GetVar(ctx);

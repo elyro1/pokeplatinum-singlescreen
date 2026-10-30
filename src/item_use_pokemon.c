@@ -1,4 +1,5 @@
 #include "item_use_pokemon.h"
+#include "pokemon_mood.h"
 
 #include <nitro.h>
 #include <string.h>
@@ -236,7 +237,7 @@ u8 Party_CheckItemEffectsOnMember(Party *party, u16 itemId, u8 partySlot, u8 mov
     return Pokemon_CheckItemEffects(mon, itemId, moveSlot, heapID);
 }
 
-u8 Pokemon_ApplyItemEffects(Pokemon *mon, u16 itemId, u16 moveSlot, u16 location, enum HeapID heapID)
+static u8 ApplyItemEffects(Pokemon *mon, u16 itemId, u16 moveSlot, u16 location, enum HeapID heapID)
 {
     // For some reason, the original developer decided to use an array to store what should have been individual variables
     // For more clarity on what each slot is used for, and to make them look more like individual variables,
@@ -389,6 +390,15 @@ u8 Pokemon_ApplyItemEffects(Pokemon *mon, u16 itemId, u16 moveSlot, u16 location
 
     Heap_Free(item);
     return effectApplied;
+}
+
+u8 Pokemon_ApplyItemEffects(Pokemon *mon, u16 itemId, u16 moveSlot, u16 location, enum HeapID heapID)
+{
+    u8 applied = ApplyItemEffects(mon, itemId, moveSlot, location, heapID);
+    if (applied) {
+        PokemonMood_OnItem(mon, itemId);
+    }
+    return applied;
 }
 
 u8 Party_ApplyItemEffectsToMember(Party *party, u16 itemId, u8 partySlot, u8 moveSlot, u16 location, enum HeapID heapID)

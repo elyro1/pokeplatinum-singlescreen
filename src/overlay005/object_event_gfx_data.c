@@ -15,6 +15,7 @@
 
 #include "berry_patch_graphics.h"
 #include "fx_util.h"
+#include "overworld_pokemon_assets.h"
 
 #include "res/graphics/field_sprites/field_sprites.naix"
 
@@ -203,7 +204,20 @@ static const UnkStruct_ov5_021FB0F0 Unk_ov5_021FB028 = {
     ov5_021EC9A0
 };
 
+static const UnkStruct_ov5_021FB0F0 sPokemonRenderer = {
+    ov5_021EB2EC,
+    OverworldPokemon_DrawUpdate,
+    ov5_021EB314,
+    ov5_021EB328,
+    ov5_021EB354
+};
+
 const ObjectEventGfxRendererEntry gObjectEventGfxRenderersTable[] = {
+#define POKEMON_GRAPHIC(index, model, tracks) \
+    { OVERWORLD_POKEMON_GFX(index, 0), &sPokemonRenderer }, \
+    { OVERWORLD_POKEMON_GFX(index, 1), &sPokemonRenderer },
+#include "res/graphics/following_pokemon/graphics.inc"
+#undef POKEMON_GRAPHIC
     { OBJ_EVENT_GFX_PLAYER_M, &Unk_ov5_021FB0F0 },
     { OBJ_EVENT_GFX_NINJA_BOY, &Unk_ov5_021FAFD8 },
     { OBJ_EVENT_GFX_TWIN, &Unk_ov5_021FAFD8 },
@@ -467,6 +481,11 @@ const ObjectEventGfxRendererEntry gObjectEventGfxRenderersTable[] = {
 };
 
 const ObjectEventGfxFileEntry gObjectEventGfxTexturesTable[] = {
+#define POKEMON_GRAPHIC(index, model, tracks) \
+    { OVERWORLD_POKEMON_GFX(index, 0), OVERWORLD_POKEMON_RESOURCE_BASE + index }, \
+    { OVERWORLD_POKEMON_GFX(index, 1), OVERWORLD_POKEMON_RESOURCE_BASE + index },
+#include "res/graphics/following_pokemon/graphics.inc"
+#undef POKEMON_GRAPHIC
     { OBJ_EVENT_GFX_PLAYER_M, player_m_nsbtx },
     { OBJ_EVENT_GFX_NINJA_BOY, ninja_boy_nsbtx },
     { OBJ_EVENT_GFX_TWIN, twin_nsbtx },
@@ -934,6 +953,8 @@ const ObjectEventGfxFileEntry gObjectEventGfxModelsTable[] = {
 };
 
 const ObjectEventGfxFileEntry gObjectEventGfxFrameSeqsTable[] = {
+    { BILLBOARD_FRAME_SEQ_POKEMON, OVERWORLD_POKEMON_SEQUENCE_NORMAL },
+    { BILLBOARD_FRAME_SEQ_POKEMON_SHINY, OVERWORLD_POKEMON_SEQUENCE_SHINY },
     { BILLBOARD_FRAME_SEQ_GENERIC_WALK, generic_walk_bin },
     { BILLBOARD_FRAME_SEQ_WALK_AND_RUN, walk_and_run_bin },
     { BILLBOARD_FRAME_SEQ_BERRY_TREE, berry_tree_bin },
@@ -1123,10 +1144,25 @@ const int gPreloadedBillboardModels[] = {
 
 const int gPreloadedBillboardFrameSeqs[] = {
     BILLBOARD_FRAME_SEQ_GENERIC_WALK,
+    BILLBOARD_FRAME_SEQ_POKEMON,
+    BILLBOARD_FRAME_SEQ_POKEMON_SHINY,
     BILLBOARD_FRAME_SEQ_SENTINEL_ID
 };
 
+static const BillboardAnim sPokemonBillboardAnims[] = {
+    { .startFrame = 0, .endFrame = 19, .animType = BILLBOARD_ANIM_TYPE_LOOP },
+    { .startFrame = 20, .endFrame = 39, .animType = BILLBOARD_ANIM_TYPE_LOOP },
+    { .startFrame = 40, .endFrame = 59, .animType = BILLBOARD_ANIM_TYPE_LOOP },
+    { .startFrame = 60, .endFrame = 79, .animType = BILLBOARD_ANIM_TYPE_LOOP },
+    { .startFrame = 0, .endFrame = 0, .animType = BILLBOARD_ANIM_TYPE_TABLE_END }
+};
+
 const ObjectEventGfxModelAnimEntry gObjectEventGfxModelAnimsTable[] = {
+#define POKEMON_GRAPHIC(index, model, tracks) \
+    { OVERWORLD_POKEMON_GFX(index, 0), model, BILLBOARD_FRAME_SEQ_POKEMON, sPokemonBillboardAnims }, \
+    { OVERWORLD_POKEMON_GFX(index, 1), model, BILLBOARD_FRAME_SEQ_POKEMON_SHINY, sPokemonBillboardAnims },
+#include "res/graphics/following_pokemon/graphics.inc"
+#undef POKEMON_GRAPHIC
     { OBJ_EVENT_GFX_PLAYER_M, BILLBOARD_MODEL_GENERIC_32x32, BILLBOARD_FRAME_SEQ_WALK_AND_RUN, sWalkRunBillboardAnims },
     { OBJ_EVENT_GFX_NINJA_BOY, BILLBOARD_MODEL_GENERIC_32x32, BILLBOARD_FRAME_SEQ_GENERIC_WALK, sWalkBillboardAnims },
     { OBJ_EVENT_GFX_TWIN, BILLBOARD_MODEL_GENERIC_32x32, BILLBOARD_FRAME_SEQ_GENERIC_WALK, sWalkBillboardAnims },
@@ -1577,6 +1613,11 @@ const int gFogIgnoredModels[] = {
 };
 
 const ObjectEventGfxRenderDetailsEntry gObjectEventGfxRenderDetailsTable[] = {
+#define POKEMON_GRAPHIC(index, model, tracks) \
+    { OVERWORLD_POKEMON_GFX(index, 0), MODEL_TYPE_BILLBOARD, .hasShadow = TRUE, tracks, .hasReflection = TRUE }, \
+    { OVERWORLD_POKEMON_GFX(index, 1), MODEL_TYPE_BILLBOARD, .hasShadow = TRUE, tracks, .hasReflection = TRUE },
+#include "res/graphics/following_pokemon/graphics.inc"
+#undef POKEMON_GRAPHIC
     { OBJ_EVENT_GFX_PLAYER_M, MODEL_TYPE_BILLBOARD, .hasShadow = TRUE, TRACK_TYPE_FOOTSTEPS, .hasReflection = TRUE },
     { OBJ_EVENT_GFX_NINJA_BOY, MODEL_TYPE_BILLBOARD, .hasShadow = TRUE, TRACK_TYPE_FOOTSTEPS, .hasReflection = TRUE },
     { OBJ_EVENT_GFX_TWIN, MODEL_TYPE_BILLBOARD, .hasShadow = TRUE, TRACK_TYPE_FOOTSTEPS, .hasReflection = TRUE },

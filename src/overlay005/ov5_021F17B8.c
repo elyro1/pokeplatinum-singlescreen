@@ -3,6 +3,8 @@
 #include <nitro.h>
 #include <string.h>
 
+#include "constants/field/field_effect_renderer.h"
+
 #include "struct_decls/map_object.h"
 #include "struct_decls/map_object_manager.h"
 
@@ -10,12 +12,16 @@
 #include "overlay005/field_effect_manager.h"
 #include "overlay005/ov5_021EB1A0.h"
 #include "overlay005/ov5_021ECE40.h"
+#include "overlay005/surf_mount_renderer.h"
 
 #include "berry_patch_graphics.h"
 #include "billboard.h"
 #include "map_object.h"
 #include "map_object_move.h"
+#include "map_tile_behavior.h"
 #include "overworld_anim_manager.h"
+#include "overworld_pokemon_assets.h"
+#include "terrain_collision_manager.h"
 
 #ifdef SDK_PORT
 #include "port/sim_config_prj.h"
@@ -68,6 +74,119 @@ static void ov5_021F1A8C(OverworldAnimManager *param0, UnkStruct_ov5_021F1A24 *p
 
 static const OverworldAnimManagerFuncs Unk_ov5_02200338;
 
+Billboard *PokemonReflection_New(FieldEffectManager *manager, const BillboardResources *resources, const VecFx32 *position)
+{
+    if (!FieldEffectManager_HasRenderer(manager, FIELD_EFFECT_RENDERER_01)) {
+        return NULL;
+    }
+    BillboardResources reflected = *resources;
+    reflected.modelRes = ov5_021DF9FC(manager, 2);
+    Billboard *billboard = FieldEffectManager_TryAddBillboard(manager, &reflected, position);
+    if (billboard != NULL) {
+        // The template embeds a 32x32 placeholder texture. Use the source
+        // frame's dimensions as well as its address when drawing 64x64 art.
+        billboard->matchTextureDimensions = TRUE;
+        Billboard_SetDrawFlag(billboard, FALSE);
+    }
+    return billboard;
+}
+
+void PokemonReflection_Update(Billboard *reflection, const Billboard *source, const VecFx32 *position, BOOL large)
+{
+    if (reflection == NULL) {
+        return;
+    }
+    Billboard_SetDrawFlag(reflection, source != NULL && Billboard_GetDrawFlag(source));
+    if (source == NULL) {
+        return;
+    }
+    Billboard_SetPos(reflection, position);
+    Billboard_SetAnimNum(reflection, Billboard_GetAnimNum(source));
+    Billboard_SetFrameNum(reflection, Billboard_GetFrameNum(source));
+    VecFx32 scale = *Billboard_GetScale(source);
+    if (large) {
+        // The original reflection quad is 32x32; imported frames may be 64x64.
+        scale.x *= 2;
+        scale.y *= 2;
+        scale.z *= 2;
+    }
+    Billboard_SetScale(reflection, &scale);
+}
+
+BOOL PokemonReflection_IsSurface(u8 tile)
+{
+    return (TileBehavior_IsSurfable(tile) || TileBehavior_HasReflectiveSurface(tile))
+        && !TileBehavior_IsBridgeOverWater(tile) && !TileBehavior_IsWaterfall(tile);
+}
+
+static void ReflectionClipDepth(const VecFx32 *position, const MtxFx43 *view, const MtxFx44 *projection, fx32 *z, fx32 *w)
+{
+    VecFx32 camera;
+    camera.x = FX_Mul(position->x, view->_00) + FX_Mul(position->y, view->_10) + FX_Mul(position->z, view->_20) + view->_30;
+    camera.y = FX_Mul(position->x, view->_01) + FX_Mul(position->y, view->_11) + FX_Mul(position->z, view->_21) + view->_31;
+    camera.z = FX_Mul(position->x, view->_02) + FX_Mul(position->y, view->_12) + FX_Mul(position->z, view->_22) + view->_32;
+    *z = FX_Mul(camera.x, projection->_02) + FX_Mul(camera.y, projection->_12) + FX_Mul(camera.z, projection->_22) + projection->_32;
+    *w = FX_Mul(camera.x, projection->_03) + FX_Mul(camera.y, projection->_13) + FX_Mul(camera.z, projection->_23) + projection->_33;
+}
+
+void PokemonReflection_SetRiderLayer(Billboard *rider, Billboard *mount, const MtxFx43 *view, const MtxFx44 *projection)
+{
+    if (rider == NULL) {
+        return;
+    }
+    rider->depthOffset = 0;
+    if (mount != NULL && Billboard_GetDrawFlag(mount)) {
+        // Match the mount's projected depth with a small foreground margin.
+        // A fixed world-space bias can pull the rider above the water overlay,
+        // especially with perspective. Preserve its X/Y, W and mirrored pose.
+        fx32 riderZ, riderW, mountZ, mountW;
+        ReflectionClipDepth(&rider->pos, view, projection, &riderZ, &riderW);
+        ReflectionClipDepth(&mount->pos, view, projection, &mountZ, &mountW);
+        if (riderW > 0 && mountW > 0 && projection->_22 != 0) {
+            fx32 margin = riderW / 65536;
+            if (margin < 1) {
+                margin = 1;
+            }
+            fx32 clipDelta = (fx64)mountZ * riderW / mountW - riderZ - margin;
+            fx32 offset = FX_Div(clipDelta, projection->_22);
+            if (offset > 0) {
+                rider->depthOffset = offset;
+            }
+        }
+    }
+}
+
+static void UpdateSurfRiderReflectionDepth(Billboard *rider, void *context)
+{
+    FieldSystem *field = context;
+    // Field effects may update their poses in either order. Resolve depth at
+    // draw time, after the mount's current movement/bob position is available.
+    PokemonReflection_SetRiderLayer(rider, SurfMountRenderer_GetReflection(field),
+        NNS_G3dGlbGetCameraMtx(), NNS_G3dGlbGetProjectionMtx());
+}
+
+BOOL PokemonReflection_GetWaterPosition(FieldSystem *fieldSystem, const Billboard *source, const VecFx32 *anchor, VecFx32 *position)
+{
+    if (!Billboard_GetDrawFlag(source) || anchor->x < 0 || anchor->z < 0) {
+        return FALSE;
+    }
+    u8 tile = TerrainCollisionManager_GetTileBehavior(fieldSystem,
+        anchor->x / MAP_OBJECT_TILE_SIZE, anchor->z / MAP_OBJECT_TILE_SIZE);
+    if (!PokemonReflection_IsSurface(tile)) {
+        return FALSE;
+    }
+    *position = *anchor;
+    if (!MapObject_RecalculatePositionHeight(fieldSystem, position)) {
+        return FALSE;
+    }
+    fx32 elevation = Billboard_GetPos(source)->y - position->y;
+    // Mount sprites sit at the waterline; bank-side walking reflections use
+    // the original lower anchor to project down onto the next tile.
+    position->y -= 6 * FX32_ONE + elevation;
+    position->z -= 7 * FX32_ONE;
+    return TRUE;
+}
+
 void *ov5_021F17B8(FieldEffectManager *param0)
 {
     UnkStruct_ov5_021F17E4 *v0 = FieldEffectManager_HeapAllocInit(param0, sizeof(UnkStruct_ov5_021F17E4), 0, 0);
@@ -88,6 +207,21 @@ void ov5_021F17D4(void *param0)
 static void ov5_021F17E4(UnkStruct_ov5_021F17E4 *param0)
 {
     ov5_021DF9E0(param0->unk_00, 2, 20);
+    // The original quad's UVs cover 32x32 texels. Enable the material's
+    // identity texture matrix so binding a 64x64 frame applies magW/magH.
+    // This is also identity for Platinum's original 32x32 reflections.
+    void *resource = ov5_021DF9FC(param0->unk_00, 2);
+    NNSG3dResMdl *model = NNS_G3dGetMdlByIdx(NNS_G3dGetMdlSet(resource), 0);
+    NNSG3dResMat *materials = NNS_G3dGetMat(model);
+    for (int i = 0; i < model->info.numMat; i++) {
+        NNSG3dResMatData *material = NNS_G3dGetMatDataByIdx(materials, i);
+        if (!(material->flag & NNS_G3D_MATFLAG_TEXMTX_USE)) {
+            material->flag |= NNS_G3D_MATFLAG_TEXMTX_USE | NNS_G3D_MATFLAG_TEXMTX_SCALEONE
+                | NNS_G3D_MATFLAG_TEXMTX_ROTZERO | NNS_G3D_MATFLAG_TEXMTX_TRANSZERO;
+            material->texImageParam = (material->texImageParam & ~REG_G3_TEXIMAGE_PARAM_TGEN_MASK)
+                | (GX_TEXGEN_TEXCOORD << REG_G3_TEXIMAGE_PARAM_TGEN_SHIFT);
+        }
+    }
 }
 
 static void ov5_021F17F4(UnkStruct_ov5_021F17E4 *param0)
@@ -234,6 +368,26 @@ static void ov5_021F1978(OverworldAnimManager *param0, void *param1)
         return;
     }
 
+    if (OverworldPokemonAssets_IsGraphicsID(v0->unk_08)) {
+        Billboard *source = ov5_021EB1A0(v1);
+        if (MapObject_IsStatusOnElevatedBridge(v1)) {
+            source = NULL;
+        }
+        VecFx32 position;
+        OverworldAnimManager_GetPosition(param0, &position);
+        if (source != NULL) {
+            VecFx32 base;
+            MapObject_GetPosPtr(v1, &base);
+            // Reflect render-only bobbing, reactions and recall scale too.
+            position.y -= Billboard_GetPos(source)->y - base.y;
+        }
+        PokemonReflection_Update(v0->unk_24, source, &position, OverworldPokemonAssets_IsLarge(v0->unk_08));
+        VecFx32 scale = *Billboard_GetScale(v0->unk_24);
+        scale.x = FX_Mul(scale.x, v0->unk_28.x);
+        Billboard_SetScale(v0->unk_24, &scale);
+        return;
+    }
+
     if (MapObject_IsHidden(v1) == 1) {
         Billboard_SetDrawFlag(v0->unk_24, 0);
     } else {
@@ -254,6 +408,16 @@ static void ov5_021F1978(OverworldAnimManager *param0, void *param1)
 
         Billboard_SetAnimNum(v0->unk_24, Billboard_GetAnimNum(v4));
         Billboard_SetFrameNum(v0->unk_24, Billboard_GetFrameNum(v4));
+    }
+
+    FieldSystem *field = v0->unk_14.fieldSystem;
+    v0->unk_24->depthOffset = 0;
+    if (field->playerAvatar != NULL && PlayerAvatar_GetMapObject(field->playerAvatar) == v1) {
+        // Reflection effects may have been created before the Surf mount, or
+        // before its appearance changed. Keep the rider over the current mount
+        // without moving either sprite or retaining a pointer to an old mount.
+        Billboard_DrawAfter(v0->unk_24, SurfMountRenderer_GetReflection(field));
+        Billboard_SetCallback(v0->unk_24, UpdateSurfRiderReflectionDepth, field);
     }
 }
 
@@ -316,8 +480,17 @@ static void ov5_021F1A8C(OverworldAnimManager *param0, UnkStruct_ov5_021F1A24 *p
 
     OverworldAnimManager_GetPosition(param0, &v2);
 
-    param1->unk_24 = ov5_021DF7F8(param1->unk_14.unk_04, &v3, &v2);
-    param1->unk_0C = 1;
+    if (OverworldPokemonAssets_IsGraphicsID(param1->unk_08)) {
+        param1->unk_24 = PokemonReflection_New(param1->unk_14.unk_04, &v3, &v2);
+    } else {
+        param1->unk_24 = ov5_021DF7F8(param1->unk_14.unk_04, &v3, &v2);
+    }
+    if (param1->unk_24 != NULL) {
+        // The model is shared with larger Pokemon reflections. Reapply this
+        // source frame's dimensions and UV scale when drawing a native sprite.
+        param1->unk_24->matchTextureDimensions = TRUE;
+    }
+    param1->unk_0C = param1->unk_24 != NULL;
 }
 
 static const OverworldAnimManagerFuncs Unk_ov5_0220034C;
@@ -334,6 +507,7 @@ static void ov5_021F1AD8(OverworldAnimManager *param0, UnkStruct_ov5_021F1AD8 *p
 
     OverworldAnimManager_GetPosition(param0, &v2);
     param1->unk_3C = ov5_021DF7F8(param1->unk_04.unk_04, &v3, &v2);
+    param1->unk_3C->matchTextureDimensions = TRUE;
 
     {
         const Billboard *v4 = param1->unk_04.unk_34;

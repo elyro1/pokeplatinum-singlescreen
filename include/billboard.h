@@ -49,6 +49,9 @@ typedef struct Billboard {
     fx32 frameNum;
     Billboard *next;
     Billboard *prev;
+    BOOL matchTextureDimensions;
+    // Render-only view-depth adjustment; zero preserves the normal projection.
+    fx32 depthOffset;
 } Billboard;
 
 typedef struct BillboardList {
@@ -110,6 +113,8 @@ BOOL BillboardList_IsRedrawing(BillboardList *list);
 void BillboardList_ResetRedraw(BillboardList *list);
 Billboard *BillboardList_Append(const BillboardTemplate *template);
 BOOL Billboard_Delete(Billboard *billboard);
+// Reorder live billboards in the same list before drawing begins.
+void Billboard_DrawAfter(Billboard *billboard, Billboard *reference);
 void BillboardResources_Set(BillboardResources *resources, void *modelRes, const NNSG3dResTex *texture, const BillboardAnim *param3, const BillboardGfxSequence *gfxSequence, NNSGfdTexKey texKey, NNSGfdTexKey tex4x4Key, NNSGfdPlttKey plttKey);
 void BillboardResources_SetWithoutKeys(BillboardResources *resources, void *modelRes, const NNSG3dResTex *texture, const BillboardAnim *param3, const BillboardGfxSequence *gfxSequence);
 void Billboard_SetPos(Billboard *billboard, const VecFx32 *pos);

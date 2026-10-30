@@ -146,6 +146,7 @@ typedef struct ScriptManager {
     u8 subCtxActive;
     u8 isMsgBoxOpen;
     u8 numActiveContexts;
+    BOOL followingPokemonSuppressed;
     u16 scriptID;
     BOOL battleResult;
     FieldMenuManager *fieldMenuMan; // used for multichoice windows
@@ -176,6 +177,7 @@ typedef struct ScriptManager {
 } ScriptManager;
 
 void ScriptManager_Set(FieldSystem *fieldSystem, u16 scriptID, MapObject *object);
+void ScriptManager_SuppressFollowingPokemon(ScriptContext *ctx);
 void ScriptManager_SetApproachingTrainer(FieldSystem *fieldSystem, MapObject *object, int sightRange, int direction, int scriptID, int trainerID, enum ApproachType approachType, int approachNum);
 void ScriptManager_Start(FieldTask *taskManager, u16 scriptID, MapObject *object, void *saveType);
 void ScriptManager_Change(FieldTask *taskManager, u16 scriptID, MapObject *object);

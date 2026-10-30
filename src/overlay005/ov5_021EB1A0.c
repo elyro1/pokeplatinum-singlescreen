@@ -17,9 +17,229 @@
 #include "overlay005/struct_ov5_021ED01C.h"
 
 #include "billboard.h"
+#include "easy3d.h"
+#include "following_pokemon_interaction.h"
+#include "heap.h"
 #include "map_object.h"
 #include "math_util.h"
 #include "overworld_anim_manager.h"
+#include "overworld_pokemon.h"
+#include "overworld_pokemon_assets.h"
+#include "simple3d.h"
+#ifdef SDK_PORT
+#include "port/sim_config_prj.h"
+#endif
+
+#include "res/graphics/following_pokemon/ball_effects.inc"
+#include "res/graphics/following_pokemon/reaction_emotes.inc"
+
+struct FollowerEmote {
+    void *modelData, *textureData;
+    NNSGfdTexKey textureKey;
+    NNSGfdPlttKey paletteKey;
+    BillboardList *list;
+    Billboard *billboard;
+};
+
+void FollowingPokemon_FreeEmote(FollowerEmote *emote)
+{
+    if (emote == NULL) {
+        return;
+    }
+    if (emote->list) {
+        BillboardList_Delete(emote->list);
+    }
+    if (emote->textureKey) {
+        NNS_GfdFreeTexVram(emote->textureKey);
+    }
+    if (emote->paletteKey) {
+        NNS_GfdFreePlttVram(emote->paletteKey);
+    }
+    if (emote->modelData) {
+        Heap_Free(emote->modelData);
+    }
+    if (emote->textureData) {
+        Heap_Free(emote->textureData);
+    }
+    Heap_Free(emote);
+}
+
+void FollowingPokemon_UpdateEmote(FollowerEmote *emote, MapObject *object, int frame)
+{
+    if (emote == NULL) {
+        return;
+    }
+    VecFx32 position;
+    ov5_021ECDA0(object, &position);
+    VecFx32 offset;
+    if (FollowingPokemon_GetReactionOffset(object, &offset)) {
+        position.x += offset.x;
+        position.y += offset.y;
+        position.z += offset.z;
+    }
+    // The bubble rises then settles; large cards need an additional screen-up
+    // offset under Platinum's camera. Neither offset changes logical tiles.
+    int rise = frame < 6 ? frame * (6 - frame) : 0;
+    position.y += (32 + rise) * FX32_ONE;
+    if (OverworldPokemonAssets_IsLarge(MapObject_GetGraphicsID(object))) {
+        const MtxFx43 *camera = NNS_G3dGlbGetCameraMtx();
+        position.x += camera->_01 * 11;
+        position.y += camera->_11 * 11;
+        position.z += camera->_21 * 11;
+    }
+    Billboard_SetPos(emote->billboard, &position);
+    Billboard_SetFrameNum(emote->billboard, (frame < 10 || (frame >= 14 && frame < 22)) ? 0 : FX32_ONE * 4);
+}
+
+FollowerEmote *FollowingPokemon_CreateEmote(MapObject *object, int type)
+{
+    static const BillboardAnim animations[] = {
+        { 0, 15, BILLBOARD_ANIM_TYPE_LOOP }, { 0, 0, BILLBOARD_ANIM_TYPE_TABLE_END }
+    };
+    if (type < 1 || type > NELEMS(sReactionEmoteTextures)) {
+        return NULL;
+    }
+    FollowerEmote *emote = Heap_Alloc(HEAP_ID_FIELD1, sizeof(*emote));
+    if (emote == NULL) {
+        return NULL;
+    }
+    memset(emote, 0, sizeof(*emote));
+    emote->modelData = Heap_Alloc(HEAP_ID_FIELD1, sizeof(sReactionEmoteModel));
+    emote->textureData = Heap_Alloc(HEAP_ID_FIELD1, sReactionEmoteTextures[type - 1].size);
+    if (!emote->modelData || !emote->textureData) {
+        FollowingPokemon_FreeEmote(emote);
+        return NULL;
+    }
+    memcpy(emote->modelData, sReactionEmoteModel, sizeof(sReactionEmoteModel));
+    memcpy(emote->textureData, sReactionEmoteTextures[type - 1].data, sReactionEmoteTextures[type - 1].size);
+    NNSG3dResTex *texture = NNS_G3dGetTex(emote->textureData);
+    emote->textureKey = NNS_GfdAllocTexVram(NNS_G3dTexGetRequiredSize(texture), FALSE, 0);
+    emote->paletteKey = NNS_GfdAllocPlttVram(NNS_G3dPlttGetRequiredSize(texture), FALSE, 0);
+    if (!emote->textureKey || !emote->paletteKey) {
+        FollowingPokemon_FreeEmote(emote);
+        return NULL;
+    }
+    NNS_G3dTexSetTexKey(texture, emote->textureKey, 0);
+    NNS_G3dPlttSetPlttKey(texture, emote->paletteKey);
+    DC_FlushRange(texture, texture->header.size);
+    NNS_G3dTexLoad(texture, TRUE);
+    NNS_G3dPlttLoad(texture, TRUE);
+    BillboardGfxSequence sequence;
+    BillboardGfxSequence_SetData(sReactionEmoteSequence, &sequence);
+    BillboardResources resources;
+    BillboardResources_Set(&resources, emote->modelData, texture, animations, &sequence, emote->textureKey, 0, emote->paletteKey);
+    // A private list and resource copies avoid taking fixed global effect slots.
+    BillboardListParams params = { 1, HEAP_ID_FIELD1 };
+    emote->list = BillboardList_New(&params);
+    if (emote->list == NULL) {
+        FollowingPokemon_FreeEmote(emote);
+        return NULL;
+    }
+    BillboardTemplate template = { emote->list, &resources, { 0, 0, 0 }, {FX32_ONE,FX32_ONE,FX32_ONE} };
+    emote->billboard = BillboardList_Append(&template);
+    if (emote->billboard == NULL) {
+        FollowingPokemon_FreeEmote(emote);
+        return NULL;
+    }
+    FollowingPokemon_UpdateEmote(emote, object, 0);
+    return emote;
+}
+
+typedef struct {
+    Simple3DModel ballModel, burstModel;
+    Simple3DRenderObj ball, burst;
+    Simple3DAnimation animation;
+    void *animationData;
+    int ticks, duration;
+} FollowerBallVisual;
+
+// The field effect owns its models and animation, and keeps no MapObject
+// pointer. Deletion/reuse of the actor cannot redirect a lingering effect.
+typedef struct {
+    FollowerBallVisual *visual;
+} FollowerBallContext;
+
+static void LoadFollowerModel(Simple3DModel *model, Simple3DRenderObj *render, const void *data, u32 size)
+{
+    model->modelSetHeader = Heap_Alloc(HEAP_ID_FIELD1, size);
+    memcpy(model->modelSetHeader, data, size);
+    Easy3D_LoadModelFromResource(&model->g3DModel, &model->modelSetHeader);
+    model->modelSet = NNS_G3dGetMdlSet(model->modelSetHeader);
+    model->texture = NNS_G3dGetTex(model->modelSetHeader);
+    model->isTextureBound = TRUE;
+    Simple3D_CreateRenderObject(render, model);
+}
+
+static BOOL InitFollowerBall(OverworldAnimManager *manager, void *data)
+{
+    FollowerBallContext *ctx = data;
+    ctx->visual = Heap_Alloc(HEAP_ID_FIELD1, sizeof(FollowerBallVisual));
+    FollowerBallVisual *v = ctx->visual;
+    memset(v, 0, sizeof(*v));
+    v->duration = 8;
+#ifdef SDK_PORT
+    if (SIM_Config_prj_GetConfig()->enable60fps) v->duration *= 2;
+#endif
+    LoadFollowerModel(&v->ballModel, &v->ball, sFollowerBall, sizeof(sFollowerBall));
+    LoadFollowerModel(&v->burstModel, &v->burst, sFollowerBurst, sizeof(sFollowerBurst));
+    v->animationData = Heap_Alloc(HEAP_ID_FIELD1, sizeof(sFollowerBurstAnim));
+    memcpy(v->animationData, sFollowerBurstAnim, sizeof(sFollowerBurstAnim));
+    Simple3D_LoadFromAllocatedSet(&v->animation, v->animationData, 0);
+    Simple3D_BindModelToAnim(&v->animation, &v->burstModel, HEAP_ID_FIELD1);
+    Simple3D_InitG3DAnimObject(&v->animation, &v->burstModel);
+    Simple3D_BindAnimToRenderObj(&v->burst, &v->animation);
+    return TRUE;
+}
+
+static void FreeFollowerBall(OverworldAnimManager *manager, void *data)
+{
+    FollowerBallVisual *v = ((FollowerBallContext *)data)->visual;
+    Simple3D_FreeAnimObject(&v->animation);
+    Heap_Free(v->animationData);
+    Simple3D_FreeModel(&v->burstModel);
+    Simple3D_FreeModel(&v->ballModel);
+    Heap_Free(v);
+}
+
+static void TickFollowerBall(OverworldAnimManager *manager, void *data)
+{
+    FollowerBallVisual *v = ((FollowerBallContext *)data)->visual;
+    if (++v->ticks >= v->duration) {
+        FieldEffectManager_FinishAnimManager(manager);
+        return;
+    }
+    Simple3D_UpdateAnim(&v->animation, FX32_ONE, TRUE);
+}
+
+static void DrawFollowerBall(OverworldAnimManager *manager, void *data)
+{
+    FollowerBallVisual *v = ((FollowerBallContext *)data)->visual;
+    VecFx32 position;
+    OverworldAnimManager_GetPosition(manager, &position);
+    BOOL release = OverworldAnimManager_GetUserInt(manager);
+    if (!release || v->ticks < v->duration / 2) {
+        Simple3D_DrawRenderObjWithPos(&v->ball, &position);
+    }
+    if (release || v->ticks >= v->duration / 2) {
+        Simple3D_DrawRenderObjWithPos(&v->burst, &position);
+    }
+}
+
+void FollowingPokemon_StartBallEffect(MapObject *object, BOOL release)
+{
+    static const OverworldAnimManagerFuncs funcs = {
+        sizeof(FollowerBallContext), InitFollowerBall, FreeFollowerBall, TickFollowerBall, DrawFollowerBall
+    };
+    FieldEffectManager *effects = MapObject_GetFieldEffectManager(object);
+    if (effects == NULL || effects->animManList == NULL) {
+        return;
+    }
+    VecFx32 position;
+    MapObject_GetPosPtr(object, &position);
+    // Exhaustion skips optional presentation while retaining follower state.
+    OverworldAnimManagerList_InitManager(effects->animManList, &funcs, &position, release, NULL,
+        MapObject_CalculateTaskPriority(object, 2));
+}
 
 typedef struct {
     s16 unk_00;
@@ -257,6 +477,43 @@ void ov5_021EB398(MapObject *mapObj)
 
     ov5_021EDEB4(mapObj, v3);
     ov5_021EC6C0(mapObj, v3);
+}
+
+void OverworldPokemon_DrawUpdate(MapObject *mapObj)
+{
+    UnkStruct_ov5_021EB2EC *work = sub_02062AF0(mapObj);
+    Billboard *billboard = work->unk_04;
+    if (ov5_021EDD94(mapObj) || billboard == NULL) {
+        return;
+    }
+
+    int facing = MapObject_GetFacingDir(mapObj);
+    if (facing != work->unk_02) {
+        Billboard_SetAnimNum(billboard, ov5_021EDF18(facing));
+        Billboard_SetAnimFrameNum(billboard, 0);
+    }
+    // HG/SS keeps the same loop running at rest and while walking. Respect
+    // the engine's animation/movement pause for menus, battles and scripts.
+    Billboard_AdvanceAnim(billboard, ov5_021ECD38(mapObj) ? 0 : FX32_ONE);
+    work->unk_02 = facing;
+    work->unk_03 = sub_02062A14(mapObj);
+
+    ov5_021EDEB4(mapObj, billboard);
+    VecFx32 pos = *Billboard_GetPos(billboard);
+    VecFx32 reaction;
+    if (FollowingPokemon_GetReactionOffset(mapObj, &reaction)) {
+        pos.x += reaction.x;
+        pos.y += reaction.y;
+        pos.z += reaction.z;
+    } else {
+        pos.y += OverworldPokemonAssets_GetBobOffset(MapObject_GetGraphicsID(mapObj), facing,
+            Billboard_GetAnimFrameNum(billboard) / FX32_ONE) * FX32_ONE;
+    }
+    Billboard_SetPos(billboard, &pos);
+    fx32 size = OverworldPokemon_GetVisualScale(mapObj);
+    VecFx32 scale = { size, size, size };
+    Billboard_SetScale(billboard, &scale);
+    ov5_021EC6C0(mapObj, billboard);
 }
 
 void ov5_021EB40C(MapObject *mapObj)

@@ -49,6 +49,8 @@
 #include "map_header.h"
 #include "map_header_data.h"
 #include "map_object.h"
+#include "overworld_pokemon.h"
+#include "overworld_encounters.h"
 #include "map_tile_behavior.h"
 #include "party.h"
 #include "persisted_map_features_init.h"
@@ -228,6 +230,12 @@ BOOL FieldInput_Process(const FieldInput *input, FieldSystem *fieldSystem)
         }
     }
 
+    // Also check while standing still: a wandering wild sprite can enter the
+    // player's tile. Trainer/step scripts above retain their normal priority.
+    if (OverworldEncounters_TryContact(fieldSystem)) {
+        return TRUE;
+    }
+
     if (input->endMovement) {
         if (Field_CheckWildEncounter(fieldSystem)) {
             return TRUE;
@@ -267,6 +275,9 @@ BOOL FieldInput_Process(const FieldInput *input, FieldSystem *fieldSystem)
         }
 
         if (validInteraction == TRUE) {
+            if (OverworldPokemon_TryInteract(fieldSystem, object)) {
+                return TRUE;
+            }
             if (PlayerAvatar_CheckForceStopMovement(fieldSystem->playerAvatar) == TRUE) {
                 PlayerAvatar_ForceStopMovement(fieldSystem->playerAvatar, PlayerAvatar_GetFacingDir(fieldSystem->playerAvatar));
             }
@@ -561,7 +572,8 @@ static BOOL Field_CheckWildEncounter(FieldSystem *fieldSystem)
         }
     }
 
-    return MapHeader_HasWildEncounters(fieldSystem->location->mapHeaderID) && WildEncounters_TryWildEncounter(fieldSystem) == TRUE;
+    return MapHeader_HasWildEncounters(fieldSystem->location->mapHeaderID)
+        && GetRadarChainActive(fieldSystem->chain) && WildEncounters_TryRadarEncounter(fieldSystem);
 }
 
 static BOOL Field_CheckMapTransition(FieldSystem *fieldSystem, const FieldInput *input)

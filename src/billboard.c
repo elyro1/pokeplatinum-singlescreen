@@ -34,8 +34,8 @@ static BillboardList *FindFirstFreeBillboardList(void);
 static void BillboardList_Reset(BillboardList *list);
 static void BillboardList_Draw(BillboardList *list);
 static void UpdateTexPlttAddressesForCurrentFrame(Billboard *billboard);
-static void UpdateModelTextureAddresses(NNSG3dResMdl *model, const NNSG3dResTex *texture, u8 textureIdx);
-static void UpdateMaterialTextureAddresses(NNSG3dResMat *material, const NNSG3dResDictTexToMatIdxData *texToMatDict, u32 textureAddress);
+static void UpdateModelTextureAddresses(NNSG3dResMdl *model, const NNSG3dResTex *texture, u8 textureIdx, BOOL matchDimensions);
+static void UpdateMaterialTextureAddresses(NNSG3dResMat *material, const NNSG3dResDictTexToMatIdxData *texToMatDict, u32 textureAddress, const NNSG3dResDictTexData *textureData, BOOL matchDimensions);
 static void UpdateModelPlttAddresses(NNSG3dResMdl *model, const NNSG3dResTex *texture, u8 plttIdx);
 static void UpdateMaterialPlttAddresses(NNSG3dResMat *material, const NNSG3dResDictPlttToMatIdxData *plttToMatDict, u32 plttAddress);
 static void BillboardList_InitBillboards(BillboardList *list);
@@ -108,6 +108,8 @@ void Billboard_Reset(Billboard *billboard)
     billboard->prev = NULL;
     billboard->draw = FALSE;
     billboard->callback = NULL;
+    billboard->matchTextureDimensions = FALSE;
+    billboard->depthOffset = 0;
 }
 
 void BillboardLists_Create(int count, enum HeapID heapID)
@@ -246,6 +248,13 @@ static BillboardList *FindFirstFreeBillboardList(void)
     return NULL;
 }
 
+static MtxFx44 BillboardProjectionWithDepthOffset(const MtxFx44 *projection, fx32 offset)
+{
+    MtxFx44 biased = *projection;
+    biased._32 += FX_Mul(biased._22, offset);
+    return biased;
+}
+
 static void BillboardList_Draw(BillboardList *list)
 {
     MtxFx33 identityMatrix;
@@ -279,7 +288,20 @@ static void BillboardList_Draw(BillboardList *list)
 #ifdef SDK_PORT
             BOOL lit = FieldVisualEffects_BeginCharacter(billboard);
 #endif
+            MtxFx44 projection;
+            if (billboard->depthOffset != 0) {
+                projection = *NNS_G3dGlbGetProjectionMtx();
+                // Same depth adjustment as field effects, scoped to this
+                // billboard. Screen X/Y, W and the sprite position stay intact.
+                MtxFx44 biased = BillboardProjectionWithDepthOffset(&projection, billboard->depthOffset);
+                NNS_G3dGlbSetProjectionMtx(&biased);
+                NNS_G3dGlbFlush();
+            }
             Easy3D_DrawRenderObj(&billboard->renderObj, &billboard->pos, rotMatrix, &billboard->scale);
+            if (billboard->depthOffset != 0) {
+                NNS_G3dGlbSetProjectionMtx(&projection);
+                NNS_G3dGlbFlush();
+            }
 #ifdef SDK_PORT
             FieldVisualEffects_EndCharacter(lit);
             FieldVisualEffects_DrawCastShadows(billboard);
@@ -676,11 +698,11 @@ static void UpdateTexPlttAddressesForCurrentFrame(Billboard *billboard)
 {
     BillboardTexPlttIndex indexes = BillboardGfxSequence_GetTexPlttIndexAt(&billboard->gfxSequence, billboard->frameNum >> FX32_SHIFT);
 
-    UpdateModelTextureAddresses(billboard->model, billboard->animTexture, indexes.textureIdx);
+    UpdateModelTextureAddresses(billboard->model, billboard->animTexture, indexes.textureIdx, billboard->matchTextureDimensions);
     UpdateModelPlttAddresses(billboard->model, billboard->animTexture, indexes.plttIdx);
 }
 
-static void UpdateModelTextureAddresses(NNSG3dResMdl *model, const NNSG3dResTex *texture, u8 textureIdx)
+static void UpdateModelTextureAddresses(NNSG3dResMdl *model, const NNSG3dResTex *texture, u8 textureIdx, BOOL matchDimensions)
 {
     NNSG3dResMat *material = NNS_G3dGetMat(model);
     const NNSG3dResDict *textureDict = (NNSG3dResDict *)((u8 *)material + material->ofsDictTexToMatList);
@@ -691,12 +713,22 @@ static void UpdateModelTextureAddresses(NNSG3dResMdl *model, const NNSG3dResTex 
         const NNSG3dResDictTexToMatIdxData *texToMatDict = (NNSG3dResDictTexToMatIdxData *)NNS_G3dGetResDataByIdx(textureDict, i);
 
         if (texToMatDict->flag & 1) {
-            UpdateMaterialTextureAddresses(material, texToMatDict, textureAddress);
+            UpdateMaterialTextureAddresses(material, texToMatDict, textureAddress, textureData, matchDimensions);
         }
     }
 }
 
-static void UpdateMaterialTextureAddresses(NNSG3dResMat *material, const NNSG3dResDictTexToMatIdxData *texToMatDict, u32 textureAddress)
+static u32 MatchFrameTextureDimensions(NNSG3dResMatData *material, const NNSG3dResDictTexData *texture, u32 parameter)
+{
+    u32 sizeMask = REG_G3_TEXIMAGE_PARAM_T_SIZE_MASK | REG_G3_TEXIMAGE_PARAM_V_SIZE_MASK;
+    u32 width = (texture->extraParam & NNS_G3D_TEXIMAGE_PARAMEX_ORIGW_MASK) >> NNS_G3D_TEXIMAGE_PARAMEX_ORIGW_SHIFT;
+    u32 height = (texture->extraParam & NNS_G3D_TEXIMAGE_PARAMEX_ORIGH_MASK) >> NNS_G3D_TEXIMAGE_PARAMEX_ORIGH_SHIFT;
+    material->magW = FX_Div(width * FX32_ONE, material->origWidth * FX32_ONE);
+    material->magH = FX_Div(height * FX32_ONE, material->origHeight * FX32_ONE);
+    return (parameter & ~sizeMask) | (texture->texImageParam & sizeMask);
+}
+
+static void UpdateMaterialTextureAddresses(NNSG3dResMat *material, const NNSG3dResDictTexToMatIdxData *texToMatDict, u32 textureAddress, const NNSG3dResDictTexData *textureData, BOOL matchDimensions)
 {
     u8 *texMaterials = (u8 *)material + texToMatDict->offset;
 
@@ -707,9 +739,15 @@ static void UpdateMaterialTextureAddresses(NNSG3dResMat *material, const NNSG3dR
         // applied to the decoded byte address rather than to that ID.
         u32 parameter = materialData->texImageParam;
         u32 address = SIM_DecodeTextureAddress(&parameter);
+        if (matchDimensions) {
+            parameter = MatchFrameTextureDimensions(materialData, textureData, parameter);
+        }
         materialData->texImageParam = SIM_EncodeTextureAddress(parameter & ~NNS_G3D_TEXIMAGE_PARAM_TEX_ADDR_MASK, address + (textureAddress << 3));
 #else
         GF_ASSERT((materialData->texImageParam & NNS_G3D_TEXIMAGE_PARAM_TEX_ADDR_MASK) + textureAddress <= NNS_G3D_TEXIMAGE_PARAM_TEX_ADDR_MASK);
+        if (matchDimensions) {
+            materialData->texImageParam = MatchFrameTextureDimensions(materialData, textureData, materialData->texImageParam);
+        }
         materialData->texImageParam += textureAddress;
 #endif
     }
@@ -794,6 +832,21 @@ static void BillboardList_Remove(Billboard *billboard)
 {
     billboard->prev->next = billboard->next;
     billboard->next->prev = billboard->prev;
+}
+
+void Billboard_DrawAfter(Billboard *billboard, Billboard *reference)
+{
+    if (billboard == NULL || reference == NULL || billboard == reference
+        || billboard->list == NULL || billboard->list != reference->list
+        || billboard->state <= BILLBOARD_STATE_INITIALIZED || reference->state <= BILLBOARD_STATE_INITIALIZED
+        || reference->next == billboard) {
+        return;
+    }
+    BillboardList_Remove(billboard);
+    billboard->next = reference->next;
+    billboard->prev = reference;
+    reference->next->prev = billboard;
+    reference->next = billboard;
 }
 
 static NNSG3dResMdlSet *RetrieveBillboardResources(const BillboardResources *resources, NNSG3dResMdl **outModel, NNSG3dResTex **outTexture)

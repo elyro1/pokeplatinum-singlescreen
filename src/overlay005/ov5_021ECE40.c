@@ -30,6 +30,7 @@
 #include "map_tile_behavior.h"
 #include "narc.h"
 #include "overworld_anim_manager.h"
+#include "overworld_pokemon_assets.h"
 #include "resource_collection.h"
 #include "sys_task.h"
 #include "sys_task_manager.h"
@@ -173,7 +174,10 @@ void ov5_021ECE40(UnkStruct_ov5_021ED0A4 *param0, const MapObjectManager *param1
 
     ov5_021EDDAC(param0, param2);
     ov5_021EE320(param0, param2, param7);
-    ov5_021ED224(param0, 8, 4, 8, 4, param4, param5);
+    // The resident sequence bank already reserves four slots. Generic walk
+    // and both Pokémon palettes use three of those; retain all four dynamic
+    // slots and size both banks from their actual bookkeeping arrays.
+    ov5_021ED224(param0, NELEMS(param0->unk_20), 4, NELEMS(param0->unk_40), 4, param4, param5);
     ov5_021ED0A4(param0, param2);
     ov5_021ED4E4(param0, param6, gPreloadedBillboardModels, gPreloadedBillboardFrameSeqs);
 }
@@ -517,6 +521,12 @@ static void ov5_021ED2AC(UnkStruct_ov5_021ED0A4 *param0)
 
 static const ObjectEventGfxFileEntry *ov5_021ED2D0(int param0, int param1, const ObjectEventGfxFileEntry *param2)
 {
+    if (param2 == gObjectEventGfxTexturesTable) {
+        if (OverworldPokemonAssets_IsGraphicsID(param0)) {
+            return &param2[param0 - OVERWORLD_POKEMON_GFX_BASE];
+        }
+        param2 += OVERWORLD_POKEMON_VARIANTS * 2;
+    }
     do {
         if (param2->id == param0) {
             return param2;
@@ -541,7 +551,19 @@ static int ov5_021ED2E8(UnkStruct_ov5_021ED0A4 *param0, ResourceHeap *param1, in
 
     {
         NARC *v1 = MapObjectMan_GetNARC(param0->unk_104);
-        ResourceHeap_LoadMemberFromNARC(param1, param2, v1, v0->narcIdx, 0);
+        u32 size = OverworldPokemonAssets_GetResourceSize(v0->narcIdx);
+        if (size != 0) {
+            void *dest = ResourceHeap_AllocItem(param1, param2, size, FALSE);
+            if (dest == NULL) {
+                return 0;
+            }
+            if (!OverworldPokemonAssets_ReadResource(v0->narcIdx, dest)) {
+                ResourceHeap_FreeItem(param1, param2);
+                return 0;
+            }
+        } else {
+            ResourceHeap_LoadMemberFromNARC(param1, param2, v1, v0->narcIdx, 0);
+        }
     }
 
     return 1;
@@ -704,7 +726,7 @@ static int ov5_021ED53C(int *param0, int param1, int param2, int param3)
 static void ov5_021ED558(UnkStruct_ov5_021ED0A4 *param0)
 {
     int *v0 = ov5_021EDCBC(param0);
-    ov5_021ED504(v0, 0xffff, 8);
+    ov5_021ED504(v0, 0xffff, NELEMS(param0->unk_20));
 }
 
 static void ov5_021ED56C(UnkStruct_ov5_021ED0A4 *param0, int param1)
@@ -785,7 +807,7 @@ static void ov5_021ED63C(MapObjectManager *param0, UnkStruct_ov5_021ED0A4 *param
 static void ov5_021ED694(UnkStruct_ov5_021ED0A4 *param0)
 {
     int *v0 = ov5_021EDCC0(param0);
-    ov5_021ED504(v0, 0xffff, 8);
+    ov5_021ED504(v0, 0xffff, NELEMS(param0->unk_40));
 }
 
 static void ov5_021ED6A8(UnkStruct_ov5_021ED0A4 *param0, int param1)
@@ -1292,6 +1314,10 @@ static void *ov5_021EDCF4(UnkStruct_ov5_021ED0A4 *param0, u32 param1, int param2
 static const ObjectEventGfxModelAnimEntry *ov5_021EDD04(int param0)
 {
     const ObjectEventGfxModelAnimEntry *v0 = gObjectEventGfxModelAnimsTable;
+    if (OverworldPokemonAssets_IsGraphicsID(param0)) {
+        return &v0[param0 - OVERWORLD_POKEMON_GFX_BASE];
+    }
+    v0 += OVERWORLD_POKEMON_VARIANTS * 2;
 
     do {
         if (v0->graphicsID == param0) {

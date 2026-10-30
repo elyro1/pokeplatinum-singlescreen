@@ -161,6 +161,11 @@ pokeplatinum_c = files(
     'unk_02039A64.c',
     'map_matrix.c',
     'map_header_data.c',
+    'overworld_pokemon_assets.c',
+    'overworld_pokemon.c',
+    'overworld_encounters.c',
+    'pokemon_mood.c',
+    'following_pokemon_interaction.c',
     'field_overworld_state.c',
     'spawn_locations.c',
     'field_overworld_weather.c',
@@ -1056,6 +1061,15 @@ pokeplatinum_c += field_lights_header
 public_includes = [public_includes, include_directories('.')]
 endif
 
+following_pokemon_data = custom_target('overworld_pokemon_data.inc',
+    output: 'overworld_pokemon_data.inc',
+    input: files('../res/graphics/following_pokemon/manifest.json'),
+    command: [find_program('python3', native: true), files('../tools/scripts/embed_following_pokemon.py'),
+        '@INPUT@', '@OUTPUT@'],
+)
+pokeplatinum_c += following_pokemon_data
+public_includes = [public_includes, include_directories('.')]
+
 # Embed resource deltas in desktop executables; the player's ROM supplies bases.
 if build_target == 'linux' or build_target == 'win64'
     map_patches_header = custom_target('map_patches.inc',
@@ -1081,7 +1095,7 @@ if build_target == 'linux' or build_target == 'win64'
             files('../res/graphics/start_menu/start_menu.order')],
         depends: py_consts_generators,
     )
-    pokeplatinum_c += [files('port/map_patches.cpp', 'port/rom_setup.cpp'), map_patches_header]
+    pokeplatinum_c += [files('port/map_patches.cpp', 'port/rom_setup.cpp', 'port/hgss_assets.cpp'), map_patches_header]
     public_includes = [public_includes, include_directories('.')]
 endif
 

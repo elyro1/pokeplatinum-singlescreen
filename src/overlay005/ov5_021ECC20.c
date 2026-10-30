@@ -13,6 +13,7 @@
 #include "heap.h"
 #include "map_object.h"
 #include "narc.h"
+#include "overworld_pokemon_assets.h"
 
 static void ov5_021ECCA4(MapObjectManager *param0);
 static void ov5_021ECCBC(MapObjectManager *param0);
@@ -86,6 +87,10 @@ const ObjectEventGfxRenderDetailsEntry *ov5_021ECD04(const MapObject *param0)
 static const ObjectEventGfxRenderDetailsEntry *ov5_021ECD10(int param0)
 {
     const ObjectEventGfxRenderDetailsEntry *v0 = gObjectEventGfxRenderDetailsTable;
+    if (OverworldPokemonAssets_IsGraphicsID(param0)) {
+        return &v0[param0 - OVERWORLD_POKEMON_GFX_BASE];
+    }
+    v0 += OVERWORLD_POKEMON_VARIANTS * 2;
 
     do {
         if (v0->graphicsID == param0) {
@@ -118,7 +123,12 @@ void *ov5_021ECD68(const MapObjectManager *param0, u32 param1, int param2)
 {
     void *v0;
     NARC *v1 = MapObjectMan_GetNARC(param0);
-    u32 v2 = NARC_GetMemberSize(v1, param1);
+    u32 v2;
+    v2 = OverworldPokemonAssets_GetResourceSize(param1);
+    BOOL pokemonResource = v2 != 0;
+    if (!pokemonResource) {
+        v2 = NARC_GetMemberSize(v1, param1);
+    }
 
     if (param2 == 1) {
         v0 = Heap_Alloc(HEAP_ID_FIELD1, v2);
@@ -126,7 +136,17 @@ void *ov5_021ECD68(const MapObjectManager *param0, u32 param1, int param2)
         v0 = Heap_AllocAtEnd(HEAP_ID_FIELD1, v2);
     }
 
-    NARC_ReadWholeMember(v1, param1, v0);
+    if (v0 == NULL) {
+        return NULL;
+    }
+    if (pokemonResource) {
+        if (!OverworldPokemonAssets_ReadResource(param1, v0)) {
+            Heap_Free(v0);
+            return NULL;
+        }
+    } else {
+        NARC_ReadWholeMember(v1, param1, v0);
+    }
 
     return v0;
 }
