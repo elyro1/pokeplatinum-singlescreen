@@ -34,7 +34,7 @@ int main()
     return 0;
 #else
     assert(GameplayConfig_UsesFileOverrides());
-    assert(GameplayConfig_OptionCount() == 23);
+    assert(GameplayConfig_OptionCount() == 24);
     GameplayConfig values;
     GameplayConfig_LoadDefaults(&values);
     for (unsigned i = 0; i < GameplayConfig_OptionCount(); ++i) {
@@ -48,8 +48,8 @@ int main()
         assert(GameplayConfig_SetOptionValue(&values, i, 0));
         assert(GameplayConfig_GetOptionValue(&values, i) == 0);
     }
-    assert(!GameplayConfig_GetOption(23, nullptr));
-    assert(!GameplayConfig_SetOptionValue(&values, 23, 0));
+    assert(!GameplayConfig_GetOption(24, nullptr));
+    assert(!GameplayConfig_SetOptionValue(&values, 24, 0));
 
     const std::string unrelated = "[Other]\r\ninfiniteTMs=false\r\ncustom=keep me ; untouched\r\n";
     const std::string original = std::string("\xef\xbb\xbf") +
@@ -63,6 +63,7 @@ int main()
     editor.values.shinyRolls = 65535;
     editor.values.tradeEvolutionLevel = 100;
     editor.values.catchRateMultiplier = 255;
+    editor.values.overworldEncounterCount = 30;
     assert(editor.IsDirty() && editor.Save());
     assert(!editor.IsDirty() && editor.NeedsRestart());
     // Saved values never modify active rules before restart.
@@ -79,6 +80,7 @@ int main()
     GameplayConfig_Init();
     assert(GameplayConfig_Get()->infiniteTMs && GameplayConfig_Get()->shinyRolls == 65535);
     assert(GameplayConfig_Get()->tradeEvolutionLevel == 100 && GameplayConfig_Get()->catchRateMultiplier == 255);
+    assert(GameplayConfig_Get()->overworldEncounterCount == 30);
     assert(!editor.NeedsRestart());
     assert(editor.Save() && Read() == saved); // Saving again does not append duplicate blocks.
 

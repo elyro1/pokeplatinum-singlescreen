@@ -112,7 +112,10 @@ static int ov5_021F336C(OverworldAnimManager *param0, void *param1)
 #endif
 
     OverworldAnimManager_SetPosition(param0, &v0);
-    v1->unk_24 = ov5_021DF84C(v1->unk_14.unk_04, 3, &v0);
+    v1->unk_24 = FieldEffectManager_TryAddBillboardByID(v1->unk_14.unk_04, 3, &v0);
+    if (v1->unk_24 == NULL) {
+        return FALSE;
+    }
 
     return 1;
 }

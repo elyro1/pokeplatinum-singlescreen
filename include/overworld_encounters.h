@@ -5,7 +5,8 @@
 
 #include "pokemon.h"
 
-#define OVERWORLD_ENCOUNTER_CAPACITY 8
+#define OVERWORLD_ENCOUNTER_CAPACITY 30
+#define OVERWORLD_ENCOUNTER_DEFAULT_COUNT 8
 
 // Keep only the opponents between spawning and contact. Player state and battle
 // resources are initialized at contact, so menus/party changes cannot stale them.

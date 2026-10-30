@@ -33,7 +33,7 @@ void GameplayContents()
     // Keep Save/Discard visible while the options scroll inside the page.
     ImGui::BeginChild("GameplayOptions");
     const char *groups[] = {"Battle rules", "Moves & tutors", "Evolution & eggs",
-                            "Encounters & events", "Progression & prices"};
+                            "Encounters & events", "Progression & prices", "Developer"};
     for (const char *group : groups) {
         if (!ImGui::CollapsingHeader(group, ImGuiTreeNodeFlags_DefaultOpen)) continue;
         if (!BeginSettings(group)) continue;

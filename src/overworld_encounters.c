@@ -29,6 +29,7 @@
 #include "unk_020655F4.h"
 
 #ifdef SDK_PORT
+#include "port/gameplay_config.h"
 #include "port/sim_config_prj.h"
 #include "port/hgss_assets.h"
 #endif
@@ -328,9 +329,13 @@ void OverworldEncounters_Update(FieldSystem *field)
             Wander(field, sprite, object);
         }
     }
-    if (freeSlot >= 0 && --manager->spawnTicks <= 0) {
+    int spawnLimit = OVERWORLD_ENCOUNTER_DEFAULT_COUNT;
+#ifdef SDK_PORT
+    spawnLimit = GameplayConfig_Get()->overworldEncounterCount;
+#endif
+    if (count < spawnLimit && freeSlot >= 0 && --manager->spawnTicks <= 0) {
         Spawn(field, &manager->sprites[freeSlot], freeSlot);
-        manager->spawnTicks = FrameTicks(count < OVERWORLD_ENCOUNTER_CAPACITY - 2 ? 15 : 90);
+        manager->spawnTicks = FrameTicks(count < spawnLimit - 2 ? 15 : 90);
     }
 }
 

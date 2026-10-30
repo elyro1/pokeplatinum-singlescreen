@@ -195,7 +195,10 @@ static int ov5_021F2F0C(OverworldAnimManager *param0, void *param1)
 
     OverworldAnimManager_SetPosition(param0, &v2);
 
-    v3->unk_34 = ov5_021DF84C(v3->unk_18.unk_10, 0, &v2);
+    v3->unk_34 = FieldEffectManager_TryAddBillboardByID(v3->unk_18.unk_10, 0, &v2);
+    if (v3->unk_34 == NULL) {
+        return FALSE;
+    }
 
     if (OverworldAnimManager_GetUserInt(param0) == 0) {
         v3->unk_00 = 1;
@@ -320,7 +323,10 @@ static int ov5_021F30C4(OverworldAnimManager *param0, void *param1)
     v1->unk_08 = *v2;
 
     OverworldAnimManager_GetPosition(param0, &v0);
-    v1->unk_1C = ov5_021DF84C(v1->unk_08.unk_0C, 0, &v0);
+    v1->unk_1C = FieldEffectManager_TryAddBillboardByID(v1->unk_08.unk_0C, 0, &v0);
+    if (v1->unk_1C == NULL) {
+        return FALSE;
+    }
 
     return 1;
 }
@@ -455,7 +461,10 @@ static int ov5_021F31B4(OverworldAnimManager *param0, void *param1)
         v0 = 7;
     }
 
-    v2->unk_24 = ov5_021DF84C(v2->unk_10.unk_0C, v0, &v1);
+    v2->unk_24 = FieldEffectManager_TryAddBillboardByID(v2->unk_10.unk_0C, v0, &v1);
+    if (v2->unk_24 == NULL) {
+        return FALSE;
+    }
     return 1;
 }
 

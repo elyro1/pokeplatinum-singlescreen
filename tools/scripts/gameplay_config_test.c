@@ -49,6 +49,7 @@ static void AssertOriginalDefaults(void)
     assert(config->shinyRolls == 1);
     assert(config->friendshipGainMultiplier == 1);
     assert(config->eggHatchSpeedMultiplier == 1);
+    assert(config->overworldEncounterCount == 8);
     assert(config->catchRateMultiplier == 1);
 }
 
@@ -88,6 +89,7 @@ static void TestConfigFile(void)
     assert(strstr(template, "friendshipGainMultiplier=1\n"));
     assert(strstr(template, "eggHatchSpeedMultiplier=1\n"));
     assert(strstr(template, "catchRateMultiplier=1\n"));
+    assert(strstr(template, "overworldEncounterCount=8\n"));
     GameplayConfig_Init();
     AssertOriginalDefaults();
 
@@ -115,7 +117,8 @@ static void TestConfigFile(void)
                 "shinyRolls=65535\n"
                 "friendshipGainMultiplier=255\n"
                 "eggHatchSpeedMultiplier=0\n"
-                "catchRateMultiplier=255\n");
+                "catchRateMultiplier=255\n"
+                "overworldEncounterCount=0\n");
     // Starting again must preserve the player's existing overrides.
     GameplayConfig_Init();
     GameplayConfig *config = GameplayConfig_Get();
@@ -142,6 +145,7 @@ static void TestConfigFile(void)
     assert(config->friendshipGainMultiplier == 255);
     assert(config->eggHatchSpeedMultiplier == 0);
     assert(config->catchRateMultiplier == 255);
+    assert(config->overworldEncounterCount == 0);
 
     // Partial files inherit defaults. Unknown names/sections and invalid values are ignored.
     WriteConfig("[Gameplay]\nprohibitBattleItems=1\nforceSetBattleStyle=TRUE\n"
@@ -149,12 +153,13 @@ static void TestConfigFile(void)
                 "bpPricePercent=-1\nrareCandyBPPrice=65536\ntradeEvolutionLevel=101\n"
                 "shinyRolls=999999999999999999999999999999999999\n"
                 "friendshipGainMultiplier=256\neggHatchSpeedMultiplier=2.5\n"
-                "catchRateMultiplier=2oops\nunknownOption=false\n"
+                "catchRateMultiplier=2oops\noverworldEncounterCount=31\nunknownOption=false\n"
                 "[Other]\nprohibitBattleItems=false\n");
     GameplayConfig_Init();
     assert(config->prohibitBattleItems == TRUE);
     assert(config->forceSetBattleStyle == TRUE);
     assert(config->freeMoveTutors == TRUE);
+    assert(config->overworldEncounterCount == 8);
     assert(config->freeMoveRelearning == FALSE);
     assert(config->bpPricePercent == 100);
     assert(config->rareCandyBPPrice == 48);

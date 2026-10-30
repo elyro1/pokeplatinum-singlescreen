@@ -30,6 +30,7 @@ typedef struct {
     u16 shinyRolls; // Total rolls for new eligible Pokemon; 0 and 1 preserve original odds.
     u8 friendshipGainMultiplier; // Positive friendship gains only; 0 and 1 preserve original gains.
     u8 eggHatchSpeedMultiplier; // 1 = original speed; 0 also falls back to original speed.
+    u8 overworldEncounterCount; // Maximum visible wild Pokemon, 0-30.
     u8 catchRateMultiplier; // Final catch rate: 2-255 boosts it; 0 and 1 preserve original rates.
 } GameplayConfig;
 

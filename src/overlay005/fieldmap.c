@@ -1013,7 +1013,13 @@ static void ov5_021D1878(FieldSystem *fieldSystem)
         FieldEffectManager_InitAnimManagerList(fieldSystem->fieldEffMan, v0);
     }
 
-    ov5_021DF488(fieldSystem->fieldEffMan, HEAP_ID_FIELD1, 32, 32, 32, 32, 0x500 * (32 / 2), 0x80 * (32 / 2), 0x800 * 32);
+#ifdef SDK_PORT
+    // Wild Pokemon can each create ground effects, in addition to NPCs and the player.
+    const int fieldEffectBillboardCount = 128;
+#else
+    const int fieldEffectBillboardCount = 32;
+#endif
+    ov5_021DF488(fieldSystem->fieldEffMan, HEAP_ID_FIELD1, fieldEffectBillboardCount, 32, 32, 32, 0x500 * (32 / 2), 0x80 * (32 / 2), 0x800 * 32);
 
     if ((fieldSystem->mapLoadType == MAP_LOAD_TYPE_UNDERGROUND) || (fieldSystem->mapLoadType == MAP_LOAD_TYPE_UNION)) {
         MapObjectMan_SetEndMovement(fieldSystem->mapObjMan, 0);

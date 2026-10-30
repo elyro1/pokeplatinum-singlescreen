@@ -432,6 +432,12 @@ Billboard *FieldEffectManager_TryAddBillboard(FieldEffectManager *param0, const 
     return v1;
 }
 
+Billboard *FieldEffectManager_TryAddBillboardByID(FieldEffectManager *manager, u32 id, const VecFx32 *position)
+{
+    BillboardResources *resources = ov5_021DF9B4(manager->unk_20, id);
+    return FieldEffectManager_TryAddBillboard(manager, resources, position);
+}
+
 Billboard *ov5_021DF84C(FieldEffectManager *param0, u32 param1, const VecFx32 *param2)
 {
     BillboardResources *v0 = ov5_021DF9B4(param0->unk_20, param1);

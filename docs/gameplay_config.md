@@ -4,7 +4,7 @@ The PC port creates `gameplay_config.ini` with its built-in defaults on first st
 
 ## Edit through the TAB menu
 
-Open **Tab → Gameplay** to change all 23 options. The page groups them into battle rules, moves and tutors, evolution and eggs, encounters and events, and progression and prices. Each option includes its description; numeric inputs stay within the ranges below.
+Open **Tab → Gameplay** to change all 24 options. The page groups them into battle rules, moves and tutors, evolution and eggs, encounters and events, progression and prices, and developer settings. Each option includes its description; numeric inputs stay within the ranges below.
 
 Choose **Save changes**, then restart the game to apply the saved rules. The page displays **Unsaved changes** while you edit and **Saved changes apply after restart** when the file differs from the running game. Draft values remain available when switching categories or closing and reopening TAB during the session.
 
@@ -82,6 +82,7 @@ All options in this table default to `false`. Set an option to `true` to enable 
 
 | Option | Default | Accepted range | Effect |
 | --- | --- | --- | --- |
+| `overworldEncounterCount` | `8` | `0–30` | Maximum visible wild Pokémon at once when overworld encounters are enabled. `0` prevents visible spawns. Available space and map objects can limit the actual number. |
 | `bpPricePercent` | `100` | `0–65535` | Percentage of original BP prices, rounded up and capped at 65535 BP. `50` halves prices; `0` makes them free. Rare Candy uses its separate price below. |
 | `rareCandyBPPrice` | `48` | `0–65535` | Exact Rare Candy BP price. Overrides `bpPricePercent`; `0` makes Rare Candy free. |
 | `tradeEvolutionLevel` | `0` | `0–100` | `0` retains trade-only evolution. `1–100` also allows plain trade evolutions on level-up at or above that level. Held-item trades use `levelUpHeldItemEvolutions` instead. |

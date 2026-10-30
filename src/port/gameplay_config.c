@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "constants/items.h"
+#include "overworld_encounters.h"
 
 static GameplayConfig sGameplayConfig;
 static BOOL sUsesFileOverrides;
@@ -94,6 +95,9 @@ void GameplayConfig_LoadDefaults(GameplayConfig *config)
     // 0 or 1 keeps normal timing, ability bonuses still apply, and zeroEggCycles eggs hatch at the next check instead of completing normal cycles.
     config->eggHatchSpeedMultiplier = 1;
 
+    // Maximum number of visible wild Pokemon at once.
+    config->overworldEncounterCount = OVERWORLD_ENCOUNTER_DEFAULT_COUNT;
+
     // Multiply the final catch rate after ball, HP, status, and Safari modifiers; 255 or higher guarantees capture.
     // 0 or 1 keeps original rates; Master Balls, guaranteed catches, and trainer capture restrictions still apply.
     config->catchRateMultiplier = 1;
@@ -141,6 +145,7 @@ static const ConfigField sConfigFields[] = {
     FIELD(shinyRolls, CONFIG_U16, 65535, "Total shiny rolls for new eligible Pokemon: 0 and 1 preserve original odds.", "Shiny rolls", "Encounters & events"),
     FIELD(friendshipGainMultiplier, CONFIG_U8, 255, "Multiply positive friendship gains: 0 and 1 preserve original gains.", "Friendship gain multiplier", "Progression & prices"),
     FIELD(eggHatchSpeedMultiplier, CONFIG_U8, 255, "Divide steps per hatch check by this value: 0 and 1 preserve original timing.", "Egg hatch speed multiplier", "Evolution & eggs"),
+    FIELD(overworldEncounterCount, CONFIG_U8, OVERWORLD_ENCOUNTER_CAPACITY, "Maximum visible wild Pokemon at once: 0 disables spawns.", "Overworld encounter count", "Developer"),
     FIELD(catchRateMultiplier, CONFIG_U8, 255, "Multiply final catch rate: 0 and 1 preserve original rates; trainer captures remain blocked.", "Catch rate multiplier", "Encounters & events"),
 };
 

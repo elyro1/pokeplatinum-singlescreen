@@ -131,7 +131,10 @@ static int ov5_021F38AC(OverworldAnimManager *param0, void *param1)
     v2.z += (((16 * FX32_ONE) >> 1) + (FX32_ONE * 6) + (FX32_ONE * 4));
 
     OverworldAnimManager_SetPosition(param0, &v2);
-    v3->unk_34 = ov5_021DF84C(v3->unk_18.unk_10, 9, &v2);
+    v3->unk_34 = FieldEffectManager_TryAddBillboardByID(v3->unk_18.unk_10, 9, &v2);
+    if (v3->unk_34 == NULL) {
+        return FALSE;
+    }
 
     if (OverworldAnimManager_GetUserInt(param0) == 0) {
         v3->unk_00 = 1;
