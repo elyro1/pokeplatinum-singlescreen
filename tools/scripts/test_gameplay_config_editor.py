@@ -28,7 +28,11 @@ def main():
         call = '    GameplayConfig_LoadFile();'
         assert original.read_text().count(call) == 1
         disabled.write_text(original.read_text().replace(call, '    // GameplayConfig_LoadFile();'))
-        cpp = flags_for('/port/gameplay_config_editor.cpp')
+        # CI's GCC defaults to C++17; newer local compilers may default to C++20.
+        cpp = flags_for('/port/gameplay_config_editor.cpp') + ['-std=c++17']
+        editor = temp / 'editor.o'
+        subprocess.run(cpp + ['-c', str(ROOT / 'src/port/gameplay_config_editor.cpp'), '-o', str(editor)],
+                       cwd=build, check=True)
         for name, source, defines in [('file', original, []),
                                       ('defaults-only', disabled, ['-DGAMEPLAY_CONFIG_DEFAULTS_ONLY'])]:
             config = temp / f'{name}-config.o'
@@ -40,7 +44,7 @@ def main():
                            cwd=build, check=True)
             executable = temp / f'{name}-test'
             subprocess.run([cpp[0], str(test), str(config),
-                            str(build / 'main.p/src_port_gameplay_config_editor.cpp.o'),
+                            str(editor),
                             str(build / 'subprojects/libntr/libraries/sim/libsim.a.p/src_config_ini.c.o'),
                             '-o', str(executable)], check=True)
             run = temp / name

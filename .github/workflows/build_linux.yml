@@ -39,6 +39,9 @@ jobs:
       - name: Verify gamepad input
         run: ./drun.sh python3 tools/scripts/test_gamepad_input.py
 
+      - name: Verify gameplay config editor (C++17)
+        run: ./drun.sh python3 tools/scripts/test_gameplay_config_editor.py
+
       - name: Verify embedded resource patches
         run: ./drun.sh python3 tools/scripts/test_map_patches.py
 

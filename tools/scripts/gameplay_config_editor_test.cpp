@@ -68,7 +68,7 @@ int main()
     // Saved values never modify active rules before restart.
     assert(!GameplayConfig_Get()->infiniteTMs && GameplayConfig_Get()->shinyRolls == 1);
     const std::string saved = Read();
-    assert(saved.starts_with("\xef\xbb\xbf; My configuration\r\n"));
+    assert(saved.find("\xef\xbb\xbf; My configuration\r\n") == 0);
     assert(saved.find("infiniteTMs = true  ; keep this comment\r\n") != std::string::npos);
     assert(saved.find("infiniteTMs=true\r\n") != std::string::npos);
     assert(saved.find("shinyRolls: 65535 ; odds\r\n") != std::string::npos);
@@ -122,7 +122,7 @@ int main()
     assert(editor.Load());
     editor.values.freeMoveTutors = TRUE;
     assert(editor.Save());
-    assert(Read().starts_with("; notes\n[Other]\nkey=value\n\n[Gameplay]\n"));
+    assert(Read().find("; notes\n[Other]\nkey=value\n\n[Gameplay]\n") == 0);
     GameplayConfig parsed;
     assert(GameplayConfig_ParseText(Read().c_str(), &parsed) && parsed.freeMoveTutors);
 
@@ -143,7 +143,7 @@ int main()
     assert(std::filesystem::status(GAMEPLAY_CONFIG_FILE_PATH).permissions() == mode);
 #endif
     for (const auto &entry : std::filesystem::directory_iterator("."))
-        assert(!entry.path().filename().string().starts_with("gameplay_config.ini.tmp-"));
+        assert(entry.path().filename().string().find("gameplay_config.ini.tmp-") != 0);
     std::filesystem::remove(GAMEPLAY_CONFIG_FILE_PATH);
     std::filesystem::create_directory(GAMEPLAY_CONFIG_FILE_PATH);
     assert(!editor.Load() && !editor.Save());

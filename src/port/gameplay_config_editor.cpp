@@ -85,10 +85,10 @@ std::string Rewrite(const std::string &source, const GameplayConfig &config)
         if (bodyEnd > begin && source[bodyEnd - 1] == '\r') --bodyEnd;
         const std::string_view body(source.data() + begin, bodyEnd - begin);
         std::string_view line = body;
-        if (begin == 0 && line.starts_with("\xef\xbb\xbf")) line.remove_prefix(3);
+        if (begin == 0 && line.substr(0, 3) == "\xef\xbb\xbf") line.remove_prefix(3);
         line = Trim(line);
         bool replaced = false;
-        if (line.starts_with("[")) {
+        if (!line.empty() && line.front() == '[') {
             const size_t close = line.find(']');
             if (close != std::string_view::npos) section = line.substr(1, close - 1);
         } else if (section == "Gameplay" && !line.empty() && line.front() != ';' && line.front() != '#') {
