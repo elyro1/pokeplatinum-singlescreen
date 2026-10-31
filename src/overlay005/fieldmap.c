@@ -7,6 +7,7 @@
 #ifdef SDK_PORT
 #include <simulator/g3_draw.h>
 #include <simulator/sim.h>
+#include "bwbattle/bw_adapter.h"
 #include "port/field_visuals.h"
 #include "overlay005/model_attributes.h"
 #include "port/field_visual_effects.h"
@@ -835,7 +836,9 @@ static void ov5_021D15F4(FieldSystem *fieldSystem)
 
 #ifdef SDK_PORT
     // The field remains alive behind Poketch; only widen it while it is on top.
-    u32 viewWidth = SIM_SetFieldWidescreen(GX_GetDispSelect() == GX_DISP_SELECT_MAIN_SUB && !fieldSystem->encounterEffectBorders && fieldSystem->npcSceneNativeViewLocks == 0);
+    u32 viewWidth = SIM_SetFieldWidescreen(GX_GetDispSelect() == GX_DISP_SELECT_MAIN_SUB
+        && (!fieldSystem->encounterEffectBorders || BwAdapter_IsEnabled())
+        && fieldSystem->npcSceneNativeViewLocks == 0);
     Camera_ComputeProjectionMatrix(fieldSystem->camera->projection, fieldSystem->camera);
     if (viewWidth > 256) {
         MtxFx44 v2 = *NNS_G3dGlbGetProjectionMtx();

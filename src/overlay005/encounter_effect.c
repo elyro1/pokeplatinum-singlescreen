@@ -4,6 +4,7 @@
 #include <simulator/sim.h>
 
 #include "bwbattle/bwbattle.h"
+#include "bwbattle/bw_adapter.h"
 #endif
 
 #include "nitro/fx/fx.h"
@@ -188,7 +189,7 @@ void EncounterEffect_Start(enum EncEffectCutIn effect, FieldSystem *fieldSystem,
     // The Galactic boss radial wipe is a screen mask drawn into BG3.
     SIM_SetFieldTransitionMask(effect == ENCEFF_CUTIN_GALACTIC_BOSS ? 3 : -1);
     fieldSystem->encounterEffectBorders = effect >= ENCEFF_CUTIN_LEADER_ROARK && effect <= ENCEFF_CUTIN_LEADER_VOLKNER;
-    if (fieldSystem->encounterEffectBorders) {
+    if (fieldSystem->encounterEffectBorders && !BwAdapter_IsEnabled()) {
         SIM_SetFieldWidescreen(FALSE);
     }
 #endif

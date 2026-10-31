@@ -7,6 +7,7 @@
 #include <simulator/sim.h>
 
 #include "bwbattle/bwbattle.h"
+#include "bwbattle/bw_adapter.h"
 #endif
 
 #include "constants/heap.h"
@@ -2995,6 +2996,9 @@ static BOOL EncounterEffect_GymLeader(EncounterEffect *encEffect, enum HeapID he
 
     case 3:
 
+#ifdef SDK_PORT
+        SIM_SetTrainerBannerWide(BwAdapter_IsEnabled());
+#endif
         ov5_021DE3D0(
             encEffect->narc, param->bannerTilemapIdx, param->bannerTileIdx, param->bannerPlttIdx, 0, 1, encEffect->fieldSystem->bgConfig, 3);
         leaderEncEffect->unk_2F0 = 1;
@@ -3131,6 +3135,9 @@ static BOOL EncounterEffect_GymLeader(EncounterEffect *encEffect, enum HeapID he
         break;
 
     case 15:
+#ifdef SDK_PORT
+        SIM_SetTrainerBannerWide(FALSE);
+#endif
         SetScreenColorBrightness(DS_SCREEN_SUB, COLOR_WHITE);
 
         if (encEffect->done != NULL) {
