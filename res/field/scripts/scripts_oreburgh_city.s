@@ -89,41 +89,40 @@ OreburghCity_CoordEvent_Rival:
 OreburghCity_RivalRunIntoPlayerZ748:
     SetObjectEventPos LOCALID_RIVAL, 271, 748
     AddObjectFromEdge LOCALID_RIVAL, MOVEMENT_ACTION_WALK_FAST_WEST
-    ApplyMovement LOCALID_PLAYER, OreburghCity_Movement_PlayerGetPushedByRival
     ApplyMovement LOCALID_RIVAL, OreburghCity_Movement_RivalRunIntoPlayer
     WaitMovement
-    GoTo OreburghCity_NextStopTheEternaGymBadge
+    GoTo OreburghCity_RivalBumpPlayer
     End
 
 OreburghCity_RivalRunIntoPlayerZ749:
     SetObjectEventPos LOCALID_RIVAL, 271, 749
     AddObjectFromEdge LOCALID_RIVAL, MOVEMENT_ACTION_WALK_FAST_WEST
-    ApplyMovement LOCALID_PLAYER, OreburghCity_Movement_PlayerGetPushedByRival
     ApplyMovement LOCALID_RIVAL, OreburghCity_Movement_RivalRunIntoPlayer
     WaitMovement
-    GoTo OreburghCity_NextStopTheEternaGymBadge
+    GoTo OreburghCity_RivalBumpPlayer
     End
 
 OreburghCity_RivalRunIntoPlayerZ750:
     SetObjectEventPos LOCALID_RIVAL, 271, 750
     AddObjectFromEdge LOCALID_RIVAL, MOVEMENT_ACTION_WALK_FAST_WEST
-    ApplyMovement LOCALID_PLAYER, OreburghCity_Movement_PlayerGetPushedByRival
     ApplyMovement LOCALID_RIVAL, OreburghCity_Movement_RivalRunIntoPlayer
     WaitMovement
-    GoTo OreburghCity_NextStopTheEternaGymBadge
+    GoTo OreburghCity_RivalBumpPlayer
     End
 
 OreburghCity_RivalRunIntoPlayerZ751:
     SetObjectEventPos LOCALID_RIVAL, 271, 751
     AddObjectFromEdge LOCALID_RIVAL, MOVEMENT_ACTION_WALK_FAST_WEST
-    ApplyMovement LOCALID_PLAYER, OreburghCity_Movement_PlayerGetPushedByRival
     ApplyMovement LOCALID_RIVAL, OreburghCity_Movement_RivalRunIntoPlayer
     WaitMovement
-    GoTo OreburghCity_NextStopTheEternaGymBadge
+    GoTo OreburghCity_RivalBumpPlayer
     End
 
-OreburghCity_NextStopTheEternaGymBadge:
+OreburghCity_RivalBumpPlayer:
     PlaySE SEQ_SE_DP_WALL_HIT2_sseq
+    ApplyMovement LOCALID_PLAYER, OreburghCity_Movement_PlayerGetPushedByRival
+    ApplyMovement LOCALID_RIVAL, OreburghCity_Movement_RivalBumpPlayer
+    WaitMovement
     Message OreburghCity_Text_BigThud
     CloseMessage
     Common_SetRivalBGM
@@ -183,7 +182,6 @@ OreburghCity_RemoveRival:
 
     .balign 4, 0
 OreburghCity_Movement_PlayerGetPushedByRival:
-    Delay4 7
     LockDir
     WalkFastWest
     UnlockDir
@@ -192,7 +190,12 @@ OreburghCity_Movement_PlayerGetPushedByRival:
 
     .balign 4, 0
 OreburghCity_Movement_RivalRunIntoPlayer:
-    WalkFastWest 9
+    WalkFastWest 8
+    EndMovement
+
+    .balign 4, 0
+OreburghCity_Movement_RivalBumpPlayer:
+    WalkFastWest
     EndMovement
 
     .balign 4, 0

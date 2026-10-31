@@ -1,15 +1,51 @@
 # original-sha256: 3b4ce36f1de36ef151979e3a95e1779e6ba2b77d00557dc727fbeb5cbdbe648d
 --- res/field/scripts/scripts_oreburgh_city.s
 +++ retail/scripts_oreburgh_city.s
-@@ -91 +91 @@
+@@ -91 +91,2 @@
 -    AddObjectFromEdge LOCALID_RIVAL, MOVEMENT_ACTION_WALK_FAST_WEST
 +    AddObject LOCALID_RIVAL
-@@ -100 +100 @@
++    ApplyMovement LOCALID_PLAYER, OreburghCity_Movement_PlayerGetPushedByRival
+@@ -94 +95 @@
+-    GoTo OreburghCity_RivalBumpPlayer
++    GoTo OreburghCity_NextStopTheEternaGymBadge
+@@ -99 +100,2 @@
 -    AddObjectFromEdge LOCALID_RIVAL, MOVEMENT_ACTION_WALK_FAST_WEST
 +    AddObject LOCALID_RIVAL
-@@ -109 +109 @@
++    ApplyMovement LOCALID_PLAYER, OreburghCity_Movement_PlayerGetPushedByRival
+@@ -102 +104 @@
+-    GoTo OreburghCity_RivalBumpPlayer
++    GoTo OreburghCity_NextStopTheEternaGymBadge
+@@ -107 +109,2 @@
 -    AddObjectFromEdge LOCALID_RIVAL, MOVEMENT_ACTION_WALK_FAST_WEST
 +    AddObject LOCALID_RIVAL
-@@ -118 +118 @@
++    ApplyMovement LOCALID_PLAYER, OreburghCity_Movement_PlayerGetPushedByRival
+@@ -110 +113 @@
+-    GoTo OreburghCity_RivalBumpPlayer
++    GoTo OreburghCity_NextStopTheEternaGymBadge
+@@ -115 +118,2 @@
 -    AddObjectFromEdge LOCALID_RIVAL, MOVEMENT_ACTION_WALK_FAST_WEST
 +    AddObject LOCALID_RIVAL
++    ApplyMovement LOCALID_PLAYER, OreburghCity_Movement_PlayerGetPushedByRival
+@@ -118,4 +122,4 @@
+-    GoTo OreburghCity_RivalBumpPlayer
+-    End
+-
+-OreburghCity_RivalBumpPlayer:
++    GoTo OreburghCity_NextStopTheEternaGymBadge
++    End
++
++OreburghCity_NextStopTheEternaGymBadge:
+@@ -123,3 +126,0 @@
+-    ApplyMovement LOCALID_PLAYER, OreburghCity_Movement_PlayerGetPushedByRival
+-    ApplyMovement LOCALID_RIVAL, OreburghCity_Movement_RivalBumpPlayer
+-    WaitMovement
+@@ -184,0 +186 @@
++    Delay4 7
+@@ -193,6 +195 @@
+-    WalkFastWest 8
+-    EndMovement
+-
+-    .balign 4, 0
+-OreburghCity_Movement_RivalBumpPlayer:
+-    WalkFastWest
++    WalkFastWest 9
