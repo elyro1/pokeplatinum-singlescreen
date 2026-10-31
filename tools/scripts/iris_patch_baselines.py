@@ -37,6 +37,11 @@ def resources(build, members):
         text = members((build / 'res/text/pl_msg.narc').read_bytes())
         order = [s.removeprefix('TEXT_BANK_').lower() for s in
                  (ROOT / 'generated/text_banks.txt').read_text().splitlines()]
+        # The follower dialogue is a new bank, not part of the retail archive.
+        # Keep it out of the baseline so the patcher appends it at startup.
+        if len(text) != len(order) or order[-1] != 'following_pokemon':
+            raise ValueError('Unexpected appended text bank order')
+        text = text[:-1]
         for name, source, count in [
             ('iron_island', ROOT / 'res/text/iron_island.json', 6),
             ('scratch_off_cards_app', ROOT / 'res/text/scratch_off_cards_app.json', 13),
