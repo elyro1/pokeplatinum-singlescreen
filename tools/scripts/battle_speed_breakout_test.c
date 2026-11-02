@@ -35,12 +35,13 @@ int main(void)
                         sConfig.battlePacing = pacing;
                         sType = link ? BATTLE_TYPE_LINK : 0;
                         BattleTiming_SetActive(active);
-                        BOOL fast = active && fps && pacing != BATTLE_PACING_SMOOTH && !link && breakout;
-                        assert(BattleDisplay_ShouldShortenBreakout(NULL, breakout) == fast);
                         BattlerData battler = { 0 };
-                        MonShowData data = { .battlerData = &battler, .face = FACE_FRONT, .fastBreakout = fast };
                         for (int bw = 0; bw < 2; bw++) {
                             sBw = bw;
+                            BOOL fast = !link && breakout
+                                && (bw || (active && fps && pacing != BATTLE_PACING_SMOOTH));
+                            assert(BattleDisplay_ShouldShortenBreakout(NULL, breakout) == fast);
+                            MonShowData data = { .battlerData = &battler, .face = FACE_FRONT, .fastBreakout = fast };
                             sFrames = sAnimations = sCries = 0;
                             BattleDisplay_StartBreakoutEntrance(&data);
                             assert(sFrames == !fast && sAnimations == !fast);
@@ -51,5 +52,5 @@ int main(void)
             }
         }
     }
-    puts("Breakout presentation: Quick/Turbo skip the extra entrance animation; normal send-outs, cries and Smooth/link/30 FPS timing preserved.");
+    puts("Breakout presentation: BW2 skips the duplicate entrance at every pacing/frame rate; Platinum, ordinary send-outs, cries and link policy preserved.");
 }

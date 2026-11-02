@@ -35,9 +35,10 @@ Quick keeps its existing fades. Link battle-script waits and menu/exit fades
 keep their existing timing and button-skip policy.
 
 After a failed capture, Quick and Turbo omit the extra entrance animation before
-the breakout message. BW2 also skips Platinum's hidden send-out, since BW2 has
-already shown the Pokémon breaking free. Ball-shake holds keep their original
-timing on the selected animation clock. Capture completion milestones remain
+the breakout message. At every pacing setting and frame rate, BW2 skips
+Platinum's hidden send-out, since BW2 has already shown the Pokémon breaking
+free and returned the camera. Link timing is unchanged. Ball-shake holds keep
+their original timing on the selected animation clock. Capture completion milestones remain
 latched across Turbo's extra animation steps so the controller cannot miss them.
 
 In Quick and Turbo, a successful **Run** starts the exit fade immediately,
@@ -107,9 +108,10 @@ all 128 negative delay values against step overflow. Capture checks run the real
 sprite-capture task, shared Bag/party menu fades and exit cleanup across 36
 pacing/frame-rate/live-change cases. Deleted sprites cannot hold scene fades open.
 Ball tests cover all eight capture commands passing a completion milestone between
-controller updates, including repeated shakes. Breakout tests check that only
-Quick/Turbo captures omit the extra entrance animation; cries, ordinary send-outs,
-Smooth, link and 30 FPS behavior retain their existing policy.
+controller updates, including repeated shakes. Breakout tests check that
+Quick/Turbo Platinum captures omit the extra entrance animation and BW2 captures
+skip the hidden send-out at every pacing setting and frame rate; cries, ordinary
+send-outs and link behavior retain their existing policy.
 Animation-clock tests cover native sprites/particles, 30/60/90 update counts,
 input edges, task deletion/reuse, nested animation owners, and live pacing changes.
 They also check particle resources are ready when two animation steps share a

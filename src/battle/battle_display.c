@@ -359,9 +359,17 @@ typedef struct MonShowData {
 
 static BOOL BattleDisplay_ShouldShortenBreakout(BattleSystem *battleSys, BOOL isQuickSendOut)
 {
-    return isQuickSendOut
-        && !(BattleSystem_GetBattleType(battleSys) & BATTLE_TYPE_LINK)
-        && BattleTiming_ExitDelay(30) < 30;
+    if (!isQuickSendOut || (BattleSystem_GetBattleType(battleSys) & BATTLE_TYPE_LINK)) {
+        return FALSE;
+    }
+#ifdef SDK_PORT
+    // BW2 has already completed the visible breakout and camera return. Replaying
+    // Platinum's hidden send-out only holds the breakout message in the IO queue.
+    if (BwAdapter_IsDrawing()) {
+        return TRUE;
+    }
+#endif
+    return BattleTiming_ExitDelay(30) < 30;
 }
 
 void BattleDisplay_InitTaskShowEncounter(BattleSystem *battleSys, BattlerData *battlerData, MonShowMessage *message)
