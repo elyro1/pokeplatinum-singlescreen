@@ -131,7 +131,15 @@ void GeneralContentsPrj()
             ImGui::SameLine();
         if (ImGui::Button(buttonLabel)) {
             OpenFileDialog([](std::string path) {
-                sBw2ExtractMessage = BwBattle_ExtractResultMessage(BwBattle_ExtractAssets(path.c_str()));
+                auto result = BwBattle_ExtractAssets(path.c_str());
+                sBw2ExtractMessage = BwBattle_ExtractResultMessage(result);
+                if (result == BWBATTLE_EXTRACT_OK && BwBattle_AssetsReady()) {
+                    auto *config = SIM_Config_prj_GetConfig();
+                    if (!config->bw2BattleVisuals) {
+                        config->bw2BattleVisuals = TRUE;
+                        SIM_Config_prj_SaveConfigFile(config);
+                    }
+                }
             });
         }
         ImGui::EndTable();
