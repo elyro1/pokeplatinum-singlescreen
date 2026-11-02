@@ -1,0 +1,8 @@
+# original-sha256: aa93ab0a86e277d09a3fc5996590dac1159fbe9b85642292b81c4a0b5e15d7af
+--- res/battle/scripts/subscripts/subscript_escape_success.s
++++ retail/subscript_escape_success.s
+@@ -6 +5,0 @@
+-    JumpIfFastExit _fade
+@@ -11,2 +9,0 @@
+-
+-_fade:

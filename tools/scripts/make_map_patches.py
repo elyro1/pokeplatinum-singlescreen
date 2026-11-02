@@ -14,6 +14,7 @@ MATRIX = 'fielddata/mapmatrix/map_matrix.narc'
 TEXT = 'msgdata/pl_msg.narc'
 SCRIPTS = 'fielddata/script/scr_seq.narc'
 MENU = 'graphic/menu_gra.narc'
+SUBSCRIPTS = 'battle/skill/sub_seq.narc'
 
 
 def menu_baseline(build):
@@ -36,6 +37,8 @@ def resource_baselines(build):
           (ROOT / 'generated/text_banks.txt').read_text().splitlines()]),
         ('scripts', SCRIPTS, 'res/field/scripts/scr_seq.narc',
          (ROOT / 'res/field/scripts/scripts.order').read_text().splitlines()),
+        ('battle_subscripts', SUBSCRIPTS, 'res/battle/scripts/sub_seq.narc',
+         (ROOT / 'res/battle/scripts/subscripts/sub_seq.order').read_text().splitlines()),
     ):
         names = (ROOT / 'res/port_patch_baselines' / kind / 'original.order').read_text().splitlines()
         baseline = build / 'res/port_patch_baselines' / ('original_%s.narc' % kind)
@@ -115,6 +118,8 @@ def main():
     parser.add_argument('--scripts', type=Path)
     parser.add_argument('--baseline-text', type=Path)
     parser.add_argument('--baseline-scripts', type=Path)
+    parser.add_argument('--subscripts', type=Path)
+    parser.add_argument('--baseline-subscripts', type=Path)
     args = parser.parse_args()
     order = (ROOT / 'res/field/maps/data/map_data.order').read_text().splitlines()
     originals = [(ROOT / 'res/field/maps/data' / name).read_bytes() for name in order]
@@ -135,13 +140,16 @@ def main():
             patches.append((MATRIX, index, index, before, after))
     # Explicit archive inputs give Meson dependency tracking; the shared helper
     # also supplies pristine members to the release-patcher integration test.
-    extra = [args.text, args.scripts, args.baseline_text, args.baseline_scripts]
+    extra = [args.text, args.scripts, args.baseline_text, args.baseline_scripts,
+             args.subscripts, args.baseline_subscripts]
     if not all(extra):
         raise ValueError('Text/script archives and their baselines are required')
     expected_paths = [args.build / 'res/text/pl_msg.narc',
                       args.build / 'res/field/scripts/scr_seq.narc',
                       args.build / 'res/port_patch_baselines/original_text.narc',
-                      args.build / 'res/port_patch_baselines/original_scripts.narc']
+                      args.build / 'res/port_patch_baselines/original_scripts.narc',
+                      args.build / 'res/battle/scripts/sub_seq.narc',
+                      args.build / 'res/port_patch_baselines/original_battle_subscripts.narc']
     if any(a.resolve() != b.resolve() for a, b in zip(extra, expected_paths)):
         raise ValueError('Resource archives must belong to the selected build')
     archives = {}

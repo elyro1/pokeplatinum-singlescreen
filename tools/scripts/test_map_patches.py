@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 
-from make_map_patches import LAND, MATRIX, ROOT, TEXT, SCRIPTS, MENU, menu_baseline, resource_baselines, members as narc_members
+from make_map_patches import LAND, MATRIX, ROOT, TEXT, SCRIPTS, SUBSCRIPTS, MENU, menu_baseline, resource_baselines, members as narc_members
 from verify_hearthome_scenery import members
 
 
@@ -59,7 +59,8 @@ def main():
                  MATRIX: list(expected[MATRIX])}
     templates = {LAND: land, MATRIX: matrix,
                  TEXT: build / 'res/text/pl_msg.narc',
-                 SCRIPTS: build / 'res/field/scripts/scr_seq.narc'}
+                 SCRIPTS: build / 'res/field/scripts/scr_seq.narc',
+                 SUBSCRIPTS: build / 'res/battle/scripts/sub_seq.narc'}
     from iris_patch_baselines import resources as iris_resources, SOUND
     iris, original_sound = iris_resources(build, narc_members)
     for path, (archive, _) in iris.items():
@@ -83,10 +84,11 @@ def main():
     for path, digest in (
         (TEXT, '3614557aa04eb1ad7e5f260578de925f73da584d'),
         (SCRIPTS, '9f4d3587b7032f4f673ccc1b8971685b2199396b'),
+        (SUBSCRIPTS, 'b646973b4c92a1d25479c5b08d28ff283274db33'),
         (MENU, '1d70dd8856d2f85beb2d4e461cfaf7179153640a'),
     ):
         assert hashlib.sha1(repack(templates[path], originals[path])).hexdigest() == digest, path
-    print('PASS: pristine text/script/menu archives match recorded retail hashes')
+    print('PASS: pristine text/script/subscript/menu archives match recorded retail hashes')
     with tempfile.TemporaryDirectory(prefix='map-patches-') as temp:
         work = Path(temp)
         original_matrix = work / 'matrix.bin'
@@ -98,7 +100,9 @@ def main():
                         str(build), str(land), str(matrix), str(work / 'map_patches.inc'),
                         '--text', str(templates[TEXT]), '--scripts', str(templates[SCRIPTS]),
                         '--baseline-text', str(build / 'res/port_patch_baselines/original_text.narc'),
-                        '--baseline-scripts', str(build / 'res/port_patch_baselines/original_scripts.narc')], check=True)
+                        '--baseline-scripts', str(build / 'res/port_patch_baselines/original_scripts.narc'),
+                        '--subscripts', str(templates[SUBSCRIPTS]),
+                        '--baseline-subscripts', str(build / 'res/port_patch_baselines/original_battle_subscripts.narc')], check=True)
         assert (work / 'map_patches.inc').read_bytes() == (build / 'src/map_patches.inc').read_bytes(), 'Embedded build patches are stale'
         target = subprocess.check_output([args.cxx, '-dumpmachine'], text=True).strip()
         windows = os.name == 'nt' or sys.platform.startswith(('msys', 'cygwin')) or 'mingw' in target

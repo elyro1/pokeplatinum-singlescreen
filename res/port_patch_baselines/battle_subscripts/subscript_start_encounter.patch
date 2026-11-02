@@ -1,0 +1,19 @@
+# original-sha256: 4e6f820fd7bfe15e52b45038af654c1631d030c763f0ac8b45e52851b6ba0139
+--- res/battle/scripts/subscripts/subscript_start_encounter.s
++++ retail/subscript_start_encounter.s
+@@ -5 +4,0 @@
+-    JumpIfFastIntro _fast
+@@ -158,13 +156,0 @@
+-
+-// Keep the normal setup commands but omit the encounter text and long opening waits.
+-_fast:
+-    SetPokemonEncounter BTLSCR_ENEMY
+-    SetTrainerEncounter BTLSCR_PLAYER
+-    PlayEncounterAnimation
+-    HealthBoxSlideIn BTLSCR_ENEMY
+-    ThrowPokeball BTLSCR_PLAYER, BTLSCR_THROW_POKE_BALL
+-    PokemonSlideIn BTLSCR_PLAYER
+-    HealthBoxSlideIn BTLSCR_PLAYER
+-    Wait
+-    SetBattleBackground
+-    End

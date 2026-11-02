@@ -39,6 +39,7 @@ def audit(base, history=True, head='HEAD'):
                     errors.append('Added game resource in history: %s %s' % (commit[:10], path))
         print('Audited %d mod commits against %s' % (len(commits), base))
     for kind, directory, extension in (('scripts', 'res/field/scripts', '.s'),
+                                        ('battle_subscripts', 'res/battle/scripts/subscripts', '.s'),
                                         ('text', 'res/text', '.json')):
         covered = set((ROOT / 'res/port_patch_baselines' / kind / 'original.order').read_text().splitlines())
         changed = set()
