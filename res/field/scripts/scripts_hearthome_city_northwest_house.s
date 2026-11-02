@@ -37,8 +37,7 @@ HearthomeCityNorthwestHouse_AcceptEevee:
     WaitFanfare
     GivePokemon SPECIES_EEVEE, 20, ITEM_NONE, VAR_RESULT
     SetFlag FLAG_RECEIVED_HEARTHOME_CITY_NORTHWEST_HOUSE_EEVEE
-    Message HearthomeCityNorthwestHouse_Text_WouldYouLikeToNicknameEevee
-    ShowYesNoMenu VAR_RESULT
+    AskForNickname HearthomeCityNorthwestHouse_Text_WouldYouLikeToNicknameEevee, VAR_RESULT
     GoToIfEq VAR_RESULT, MENU_YES, HearthomeCityNorthwestHouse_GiveNickname
     GoToIfEq VAR_RESULT, MENU_NO, HearthomeCityNorthwestHouse_DontGiveNickname
     End

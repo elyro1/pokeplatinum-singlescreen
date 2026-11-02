@@ -79,6 +79,17 @@ void BattleSpeedContents() {
         ImGui::SetTooltip("Normal: half the speed of Fast. Faster: shorter changes.\n"
             "Independent of battle pacing and text.");
     }
+    SettingsRow("Ask for a nickname", "Automatic naming offers for caught, hatched and received Pokemon.");
+    const NicknameMode nicknameModes[] = { NICKNAME_MODE_ALWAYS, NICKNAME_MODE_NEVER, NICKNAME_MODE_ASK };
+    int nicknameMode = myConfig->nicknameMode == NICKNAME_MODE_ASK ? 2 : static_cast<int>(myConfig->nicknameMode) - 1;
+    if (ImGui::Combo("##NicknameMode", &nicknameMode, "Always\0Never\0Ask\0")) {
+        myConfig->nicknameMode = nicknameModes[nicknameMode];
+        configChanged = true;
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Always: open the naming screen directly. Never: keep the species name.\n"
+            "Ask: show the original Yes/No prompt. Applies to the next naming offer.");
+    }
     ImGui::EndTable();
 
     if (configChanged) {

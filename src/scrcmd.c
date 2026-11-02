@@ -230,6 +230,7 @@
 #ifdef SDK_PORT
 #include "port/scripted_npc_scene.h"
 #include "port/gameplay_config.h"
+#include "port/sim_config_prj.h"
 #endif
 
 typedef struct {
@@ -241,6 +242,7 @@ typedef struct {
 
 static BOOL ScrCmd_CheckInstantSpiritomb(ScriptContext *ctx);
 static BOOL ScrCmd_CheckIrisAssets(ScriptContext *ctx);
+static BOOL ScrCmd_GetNicknameMode(ScriptContext *ctx);
 static BOOL ScrCmd_CheckFreeMoveRelearning(ScriptContext *ctx);
 static BOOL ScrCmd_CheckUnlimitedGreatMarshSteps(ScriptContext *ctx);
 static BOOL ScrCmd_Noop(ScriptContext *ctx);
@@ -784,6 +786,17 @@ const ScrCmdFunc gFieldScriptCommands[] = {
 };
 
 const u32 gNumFieldScriptCommands = NELEMS(gFieldScriptCommands);
+
+// Script-facing values: 0 = Ask, 1 = Always, 2 = Never.
+static BOOL ScrCmd_GetNicknameMode(ScriptContext *ctx)
+{
+    u16 *dest = ScriptContext_GetVarPointer(ctx);
+    *dest = 0;
+#ifdef SDK_PORT
+    *dest = SIM_Config_prj_GetConfig()->nicknameMode;
+#endif
+    return FALSE;
+}
 
 static BOOL ScrCmd_CheckIrisAssets(ScriptContext *ctx)
 {

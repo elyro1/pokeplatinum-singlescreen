@@ -865,6 +865,8 @@ ScriptCommand(SCRCMD_CHECKINSTANTSPIRITOMB,                                ScrCm
 
 ScriptCommand(SCRCMD_CHECKIRISASSETS,                                      ScrCmd_CheckIrisAssets)
 
+ScriptCommand(SCRCMD_GETNICKNAMEMODE,                                     ScrCmd_GetNicknameMode)
+
 // clang-format on
 
 #endif // POKEPLATINUM_DATA_SCRIPTS_SCRCMD_H

@@ -348,7 +348,11 @@ void BattleSystem_FreeGraphics(BattleSystem *battleSys)
 {
     SetVBlankCallback(NULL, NULL);
     BattleSubscreen_Free(battleSys->btlSubscreen);
-    Window_Remove(&battleSys->windows[0]);
+    // The capture flow can finish directly from the Pokedex, which has already
+    // removed this window. Heap_Free does not accept NULL.
+    if (battleSys->windows[0].pixels != NULL) {
+        Window_Remove(&battleSys->windows[0]);
+    }
 
     BattleMain_FreeBgLayers(battleSys->bgConfig);
     Dummy_0223C2BC(battleSys);

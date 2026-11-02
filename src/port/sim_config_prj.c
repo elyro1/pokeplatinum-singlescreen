@@ -15,6 +15,8 @@ typedef struct {
 static const char *sBattlePacingNames[BATTLE_PACING_COUNT] = { "Smooth", "Quick", "Turbo" };
 static const char *sSpeedNames[PORT_SPEED_COUNT] = { "Fast", "Faster", "Instant", "Normal" };
 
+static const char *sNicknameModeNames[NICKNAME_MODE_COUNT] = { "Ask", "Always", "Never" };
+
 static int IniHandler(void *user, const char *section, const char *name, const char *value);
 static const char * BoolToString(BOOL arg);
 static BOOL StringToBool(const char * str);
@@ -57,6 +59,14 @@ static int IniHandler(void* user, const char* section, const char* name,
                 if (strcmp(name, "TextSpeed") == 0) config->textSpeed = (PortSpeed)i;
                 // Instant bars were removed; keep old configurations on the fastest available setting.
                 else config->battleBarSpeed = i == PORT_SPEED_INSTANT ? PORT_SPEED_FASTER : (PortSpeed)i;
+                break;
+            }
+        }
+    }
+    if (MATCH("General", "NicknameMode")) {
+        for (int i = 0; i < NICKNAME_MODE_COUNT; i++) {
+            if (strcmp(value, sNicknameModeNames[i]) == 0) {
+                config->nicknameMode = (NicknameMode)i;
                 break;
             }
         }
@@ -133,6 +143,7 @@ void SIM_Config_prj_LoadDefaults(SIM_Config_prj_type * aConfig)
   memset(aConfig, 0, sizeof(*aConfig));
   aConfig->enable60fps = TRUE;
   aConfig->battlePacing = BATTLE_PACING_SMOOTH;
+  aConfig->nicknameMode = NICKNAME_MODE_ASK;
   aConfig->textSpeed = PORT_SPEED_FAST;
   aConfig->battleBarSpeed = PORT_SPEED_FAST;
   aConfig->bw2BattleVisuals = FALSE;
@@ -185,6 +196,7 @@ void SIM_Config_prj_SaveConfigFile(SIM_Config_prj_type * aConfig)
     fprintf(configFile, "BattlePacing=%s\n", sBattlePacingNames[aConfig->battlePacing]);
     fprintf(configFile, "TextSpeed=%s\n", sSpeedNames[aConfig->textSpeed]);
     fprintf(configFile, "BattleBarSpeed=%s\n", sSpeedNames[aConfig->battleBarSpeed]);
+    fprintf(configFile, "NicknameMode=%s\n", sNicknameModeNames[aConfig->nicknameMode]);
     fprintf(configFile, "FastWildBattleIntro=%s\n", BoolToString(aConfig->fastWildBattleIntro));
     fprintf(configFile, "BW2BattleVisuals=%s\n", BoolToString(aConfig->bw2BattleVisuals));
     fprintf(configFile, "OverworldEncounters=%s\n", BoolToString(aConfig->overworldEncounters));

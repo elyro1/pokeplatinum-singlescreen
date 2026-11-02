@@ -28,6 +28,8 @@ def main():
             ('bars', '/battle/healthbox.c', []),
             ('text', '/src/text.c', []),
             ('waits', '/battle/battle_script.c', []),
+            ('nickname', '/battle/battle_script.c', []),
+            ('graphics_cleanup', '/battle/battle_main.c', []),
             ('exit', '/battle/battle_display.c', []),
             ('animation', '/src/sys_task_manager.c', []),
             ('capture', '/battle/battle_display.c', []),

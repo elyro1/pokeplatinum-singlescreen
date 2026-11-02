@@ -228,8 +228,7 @@ MiningMuseum_PokemonRevival:
     GivePokemon VAR_REVIVED_POKEMON_SPECIES, 20, ITEM_NONE, VAR_RESULT
     IncrementGameRecord RECORD_POKEMON_RECEIVED_FROM_FOSSIL_REVIVAL
     SetVar VAR_REVIVED_POKEMON_SPECIES, 0
-    Message MiningMuseum_Text_GiveNickname
-    ShowYesNoMenu VAR_RESULT
+    AskForNickname MiningMuseum_Text_GiveNickname, VAR_RESULT
     GoToIfEq VAR_RESULT, MENU_YES, MiningMuseum_NicknamePrompt
     GoToIfEq VAR_RESULT, MENU_NO, MiningMuseum_NoNickname
     End

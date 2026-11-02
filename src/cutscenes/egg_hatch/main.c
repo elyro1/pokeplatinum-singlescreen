@@ -2,6 +2,10 @@
 
 #include <nitro.h>
 
+#ifdef SDK_PORT
+#include "port/sim_config_prj.h"
+#endif
+
 #include "constants/menu.h"
 
 #include "cutscenes/egg_hatch/graphics.h"
@@ -152,6 +156,19 @@ static BOOL EggHatchCutscene_Normal(EggHatchCutscene *eggHatch)
             break;
         }
 
+#ifdef SDK_PORT
+        // Finish the hatch presentation before bypassing the question and menu.
+        if (SIM_Config_prj_GetConfig()->nicknameMode != NICKNAME_MODE_ASK) {
+            if (PokemonAnimManager_HasAnimCompleted(eggHatch->graphics.animMan, 0) != TRUE
+                || PokemonSprite_IsAnimActive(eggHatch->monSprite)) {
+                break;
+            }
+            eggHatch->app->nicknameMon = SIM_Config_prj_GetConfig()->nicknameMode == NICKNAME_MODE_ALWAYS;
+            eggHatch->state = 14; // No menu was allocated, so skip menu cleanup.
+            break;
+        }
+#endif
+
         eggHatch->graphics.printerID = EggHatch_PrintMessage(&eggHatch->graphics.windows[WINDOW_MESSAGE_BOX], EggHatch_Text_WantToNickname, eggHatch->app->args.mon, eggHatch->graphics.renderDelay);
         eggHatch->state++;
     case 11:
@@ -292,6 +309,19 @@ static BOOL EggHatchCutscene_Manaphy(EggHatchCutscene *eggHatch)
         if (Text_IsPrinterActive(eggHatch->graphics.printerID)) {
             break;
         }
+
+#ifdef SDK_PORT
+        // Finish the hatch presentation before bypassing the question and menu.
+        if (SIM_Config_prj_GetConfig()->nicknameMode != NICKNAME_MODE_ASK) {
+            if (PokemonAnimManager_HasAnimCompleted(eggHatch->graphics.animMan, 0) != TRUE
+                || PokemonSprite_IsAnimActive(eggHatch->monSprite)) {
+                break;
+            }
+            eggHatch->app->nicknameMon = SIM_Config_prj_GetConfig()->nicknameMode == NICKNAME_MODE_ALWAYS;
+            eggHatch->state = 14; // No menu was allocated, so skip menu cleanup.
+            break;
+        }
+#endif
 
         eggHatch->graphics.printerID = EggHatch_PrintMessage(&eggHatch->graphics.windows[WINDOW_MESSAGE_BOX], EggHatch_Text_WantToNickname, eggHatch->app->args.mon, eggHatch->graphics.renderDelay);
         eggHatch->state++;

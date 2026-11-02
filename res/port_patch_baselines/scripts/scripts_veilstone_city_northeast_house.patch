@@ -1,0 +1,7 @@
+# original-sha256: 3b58319907336e7f5467664cbf29c9fd908500841c5d49894e80aab5b7616895
+--- res/field/scripts/scripts_veilstone_city_northeast_house.s
++++ res/field/scripts/scripts_veilstone_city_northeast_house.s
+@@ -41 +41,2 @@
+-    AskForNickname VeilstoneCityNortheastHouse_Text_AskNicknamePorygon, VAR_RESULT
++    Message VeilstoneCityNortheastHouse_Text_AskNicknamePorygon
++    ShowYesNoMenu VAR_RESULT

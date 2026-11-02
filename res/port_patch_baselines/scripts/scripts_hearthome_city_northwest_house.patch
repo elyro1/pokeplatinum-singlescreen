@@ -1,0 +1,7 @@
+# original-sha256: 993c40c1760a43f3bfde1946212fa612f49446a1e8d6051512950aa6b768dcbf
+--- res/field/scripts/scripts_hearthome_city_northwest_house.s
++++ res/field/scripts/scripts_hearthome_city_northwest_house.s
+@@ -40 +40,2 @@
+-    AskForNickname HearthomeCityNorthwestHouse_Text_WouldYouLikeToNicknameEevee, VAR_RESULT
++    Message HearthomeCityNorthwestHouse_Text_WouldYouLikeToNicknameEevee
++    ShowYesNoMenu VAR_RESULT

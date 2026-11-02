@@ -1,0 +1,7 @@
+# original-sha256: 7d1ef69c840e47911f558b872af4e1275ac7681439528266071d6b6a9b880e88
+--- res/field/scripts/scripts_mining_museum.s
++++ res/field/scripts/scripts_mining_museum.s
+@@ -231 +231,2 @@
+-    AskForNickname MiningMuseum_Text_GiveNickname, VAR_RESULT
++    Message MiningMuseum_Text_GiveNickname
++    ShowYesNoMenu VAR_RESULT

@@ -22,11 +22,19 @@ typedef enum {
     PORT_SPEED_COUNT,
 } PortSpeed;
 
+typedef enum {
+    NICKNAME_MODE_ASK,
+    NICKNAME_MODE_ALWAYS,
+    NICKNAME_MODE_NEVER,
+    NICKNAME_MODE_COUNT,
+} NicknameMode;
+
 typedef struct {
     BOOL enable60fps; // Speed correction is automatic at 60 FPS.
     BattlePacing battlePacing;
     PortSpeed textSpeed; // Overrides the saved text setting, in and out of battle.
     PortSpeed battleBarSpeed; // HP/EXP progression, independent of effects and text.
+    NicknameMode nicknameMode; // Automatic nickname offers; explicit renaming remains available.
     BOOL fastWildBattleIntro; // Shorten eligible BW2 wild battle intros.
     BOOL bw2BattleVisuals; // Show battles with Black 2 / White 2's view when its assets are extracted (docs/bwbattle.md)
     BOOL overworldEncounters;

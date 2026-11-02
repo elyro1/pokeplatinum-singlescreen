@@ -5439,3 +5439,25 @@ _start:
     .short SCRCMD_CHECKIRISASSETS
     .short \destVarID
     .endm
+
+    .macro GetNicknameMode destVarID
+    .short SCRCMD_GETNICKNAMEMODE
+    .short \destVarID
+    .endm
+
+    @ GetNicknameMode returns 0 = Ask, 1 = Always, 2 = Never.
+    @ Only automatic naming offers use this; the Name Rater keeps its original prompts.
+    .macro AskForNickname messageID, destVarID
+    GetNicknameMode \destVarID
+    GoToIfEq \destVarID, 1, _nickname_always_\@
+    GoToIfEq \destVarID, 2, _nickname_never_\@
+    Message \messageID
+    ShowYesNoMenu \destVarID
+    GoTo _nickname_done_\@
+_nickname_always_\@:
+    SetVar \destVarID, MENU_YES
+    GoTo _nickname_done_\@
+_nickname_never_\@:
+    SetVar \destVarID, MENU_NO
+_nickname_done_\@:
+    .endm

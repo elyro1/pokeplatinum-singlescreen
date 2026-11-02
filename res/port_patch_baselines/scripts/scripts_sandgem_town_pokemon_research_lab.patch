@@ -1,0 +1,7 @@
+# original-sha256: 6ca93af7ffc9c9cafdd8835ff3f2ec78a235e6c4b45dee601d2769225a483bae
+--- res/field/scripts/scripts_sandgem_town_pokemon_research_lab.s
++++ res/field/scripts/scripts_sandgem_town_pokemon_research_lab.s
+@@ -165 +165,2 @@
+-    AskForNickname SandgemTownLab_Text_GiveItANickname, VAR_RESULT
++    Message SandgemTownLab_Text_GiveItANickname
++    ShowYesNoMenu VAR_RESULT

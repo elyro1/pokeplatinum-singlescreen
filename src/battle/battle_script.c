@@ -75,6 +75,7 @@
 #include "unk_0208C098.h"
 
 #ifdef SDK_PORT
+#include "port/sim_config_prj.h"
 #include "bwbattle/bw_adapter.h"
 #include "port/gameplay_config.h"
 #endif
@@ -10418,6 +10419,9 @@ enum CatchMonTaskState {
     SEQ_CATCH_MON_DONE,
 #ifdef SDK_PORT
     SEQ_CATCH_MON_WAIT_BW_BALL, // BW2's view plays the throw (src/bwbattle/adapter)
+    SEQ_CATCH_MON_BW_FADE_FOR_POKEDEX,
+    SEQ_CATCH_MON_BW_FINISH_CATCH_FOR_POKEDEX,
+    SEQ_CATCH_MON_FINISH_WITHOUT_NICKNAME_SCREEN,
 #endif
 };
 
@@ -10425,8 +10429,63 @@ enum CatchMonTaskDataIndex {
     CATCH_MON_MSG_INDEX = 0,
     CATCH_MON_DELAY,
     CATCH_MON_TOTAL_SHAKES,
-    CATCH_MON_REMAINING_SHAKES
+    CATCH_MON_REMAINING_SHAKES,
 };
+
+#ifdef SDK_PORT
+// Finish directly from the Pokedex instead of allocating the nickname backdrop,
+// window, or caught-mon sprite. The shared completion path still stores the mon.
+static BOOL BattleScript_SkipNicknameScreen(BattleScriptTaskData *data, PokemonSpriteManager *monSpriteMan, BOOL fromPokedex)
+{
+    if (SIM_Config_prj_GetConfig()->nicknameMode != NICKNAME_MODE_NEVER) {
+        return FALSE;
+    }
+
+    if (fromPokedex) {
+        PokemonSpriteManager_DeleteAll(monSpriteMan);
+        data->seqNum = SEQ_CATCH_MON_FINISH_WITHOUT_NICKNAME_SCREEN;
+    } else {
+        ov12_0223783C(data->ballRotation);
+        data->seqNum = SEQ_CATCH_MON_DIDNT_GIVE_NICKNAME;
+    }
+    return TRUE;
+}
+
+// Fade from the successful catch while its camera is still held on the ball.
+// The resumed effect can then release its resources under black before the dex opens.
+static BOOL BattleScript_BeginDirectPokedex(BattleScriptTaskData *data, int battler, PaletteData *paletteData, PokemonSpriteManager *monSpriteMan)
+{
+    if (!BwAdapter_IsDrawing()
+        || (BattleSystem_GetBattleType(data->battleSys) & (BATTLE_TYPE_PAL_PARK | BATTLE_TYPE_CATCH_TUTORIAL))) {
+        return FALSE;
+    }
+    Pokemon *mon = BattleSystem_GetPartyPokemon(data->battleSys, battler, data->battleCtx->selectedPartySlot[battler]);
+    if (BattleSystem_HasCaughtSpecies(data->battleSys, Pokemon_GetValue(mon, MON_DATA_SPECIES, NULL))) {
+        return FALSE;
+    }
+    BattleSystem_SetCaughtBattlerIndex(data->battleSys, battler);
+    BattleSystem_TryIncrementTrainerScoreCaughtSpecies(data->battleSys);
+    sub_02015738(BattleSystem_GetPaletteAnimator(data->battleSys), 1);
+    PaletteData_StartFade(paletteData, PLTTBUF_MAIN_BG_F | PLTTBUF_MAIN_OBJ_F, 0xFFFF, 1, 0, 16, 0);
+    PokemonSpriteManager_StartFadeAll(monSpriteMan, 0, 16, 0, 0);
+    data->seqNum = SEQ_CATCH_MON_BW_FADE_FOR_POKEDEX;
+    return TRUE;
+}
+
+static void BattleScript_UpdateDirectPokedex(BattleScriptTaskData *data, PaletteData *paletteData)
+{
+    if (data->seqNum == SEQ_CATCH_MON_BW_FADE_FOR_POKEDEX) {
+        if (PaletteData_GetSelectedBuffersMask(paletteData) == 0) {
+            SetScreenColorBrightness(DS_SCREEN_MAIN, COLOR_BLACK);
+            BwAdapter_FinishCatch();
+            data->seqNum = SEQ_CATCH_MON_BW_FINISH_CATCH_FOR_POKEDEX;
+        }
+    } else if (!BwAdapter_IsBusy() && ov12_022368D0(data->ballRotation, 7) == FALSE) {
+        data->seqNum = SEQ_CATCH_MON_SET_POKEDEX_DATA;
+    }
+}
+
+#endif
 
 static void BattleScript_CatchMonTask(SysTask *task, void *inData)
 {
@@ -10606,6 +10665,9 @@ static void BattleScript_CatchMonTask(SysTask *task, void *inData)
             data->seqNum = SEQ_CATCH_MON_SET_CAUGHT_SPECIES;
             ov12_022368C8(data->ballRotation, 7);
 #ifdef SDK_PORT
+            if (BattleScript_BeginDirectPokedex(data, battler, paletteData, monSpriteMan)) {
+                break;
+            }
             BwAdapter_FinishCatch();
 #endif
         }
@@ -10629,6 +10691,11 @@ static void BattleScript_CatchMonTask(SysTask *task, void *inData)
                     PokemonSpriteManager_StartFadeAll(monSpriteMan, 0, 16, 0, 0);
                     data->seqNum = SEQ_CATCH_MON_DONE;
                 } else if (BattleSystem_HasCaughtSpecies(data->battleSys, Pokemon_GetValue(mon, MON_DATA_SPECIES, NULL))) {
+#ifdef SDK_PORT
+                    if (BattleScript_SkipNicknameScreen(data, monSpriteMan, FALSE)) {
+                        break;
+                    }
+#endif
                     sub_02015738(BattleSystem_GetPaletteAnimator(data->battleSys), 1);
                     PaletteData_StartFade(paletteData, PLTTBUF_MAIN_BG_F | PLTTBUF_MAIN_OBJ_F, 0xFFFF, 1, 0, 16, 0);
                     PokemonSpriteManager_StartFadeAll(monSpriteMan, 0, 16, 0, 0);
@@ -10681,6 +10748,11 @@ static void BattleScript_CatchMonTask(SysTask *task, void *inData)
             dexEntryScreenParams.hasNationalDex = IsNationalDexObtained(BattleSystem_GetPokedex(data->battleSys));
             data->tmpPtr[1] = CharTransfer_PopTaskManager();
             data->tmpPtr[0] = ov21_021E8D48(&dexEntryScreenParams);
+#ifdef SDK_PORT
+            // The dex has installed its own black-to-visible blend before we
+            // release the hardware mask used during BW2's offscreen cleanup.
+            ResetScreenMasterBrightness(DS_SCREEN_MAIN);
+#endif
             data->seqNum = SEQ_CATCH_MON_START_FADE_TO_BLACK_FOR_ASK_NICKNAME;
         }
         break;
@@ -10694,6 +10766,11 @@ static void BattleScript_CatchMonTask(SysTask *task, void *inData)
             }
 
             if (data->seqNum == SEQ_CATCH_MON_MOVE_FOR_ASK_NICKNAME) {
+#ifdef SDK_PORT
+                if (SIM_Config_prj_GetConfig()->nicknameMode == NICKNAME_MODE_NEVER) {
+                    data->seqNum = SEQ_CATCH_MON_CLOSE_POKEDEX;
+                }
+#endif
                 PaletteData_StartFade(paletteData, PLTTBUF_MAIN_BG_F | PLTTBUF_MAIN_OBJ_F, 0xFFFF, 1, 0, 16, 0);
                 ov21_021E8E04(data->tmpPtr[0], 0);
             }
@@ -10709,8 +10786,16 @@ static void BattleScript_CatchMonTask(SysTask *task, void *inData)
         }
         break;
     case SEQ_CATCH_MON_CLOSE_POKEDEX:
+        if (PaletteData_GetSelectedBuffersMask(paletteData) != 0) {
+            break;
+        }
         ov21_021E8DD0(data->tmpPtr[0]);
         CharTransfer_PushTaskManager(data->tmpPtr[1]);
+#ifdef SDK_PORT
+        if (BattleScript_SkipNicknameScreen(data, monSpriteMan, TRUE)) {
+            break;
+        }
+#endif
         // The nickname prompt uses the backdrop without the baked terrain platforms.
         BattleSystem_SetupBattleScreen(data->battleSys, FALSE);
         PaletteData_StartFade(paletteData, PLTTBUF_MAIN_BG_F | PLTTBUF_MAIN_OBJ_F, 0xFFFF, 1, 16, 0, 0);
@@ -10746,6 +10831,19 @@ static void BattleScript_CatchMonTask(SysTask *task, void *inData)
         }
         break;
     case SEQ_CATCH_MON_PRINT_YES_NO_GIVE_NICKNAME:
+#ifdef SDK_PORT
+        if (SIM_Config_prj_GetConfig()->nicknameMode == NICKNAME_MODE_NEVER) {
+            data->seqNum = SEQ_CATCH_MON_DIDNT_GIVE_NICKNAME;
+            break;
+        }
+        if (SIM_Config_prj_GetConfig()->nicknameMode == NICKNAME_MODE_ALWAYS) {
+            sub_02015738(BattleSystem_GetPaletteAnimator(data->battleSys), 1);
+            PaletteData_StartFade(paletteData, PLTTBUF_MAIN_BG_F | PLTTBUF_SUB_BG_F | PLTTBUF_MAIN_OBJ_F | PLTTBUF_SUB_OBJ_F, 0xFFFF, 1, 0, 16, 0);
+            PokemonSpriteManager_StartFadeAll(monSpriteMan, 0, 16, 0, 0);
+            data->seqNum = SEQ_CATCH_MON_START_NAMING_SCREEN;
+            break;
+        }
+#endif
         int v15 = battler | (data->battleCtx->selectedPartySlot[battler]);
         BattleController_EmitShowYesNoMenu(data->battleSys, data->battleCtx, 0, BattleStrings_Text_GiveANicknameToTheCaughtPokemonYesNo, 5, 0, v15);
         data->seqNum++;
@@ -10825,6 +10923,9 @@ static void BattleScript_CatchMonTask(SysTask *task, void *inData)
             data->seqNum = SEQ_CATCH_MON_GAVE_NICKNAME;
         }
         break;
+#ifdef SDK_PORT
+    case SEQ_CATCH_MON_FINISH_WITHOUT_NICKNAME_SCREEN:
+#endif
     case SEQ_CATCH_MON_DIDNT_GIVE_NICKNAME:
     case SEQ_CATCH_MON_GAVE_NICKNAME:
         if (PaletteData_GetSelectedBuffersMask(paletteData) == 0) {
@@ -10968,6 +11069,10 @@ static void BattleScript_CatchMonTask(SysTask *task, void *inData)
         }
         break;
 #ifdef SDK_PORT
+    case SEQ_CATCH_MON_BW_FADE_FOR_POKEDEX:
+    case SEQ_CATCH_MON_BW_FINISH_CATCH_FOR_POKEDEX:
+        BattleScript_UpdateDirectPokedex(data, paletteData);
+        break;
     case SEQ_CATCH_MON_WAIT_BW_BALL:
         if (!BwAdapter_IsBusy()) {
             if (data->tmpData[CATCH_MON_REMAINING_SHAKES]) {

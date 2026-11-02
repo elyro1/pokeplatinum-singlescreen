@@ -78,11 +78,23 @@ All options in this table default to `false`. Set an option to `true` to enable 
 | `feebasWaterStoneEvolution` | Feebas evolves with a Water Stone instead of leveling up with sufficient Beauty. Disabling it restores Beauty evolution and removes the Water Stone alternative. |
 | `disableOverworldPoisonDamage` | Skips walking poison damage and its visual/survival effects. Poison status and battle damage remain. |
 
+## Nickname offers
+
+**Tab → Speed & text → Ask for a nickname** controls automatic naming offers for caught Pokémon, hatched eggs (including Manaphy), your starter, gift Eevee/Porygon, and revived fossils:
+
+- **Always** opens the naming screen directly. You can still leave without choosing a nickname.
+- **Never** skips the entire nickname presentation, keeping the species name. New Pokédex entries still appear. Closing an entry finishes the catch directly, without creating the nickname screen; full-party catches go straight to the PC without an additional transfer screen. Previously registered species retain the normal PC transfer message.
+- **Ask** (default) preserves the original Yes/No prompt.
+
+Changes save automatically to `[General]` in `sim_config_prj.ini` as `NicknameMode=Ask`, `Always`, or `Never`, and apply to the next naming offer without restarting. Missing values default to Ask; invalid values are ignored. The Name Rater, fixed nicknames, and events without a naming offer retain their original behavior.
+
 ## Fast BW battle introductions
 
 Enable **Tab → Speed & text → Fast wild battle intro** for shorter wild encounters. This setting saves automatically to `sim_config_prj.ini` and applies to the next battle. Trainer battles use their full introductions. The former `fastTrainerBattleIntro` gameplay option has been removed; existing entries are ignored.
 
 Fast openings skip the encounter text and opening camera shots, show the player throwing their Poké Ball and releasing their Pokémon at twice the usual effect speed, and then proceed to battle. Opponent and health-box setup still runs. The option applies only when BW battle view is active. Link and recorded battles, the first battle, catching tutorial, Safari Zone, Pal Park, and Giratina's special entrance retain their existing presentation. Later switches and battle animations are unaffected. The exact speedup varies with text, encounter animations, and system performance.
+
+With BW2 battle visuals, a successful capture of a new species fades from the capture camera directly into its Pokédex entry. The camera return and the brief “data was added” message are hidden during this transition. Previously registered species and special capture modes keep their existing flow.
 
 ## Numeric options
 
@@ -108,4 +120,6 @@ The authoritative defaults, option names, ranges, parser, template generator, an
 ```sh
 python3 tools/scripts/test_gameplay_config.py --build build_linux
 python3 tools/scripts/test_gameplay_config_editor.py --build build_linux
+python3 tools/scripts/test_battle_speed.py --build build_linux
+python3 tools/scripts/test_nickname_prompts.py --build build_linux
 ```

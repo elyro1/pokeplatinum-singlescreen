@@ -162,8 +162,7 @@ SandgemTownLab_GiveItANickname:
     ChangePlayerState
     BufferPartyMonSpecies 0, 0
     Message SandgemTownLab_Text_EntrustingWasNoMistake
-    Message SandgemTownLab_Text_GiveItANickname
-    ShowYesNoMenu VAR_RESULT
+    AskForNickname SandgemTownLab_Text_GiveItANickname, VAR_RESULT
     GoToIfEq VAR_RESULT, MENU_NO, SandgemTownLab_CherishThatStarter
     GoTo SandgemTownLab_NicknameStarter
     End

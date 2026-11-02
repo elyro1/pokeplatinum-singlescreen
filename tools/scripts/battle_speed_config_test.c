@@ -21,6 +21,22 @@ int main(void)
     SIM_Config_prj_LoadDefaults(config);
     assert(config->enable60fps && config->battlePacing == BATTLE_PACING_SMOOTH);
     assert(config->textSpeed == PORT_SPEED_FAST && config->battleBarSpeed == PORT_SPEED_FAST);
+    assert(config->nicknameMode == NICKNAME_MODE_ASK);
+    const char *nicknameModes[] = { "Ask", "Always", "Never" };
+    for (int mode = 0; mode < NICKNAME_MODE_COUNT; mode++) {
+        char text[80];
+        snprintf(text, sizeof(text), "[General]\nNicknameMode=%s\n", nicknameModes[mode]);
+        Load(text);
+        assert(config->nicknameMode == mode);
+        SIM_Config_prj_SaveConfigFile(config);
+        SIM_Config_prj_LoadDefaults(config);
+        assert(SIM_Config_prj_LoadConfigFile(config));
+        assert(config->nicknameMode == mode);
+    }
+    Load("[General]\nNicknameMode=invalid\n");
+    assert(config->nicknameMode == NICKNAME_MODE_ASK);
+    Load("[General]\n");
+    assert(config->nicknameMode == NICKNAME_MODE_ASK);
     assert(config->fastWildBattleIntro == FALSE);
     Load("[General]\nFastWildBattleIntro=true\n");
     assert(config->fastWildBattleIntro == TRUE);
