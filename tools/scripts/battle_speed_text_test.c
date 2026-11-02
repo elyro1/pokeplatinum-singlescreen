@@ -6,22 +6,21 @@
 #include "../../src/text.c"
 #include "../../src/render_text.c"
 #include "../../src/charcode.c"
+#include "../../src/port/battle_timing.c"
 
 static SIM_Config_prj_type sConfig;
 static SysTask sTask;
-static BattleTimingDomain sTestDomain;
 static int sGlyphs, sCopies, sSounds, sCallbackCount;
 static BOOL sBlockCallback;
 System gSystem;
 void ErrorHandling_AssertFail(void) { assert(0); }
 SIM_Config_prj_type *SIM_Config_prj_GetConfig(void) { return &sConfig; }
-BattleTimingDomain BattleTiming_SetDomain(BattleTimingDomain domain) { BattleTimingDomain old = sTestDomain; sTestDomain = domain; return old; }
 void *Heap_Alloc(u32 heap, u32 size) { return calloc(1, size); }
 void Heap_Free(void *ptr) { free(ptr); }
 const charcode_t *String_GetData(const String *string) { return string->data; }
 SysTask *SysTask_CreateOnPrintQueue(SysTaskFunc callback, void *param, u32 priority)
 {
-    assert(sTestDomain == BATTLE_TIMING_NONE);
+    assert(BattleTiming_GetDomain() == BATTLE_TIMING_NONE);
     sTask = (SysTask){ .callback = callback, .param = param };
     return &sTask;
 }
@@ -79,17 +78,18 @@ int main(void)
 {
     static const FontAttributes attributes[FONT_MAX + 1];
     Text_SetFontAttributesPtr(attributes);
+    BattleTiming_SetActive(TRUE);
     const charcode_t plain[] = { CHAR_A, CHAR_B, CHAR_C, CHAR_D, CHAR_E, CHAR_EOS };
     for (int speed = 0; speed < PORT_SPEED_COUNT; speed++) {
         for (int pacing = 0; pacing < BATTLE_PACING_COUNT; pacing++) {
             for (int savedDelay = TEXT_SPEED_FAST; savedDelay <= TEXT_SPEED_SLOW; savedDelay++) {
                 sConfig.textSpeed = speed;
                 sConfig.battlePacing = pacing;
-                sTestDomain = BATTLE_TIMING_ANIMATION;
+                BattleTiming_SetDomain(BATTLE_TIMING_ANIMATION);
                 sGlyphs = 0;
                 u8 id = Start(plain, savedDelay, NULL);
                 assert(Text_IsPrinterActive(id));
-                assert(sTestDomain == BATTLE_TIMING_ANIMATION);
+                assert(BattleTiming_GetDomain() == BATTLE_TIMING_ANIMATION);
                 Tick();
                 assert(sGlyphs == (speed == PORT_SPEED_FASTER ? 2 : speed == PORT_SPEED_INSTANT ? 5 : 1));
                 if (speed == PORT_SPEED_NORMAL) {
@@ -160,5 +160,42 @@ int main(void)
     assert(sGlyphs == 1);
     Tick();
     assert(sGlyphs == 2 && !Text_IsPrinterActive(id));
-    puts("Text speed: saved-setting override, pacing independence, instant pages, prompts, pauses and callbacks passed.");
+    // Enemy tag-battle send-out messages end each trainer's page with an
+    // automatic clear. Test the real printer without simulated button presses.
+    for (int active = 0; active < 2; active++) {
+        for (int fps = 0; fps < 2; fps++) {
+            for (int pacing = 0; pacing < BATTLE_PACING_COUNT; pacing++) {
+                for (int skippable = 0; skippable < 2; skippable++) {
+                    sConfig.enable60fps = fps;
+                    sConfig.battlePacing = pacing;
+                    BattleTiming_SetActive(active);
+                    RenderControlFlags_SetAutoScrollFlags(skippable ? AUTO_SCROLL_NO_WAIT : AUTO_SCROLL_ENABLED);
+                    int dwell = active && fps && skippable
+                        ? (pacing == BATTLE_PACING_TURBO ? 4 : pacing == BATTLE_PACING_QUICK ? 8 : 100) : 100;
+                    id = Start(pages, TEXT_SPEED_FAST, NULL);
+                    sGlyphs = 0;
+                    Tick();
+                    for (int i = 0; i < dwell; i++) {
+                        Tick();
+                        assert(sGlyphs == 1 && Text_IsPrinterActive(id));
+                    }
+                    Tick(); // Release the automatic page wait.
+                    Tick();
+                    assert(sGlyphs == 2 && !Text_IsPrinterActive(id));
+                }
+            }
+        }
+    }
+    // Switching to Quick/Turbo releases a dwell already past its new cap.
+    for (int pacing = BATTLE_PACING_QUICK; pacing <= BATTLE_PACING_TURBO; pacing++) {
+        TextPrinter waiting = { 0 };
+        sConfig.battlePacing = BATTLE_PACING_SMOOTH;
+        for (int i = 0; i < 20; i++) assert(!TextPrinter_WaitAutoMode(&waiting));
+        sConfig.battlePacing = pacing;
+        assert(TextPrinter_WaitAutoMode(&waiting));
+    }
+    TextPrinter waiting = { 0 };
+    RenderControlFlags_SetAutoScrollFlags(AUTO_SCROLL_DISABLED);
+    assert(!TextPrinter_Wait(&waiting)); // Required acknowledgements still wait.
+    puts("Text speed: saved-setting override, instant pages, prompts, pauses and callbacks passed. Quick/Turbo cap offline automatic page dwell; Smooth, link/recorded, 30 FPS and required acknowledgements retain timing.");
 }

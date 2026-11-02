@@ -25,6 +25,8 @@ BOOL BattleTiming_IsExtraAnimationStep(void);
 BOOL BattleTiming_SetExtraAnimationStep(BOOL extra);
 // Scale only presentation pauses. Never use for animation, input or communication clocks.
 int BattleTiming_PresentationDelay(int frames);
+// Automatic battle-message page dwell: Quick caps at eight, Turbo at four.
+int BattleTiming_MessagePageDelay(int frames);
 // Battle exits: half duration in Quick, at most two updates in Turbo.
 int BattleTiming_ExitDelay(int frames);
 BattleTimingDomain BattleTiming_GetDomain(void);
@@ -73,6 +75,10 @@ static inline BOOL BattleTiming_SetExtraAnimationStep(BOOL extra)
     return FALSE;
 }
 static inline int BattleTiming_PresentationDelay(int frames)
+{
+    return frames;
+}
+static inline int BattleTiming_MessagePageDelay(int frames)
 {
     return frames;
 }

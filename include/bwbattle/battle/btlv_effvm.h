@@ -30,8 +30,8 @@ void BtlvEffvm_Start(VM *vm, u32 attacker, u32 defender, u16 move, BtlvEffvmPara
 // Start the wild shinies' sparkle subroutines before the current send-out script.
 // Their particles share its lifetime and run during the throw, without a separate wait.
 void BtlvEffvm_PrefixWildShinies(VM *vm);
-// The shortened wild opening may reach the menu while its send-out cry finishes.
-void BtlvEffvm_OverlapIntroCry(VM *vm);
+// Send-outs may restore shadows and move the camera while their cries finish.
+void BtlvEffvm_OverlapSendOutCry(VM *vm);
 #endif
 void BtlvEffvm_Stop(VM *vm);
 void BtlvEffvm_Resume(VM *vm);

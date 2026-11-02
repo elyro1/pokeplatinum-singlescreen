@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "../../src/bwbattle/adapter/bw_battle_view.c"
+#include "../../src/port/battle_timing.c"
 
 static SIM_Config_prj_type sConfig;
 static u32 sType, sStatus;
@@ -34,6 +35,19 @@ int main(void)
             sConfig.enable60fps = fps;
             sConfig.battlePacing = pacing;
             assert(BwAdapter_ViewFrames() == (fps ? pacing + 1 : 2));
+            for (int active = 0; active < 2; active++) {
+                BattleTiming_SetActive(active);
+                for (unsigned type = 0; type < NELEMS(types); type++) {
+                    sType = types[type];
+                    BOOL overlap = active && fps && pacing != BATTLE_PACING_SMOOTH
+                        && !(sType & BATTLE_TYPE_LINK);
+                    assert(BwAdapter_ShouldOverlapSendOutCry(BW_EFFECT_PLAYER_SEND_OUT) == overlap);
+                    assert(BwAdapter_ShouldOverlapSendOutCry(BW_EFFECT_TRAINER_SEND_OUT) == overlap);
+                    assert(BwAdapter_ShouldOverlapSendOutCry(BW_EFFECT_SEND_OUT) == overlap);
+                    assert(!BwAdapter_ShouldOverlapSendOutCry(BW_EFFECT_TRAINER_THROW));
+                    assert(!BwAdapter_ShouldOverlapSendOutCry(BW_EFFECT_FAINT));
+                }
+            }
         }
     }
     puts("Intro policy: 120 cases; eligible wild shortening, full trainer openings and special-battle exclusions passed.");

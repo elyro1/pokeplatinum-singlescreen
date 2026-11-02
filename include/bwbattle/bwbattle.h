@@ -155,6 +155,8 @@ bool BwBattleView_StartMove(unsigned int attackerPos, unsigned int defenderPos, 
 bool BwBattleView_StartEffect(int viewPos, unsigned short effect);
 // Fast wild opening: overlap wild shiny sparkles with the player's existing send-out.
 bool BwBattleView_StartFastWildSendOut(void);
+// Quick/Turbo send-outs finish their landing/shadow/camera sequence while cries play.
+bool BwBattleView_StartFastSendOut(int viewPos, unsigned short effect);
 // Finish an opening effect without drawing its intermediate camera shots.
 void BwBattleView_FinishOpeningEffect(void);
 // The HP and EXP gauge of the Pokémon at a view position: shown for a record (which has to stay valid while shown),

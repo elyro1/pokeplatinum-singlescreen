@@ -368,8 +368,21 @@ BOOL BtlvEffect_StartFastWildSendOut(void) {
         return FALSE;
     }
     BtlvEffect_Start(0x234);
-    BtlvEffvm_OverlapIntroCry(sBtlvEffect->effvm);
+    BtlvEffvm_OverlapSendOutCry(sBtlvEffect->effvm);
     BtlvEffvm_PrefixWildShinies(sBtlvEffect->effvm);
+    return TRUE;
+}
+
+BOOL BtlvEffect_StartFastSendOut(int viewPos, u16 effect) {
+    if (BtlvEffect_IsBusy()) {
+        return FALSE;
+    }
+    if (viewPos < 0) {
+        BtlvEffect_Start(effect);
+    } else {
+        BtlvEffect_StartPos(viewPos, effect);
+    }
+    BtlvEffvm_OverlapSendOutCry(sBtlvEffect->effvm);
     return TRUE;
 }
 

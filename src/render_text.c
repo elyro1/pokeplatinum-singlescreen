@@ -1,5 +1,7 @@
 #include "render_text.h"
 
+#include "port/battle_timing.h"
+
 #include <nitro.h>
 #include <string.h>
 
@@ -392,7 +394,13 @@ static BOOL TextPrinter_Continue(TextPrinter *printer)
 BOOL TextPrinter_WaitAutoMode(TextPrinter *printer)
 {
     TextPrinterSubstruct *substruct = (TextPrinterSubstruct *)printer->substruct;
-    if (substruct->autoScrollDelay == 100) {
+    int delay = 100;
+    // Offline battles allow button skips. Their automatic page dwell is a
+    // presentation pause too; link/recorded battles keep the original timing.
+    if (sRenderControlFlags.speedUpAutoScroll) {
+        delay = BattleTiming_MessagePageDelay(delay);
+    }
+    if (substruct->autoScrollDelay >= delay) {
         return TRUE;
     }
 

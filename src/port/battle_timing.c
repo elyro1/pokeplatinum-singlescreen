@@ -105,6 +105,16 @@ int BattleTiming_PresentationDelay(int frames)
     return frames;
 }
 
+int BattleTiming_MessagePageDelay(int frames)
+{
+    const SIM_Config_prj_type *config = SIM_Config_prj_GetConfig();
+    if (sActive && config->enable60fps && config->battlePacing == BATTLE_PACING_QUICK) {
+        int delay = (frames + 1) / 2;
+        return delay > 8 ? 8 : delay;
+    }
+    return BattleTiming_PresentationDelay(frames);
+}
+
 int BattleTiming_ExitDelay(int frames)
 {
     const SIM_Config_prj_type *config = SIM_Config_prj_GetConfig();

@@ -63,6 +63,7 @@ void BtlvEffect_Main(void);
 void BtlvEffect_Step(BOOL tickIdle);
 BOOL BtlvEffect_ShouldTickIdle(void);
 BOOL BtlvEffect_StartFastWildSendOut(void);
+BOOL BtlvEffect_StartFastSendOut(int viewPos, u16 effect);
 #endif
 
 // Effects started by number, at positions or for a move; one started while another runs waits in a task

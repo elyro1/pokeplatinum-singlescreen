@@ -23,6 +23,7 @@
 #include "bwbattle/bwbattle.h"
 #include <simulator/sim.h>
 #include "port/sim_config_prj.h"
+#include "port/battle_timing.h"
 
 #include "battle/battle_display.h"
 #include "battle/healthbox.h"
@@ -1446,6 +1447,13 @@ static void BwAdapter_QueueWithEffect(const BwAdapterStep *step, u16 effect, int
     BwAdapter_QueueWithParticipants(step, effect, effectPos, step != NULL ? FlagIndex(step->battler) : 0);
 }
 
+static BOOL BwAdapter_ShouldOverlapSendOutCry(u16 effect)
+{
+    return (effect == BW_EFFECT_PLAYER_SEND_OUT || effect == BW_EFFECT_TRAINER_SEND_OUT || effect == BW_EFFECT_SEND_OUT)
+        && !(BattleSystem_GetBattleType(sBattleSys) & BATTLE_TYPE_LINK)
+        && BattleTiming_MessagePageDelay(100) < 100;
+}
+
 static void BwAdapter_RunSteps(void)
 {
     if (sStepEffectRunning && !BwBattleView_IsEffectBusy()) {
@@ -1503,6 +1511,8 @@ static void BwAdapter_RunSteps(void)
                 && step.effect != BW_EFFECT_TRAINER_SEND_OUT && step.effect != BW_EFFECT_SEND_OUT);
             if (sFastIntro && step.effect == BW_EFFECT_PLAYER_SEND_OUT) {
                 sStepEffectRunning = BwBattleView_StartFastWildSendOut();
+            } else if (BwAdapter_ShouldOverlapSendOutCry(step.effect)) {
+                sStepEffectRunning = BwBattleView_StartFastSendOut(step.effectPos, step.effect);
             } else {
                 sStepEffectRunning = BwBattleView_StartEffect(step.effectPos, step.effect);
             }

@@ -27,17 +27,38 @@ static void CheckIntroCryOverlap(void)
     sCryQueries = 0;
     assert(!BtlvEffvm_WaitCries(&wk)); // Ordinary openings retain their sound wait.
     assert(sCryQueries == 1);
-    BtlvEffvm_OverlapIntroCry(&vm);
+    BtlvEffvm_OverlapSendOutCry(&vm);
     assert(BtlvEffvm_WaitCries(&wk));
     assert(wk.voices[0] == 7 && sCryQueries == 1); // Audio stays alive after the menu is ready.
     wk.cryDelayed = TRUE;
     assert(!BtlvEffvm_WaitCries(&wk)); // A scheduled cry must start before the effect can end.
     wk.cryDelayed = FALSE;
     wk.move = 0x238;
-    BtlvEffvm_OverlapIntroCry(&vm);
-    assert(!BtlvEffvm_WaitCries(&wk)); // Trainer openings are unaffected.
+    BtlvEffvm_OverlapSendOutCry(&vm);
+    assert(!BtlvEffvm_WaitCries(&wk)); // Trainer throws are unaffected.
     sCryPlaying = FALSE;
     assert(BtlvEffvm_WaitCries(&wk) && wk.voices[0] == -1);
+}
+
+static void CheckAcceleratedSendOutCryOverlap(void)
+{
+    const u16 effects[] = { 0x234, 0x239, 0x26d, 0x231, 0x238, 0x23b };
+    for (unsigned i = 0; i < NELEMS(effects); i++) {
+        BtlvEffvm wk = { .move = effects[i], .voices = { 7, -1, -1, -1, -1, -1 } };
+        VM vm = { .env = &wk };
+        sCryPlaying = TRUE;
+        assert(!BtlvEffvm_WaitCries(&wk));
+        BtlvEffvm_OverlapSendOutCry(&vm);
+        // Player, trainer and replacement send-outs reach the shadow restore
+        // after landing while the cry continues. Other effects keep waiting.
+        assert(BtlvEffvm_WaitCries(&wk) == (i < 3));
+        assert(wk.voices[0] == 7);
+        wk.cryDelayed = TRUE;
+        assert(!BtlvEffvm_WaitCries(&wk));
+        wk.cryDelayed = FALSE;
+        sCryPlaying = FALSE;
+        assert(BtlvEffvm_WaitCries(&wk));
+    }
 }
 
 BtlvMcss *BtlvEffect_GetMcss(void) { return NULL; }
@@ -110,10 +131,11 @@ static void CheckShinies(unsigned exists, unsigned shiny)
 int main(void)
 {
     CheckIntroCryOverlap();
+    CheckAcceleratedSendOutCryOverlap();
     for (unsigned exists = 0; exists < 256; exists++) {
         for (unsigned shiny = 0; shiny < 256; shiny++) {
             CheckShinies(exists, shiny);
         }
     }
-    puts("Fast wild intro: cry overlaps the menu without cutting audio; ordinary/trainer sound waits preserved; 65,536 shiny masks retain sparkle order and cleanup.");
+    puts("Send-out cry waits: Quick/Turbo player/trainer/replacement landings overlap audio; other effects and delayed cries retain waits. Fast wild intro and 65,536 shiny masks retain sparkle order and cleanup.");
 }

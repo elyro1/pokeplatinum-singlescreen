@@ -34,6 +34,16 @@ remain. Menu and battle exit fades finish in about two progression updates;
 Quick keeps its existing fades. Link battle-script waits and menu/exit fades
 keep their existing timing and button-skip policy.
 
+With BW2 visuals, Quick and Turbo let send-out cries continue over the shadow
+restore and camera transition after landing. This applies to player and opponent openings,
+including doubles, and replacement send-outs. Landing animations, shiny effects
+and cry playback still complete; other pacing modes and link battles retain
+their existing cry waits.
+Quick caps automatic battle-message page dwell at eight updates, and Turbo at
+four. This removes the extra hold after enemy tag-battle send-outs, whose message contains
+a separate page for each trainer. Required acknowledgements, authored pauses,
+and link/recorded battle page timing retain their existing behavior.
+
 After a failed capture, Quick and Turbo omit the extra entrance animation before
 the breakout message. At every pacing setting and frame rate, BW2 skips
 Platinum's hidden send-out, since BW2 has already shown the Pokémon breaking
@@ -117,4 +127,6 @@ input edges, task deletion/reuse, nested animation owners, and live pacing chang
 They also check particle resources are ready when two animation steps share a
 frame, before a deferred post-VBlank upload could have run.
 The existing BW2 gauge and send-out tests cover visual feedback and cleanup.
+Send-out cry checks cover player, trainer and replacement effects, pending
+cries, and the Quick/Turbo/offline/60 FPS policy while retaining other effects' waits.
 The menu test renders the actual Speed & text controls across window sizes and scales.

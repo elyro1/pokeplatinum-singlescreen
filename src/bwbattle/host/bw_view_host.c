@@ -500,3 +500,7 @@ bool BwBattleView_StartEffect(int viewPos, unsigned short effect) {
 bool BwBattleView_StartFastWildSendOut(void) {
     return sViewActive && BtlvEffect_StartFastWildSendOut();
 }
+
+bool BwBattleView_StartFastSendOut(int viewPos, unsigned short effect) {
+    return sViewActive && BtlvEffect_StartFastSendOut(viewPos, effect);
+}

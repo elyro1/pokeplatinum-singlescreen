@@ -90,7 +90,7 @@ struct BtlvEffvm {
     u32 lastMove;                  // 0x2a4  effects 0x261 and 0x262 don't repeat for the same attacker
     u32 lastAttacker;              // 0x2a8
 #ifdef BWBATTLE
-    BOOL overlapIntroCry;
+    BOOL overlapSendOutCry;
 #endif
 };
 
@@ -575,7 +575,7 @@ void BtlvEffvm_Start(VM *vm, u32 attacker, u32 defender, u16 move, BtlvEffvmPara
     wk->unk244 = 1;
     wk->move = move;
 #ifdef BWBATTLE
-    wk->overlapIntroCry = FALSE;
+    wk->overlapSendOutCry = FALSE;
 #endif
     if (wk->move >= BTLV_EFFECT_FIRST && (wk->move == 0x261 || wk->move == 0x262) && wk->lastMove == wk->move &&
         wk->lastAttacker == attacker) {
@@ -2592,10 +2592,10 @@ static BOOL BtlvEffvm_Call(VM *vm, u32 effect, u32 attacker, u32 defender) {
 }
 
 #ifdef BWBATTLE
-void BtlvEffvm_OverlapIntroCry(VM *vm) {
+void BtlvEffvm_OverlapSendOutCry(VM *vm) {
     BtlvEffvm *wk = VM_GetEnv(vm);
 
-    wk->overlapIntroCry = wk->move == 0x234;
+    wk->overlapSendOutCry = wk->move == 0x234 || wk->move == 0x239 || wk->move == 0x26d;
 }
 
 void BtlvEffvm_PrefixWildShinies(VM *vm) {
@@ -2797,9 +2797,9 @@ static BOOL BtlvEffvm_WaitCries(BtlvEffvm *wk) {
         return FALSE;
     }
 #ifdef BWBATTLE
-    if (wk->overlapIntroCry) {
+    if (wk->overlapSendOutCry) {
         // Keep the voices alive for the background cry/BGM task. Only the
-        // shortened opening's UI wait ends; audio and visual cleanup continue.
+        // send-out's presentation wait ends; audio and visual cleanup continue.
         return TRUE;
     }
 #endif
