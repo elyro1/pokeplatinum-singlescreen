@@ -9,7 +9,7 @@ static SIM_Config_prj_type sConfig;
 static int sPartyCount;
 static int sFreedBalls, sDeletedSprites, sBackdrops, sFades;
 static BOOL sBlack, sDrawing, sCaught, sBusy, sBallBusy;
-static u16 sFadeBuffers;
+static u16 sFadeBuffers, sLastFadeBuffers;
 static int sResumes, sCaughtBattler, sScore;
 
 SIM_Config_prj_type *SIM_Config_prj_GetConfig(void) { return &sConfig; }
@@ -54,6 +54,7 @@ void Heap_Free(void *ptr)
 u8 PaletteData_StartFade(PaletteData *palette, u16 buffers, u16 palettes, s8 wait, u8 start, u8 end, u16 target)
 {
     assert((start == 16 && end == 0) || (start == 0 && end == 16));
+    sLastFadeBuffers = buffers;
     sFades++;
     return TRUE;
 }
@@ -91,6 +92,27 @@ static void CheckNicknameSkip(void)
                     Window_Remove(&window);
                 }
             }
+        }
+    }
+}
+
+static void CheckDirectNaming(void)
+{
+    for (int mode = 0; mode < NICKNAME_MODE_COUNT; mode++) {
+        BattleScriptTaskData data = { .seqNum = SEQ_CATCH_MON_CLOSE_POKEDEX };
+        sConfig.nicknameMode = mode;
+        sFades = sBackdrops = 0;
+        sBlack = FALSE;
+        BOOL direct = BattleScript_StartDirectNaming(&data, NULL);
+        assert(direct == (mode == NICKNAME_MODE_ALWAYS));
+        assert(!sBlack && !sBackdrops);
+        assert(sFades == direct);
+        if (direct) {
+            assert(data.seqNum == SEQ_CATCH_MON_START_NAMING_SCREEN);
+            // Never fade the main screen back in: its prompt scene was skipped.
+            assert(sLastFadeBuffers == (PLTTBUF_SUB_BG_F | PLTTBUF_SUB_OBJ_F));
+        } else {
+            assert(data.seqNum == SEQ_CATCH_MON_CLOSE_POKEDEX);
         }
     }
 }
@@ -146,5 +168,6 @@ int main(void)
 {
     CheckNicknameSkip();
     CheckDirectPokedex();
-    puts("Capture presentation: 24 routes passed; no nickname screen allocation or masking, and direct BW2 Pokedex transitions.");
+    CheckDirectNaming();
+    puts("Capture presentation: 27 routes passed; direct Always keyboard, no Never screen allocation or masking, and direct BW2 Pokedex transitions.");
 }

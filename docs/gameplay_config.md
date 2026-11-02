@@ -82,7 +82,7 @@ All options in this table default to `false`. Set an option to `true` to enable 
 
 **Tab → Speed & text → Ask for a nickname** controls automatic naming offers for caught Pokémon, hatched eggs (including Manaphy), your starter, gift Eevee/Porygon, and revived fossils:
 
-- **Always** opens the naming screen directly. You can still leave without choosing a nickname.
+- **Always** opens the keyboard directly, skipping the nickname question, backdrop, and caught-Pokémon slide. You can still leave without choosing a nickname.
 - **Never** skips the entire nickname presentation, keeping the species name. New Pokédex entries still appear. Closing an entry finishes the catch directly, without creating the nickname screen; full-party catches go straight to the PC without an additional transfer screen. Previously registered species retain the normal PC transfer message.
 - **Ask** (default) preserves the original Yes/No prompt.
 

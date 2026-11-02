@@ -10451,6 +10451,18 @@ static BOOL BattleScript_SkipNicknameScreen(BattleScriptTaskData *data, PokemonS
     return TRUE;
 }
 
+// Both entry points have already faded and released the main-screen scene.
+// Fade only the bottom screen, then open the keyboard without rebuilding the prompt.
+static BOOL BattleScript_StartDirectNaming(BattleScriptTaskData *data, PaletteData *paletteData)
+{
+    if (SIM_Config_prj_GetConfig()->nicknameMode != NICKNAME_MODE_ALWAYS) {
+        return FALSE;
+    }
+    PaletteData_StartFade(paletteData, PLTTBUF_SUB_BG_F | PLTTBUF_SUB_OBJ_F, 0xFFFF, 1, 0, 16, 0);
+    data->seqNum = SEQ_CATCH_MON_START_NAMING_SCREEN;
+    return TRUE;
+}
+
 // Fade from the successful catch while its camera is still held on the ball.
 // The resumed effect can then release its resources under black before the dex opens.
 static BOOL BattleScript_BeginDirectPokedex(BattleScriptTaskData *data, int battler, PaletteData *paletteData, PokemonSpriteManager *monSpriteMan)
@@ -10767,7 +10779,7 @@ static void BattleScript_CatchMonTask(SysTask *task, void *inData)
 
             if (data->seqNum == SEQ_CATCH_MON_MOVE_FOR_ASK_NICKNAME) {
 #ifdef SDK_PORT
-                if (SIM_Config_prj_GetConfig()->nicknameMode == NICKNAME_MODE_NEVER) {
+                if (SIM_Config_prj_GetConfig()->nicknameMode != NICKNAME_MODE_ASK) {
                     data->seqNum = SEQ_CATCH_MON_CLOSE_POKEDEX;
                 }
 #endif
@@ -10795,6 +10807,10 @@ static void BattleScript_CatchMonTask(SysTask *task, void *inData)
         if (BattleScript_SkipNicknameScreen(data, monSpriteMan, TRUE)) {
             break;
         }
+        if (BattleScript_StartDirectNaming(data, paletteData)) {
+            PokemonSpriteManager_DeleteAll(monSpriteMan);
+            break;
+        }
 #endif
         // The nickname prompt uses the backdrop without the baked terrain platforms.
         BattleSystem_SetupBattleScreen(data->battleSys, FALSE);
@@ -10814,6 +10830,11 @@ static void BattleScript_CatchMonTask(SysTask *task, void *inData)
             PokemonSpriteManager_DeleteAll(monSpriteMan);
             BattlerData_SetTrainerVisibility(BattleSystem_GetBattlerData(data->battleSys, 0), FALSE);
             BattleSystem_HideBattleScreen(data->battleSys);
+#ifdef SDK_PORT
+            if (BattleScript_StartDirectNaming(data, paletteData)) {
+                break;
+            }
+#endif
             BattleSystem_SetupBattleScreen(data->battleSys, FALSE);
             Pokemon_BuildSpriteTemplate(&monSpriteTemplate, mon, 2);
             PokemonSpriteManager_CreateSprite(monSpriteMan, &monSpriteTemplate, 128, 72, 0, 0, NULL, NULL);
