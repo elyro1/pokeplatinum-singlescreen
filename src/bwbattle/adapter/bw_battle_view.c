@@ -126,6 +126,9 @@ static BOOL sActive;
 static BOOL sFastIntro;
 static BOOL sFastIntroBattle;
 static BOOL sFastPlayerSendOut;
+// A fast opening's 3D layer stays black until its send-out starts: before it, the view shows BW2's default camera on
+// an empty field, then the wild Pokémon appearing, for the frame or two its setup steps take
+static BOOL sFastIntroHidden;
 // BW2's player stands on the field from the camera's turn to the player's side to the send-out
 static BOOL sPlayerThrowing;
 // A partner fights beside the player (a 2 vs 2 battle): BW2's multi battle, whose send-out brings the partner in
@@ -333,7 +336,12 @@ static void BwAdapter_MirrorFade(BattleSystem *battleSys)
 {
     PaletteFadeControl *fade = &BattleSystem_GetPaletteData(battleSys)->buffers[PLTTBUF_MAIN_BG].selected;
     int level = fade->unfadedMask == 0xffff ? fade->cur : 0;
+    u16 target = fade->target;
 
+    if (sFastIntroHidden) {
+        level = 16;
+        target = 0;
+    }
     if (level == 0) {
         BwAdapter_RestoreFadeBlend();
         return;
@@ -346,8 +354,8 @@ static void BwAdapter_MirrorFade(BattleSystem *battleSys)
     }
     // Toward white brightens; black and any other color darken. BW2's 2D sprites (the gauges) have palettes of their
     // own (SIM_SetObjExtension), which fade the way Platinum's do
-    G2_SetBlendBrightness(GX_BLEND_PLANEMASK_BG0, fade->target == 0x7fff ? level : -level);
-    BwBattleView_SetObjFade(level, fade->target);
+    G2_SetBlendBrightness(GX_BLEND_PLANEMASK_BG0, target == 0x7fff ? level : -level);
+    BwBattleView_SetObjFade(level, target);
     sFadeWrittenBlend[0] = reg_G2_BLDCNT;
     sFadeWrittenBlend[2] = reg_G2_BLDY;
 }
@@ -805,6 +813,7 @@ BOOL BwAdapter_UsedFastIntro(void)
 void BwAdapter_EndIntro(void)
 {
     sFastIntro = FALSE;
+    sFastIntroHidden = FALSE;
 }
 
 void BwAdapter_BattleCreate(BattleSystem *battleSys)
@@ -870,6 +879,7 @@ void BwAdapter_BattleCreate(BattleSystem *battleSys)
     sActive = TRUE;
     sFastIntro = BwAdapter_ChooseFastIntro(battleSys);
     sFastIntroBattle = sFastIntro;
+    sFastIntroHidden = sFastIntro;
     sFastPlayerSendOut = FALSE;
     sBattleSys = battleSys;
     sDoubles = (battleType & BATTLE_TYPE_DOUBLES) != 0;
@@ -1517,6 +1527,9 @@ static void BwAdapter_RunSteps(void)
                 sStepEffectRunning = BwBattleView_StartEffect(step.effectPos, step.effect);
             }
             sFastPlayerSendOut = sStepEffectRunning && sFastIntro && step.effect == BW_EFFECT_PLAYER_SEND_OUT;
+            if (sFastIntro && step.effect == BW_EFFECT_PLAYER_SEND_OUT) {
+                sFastIntroHidden = FALSE;
+            }
             if (sStepEffectRunning && sFastIntro
                 && (step.effect == BW_EFFECT_TO_PLAYER || step.effect == BW_EFFECT_TO_PLAYER_AND_PARTNER)) {
                 BwBattleView_FinishOpeningEffect();
