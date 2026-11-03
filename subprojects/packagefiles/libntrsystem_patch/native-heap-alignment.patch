@@ -1,0 +1,42 @@
+diff --git a/libraries/fnd/src/expheap.c b/libraries/fnd/src/expheap.c
+--- a/libraries/fnd/src/expheap.c
++++ b/libraries/fnd/src/expheap.c
+@@ -18,7 +18,12 @@
+ #define MBLOCK_USED_SIGNATURE   ('UD')
+ #define MAX_GROUPID             0xff
+ #define DEFAULT_GROUPID         0
++#ifdef SDK_PORT
++/* Free-block headers contain native pointers, even for byte-sized requests. */
++#define MIN_ALIGNMENT           ((int)sizeof(void *))
++#else
+ #define MIN_ALIGNMENT           4
++#endif
+ #define DEFAULT_ALLOC_MODE      NNS_FND_EXPHEAP_ALLOC_MODE_FIRST
+ #define MIN_FREE_BLOCK_SIZE     4
+
+@@ -637,6 +642,12 @@
+
+ void * NNS_FndAllocFromExpHeapEx (NNSFndHeapHandle heap, u32 size, int alignment)
+ {
++#ifdef SDK_PORT
++    /* Original callers may ask for four-byte alignment. Preserve that minimum
++     * while also aligning the native linked-list headers placed in free space. */
++    if (alignment > 0 && alignment < MIN_ALIGNMENT) alignment = MIN_ALIGNMENT;
++    if (alignment < 0 && alignment > -MIN_ALIGNMENT) alignment = -MIN_ALIGNMENT;
++#endif
+     void * memory = NULL;
+
+     NNS_ASSERT(IsValidExpHeapHandle(heap));
+@@ -775,6 +786,12 @@
+
+ u32 NNS_FndGetAllocatableSizeForExpHeapEx (NNSFndHeapHandle heap, int alignment)
+ {
++#ifdef SDK_PORT
++    /* Original callers may ask for four-byte alignment. Preserve that minimum
++     * while also aligning the native linked-list headers placed in free space. */
++    if (alignment > 0 && alignment < MIN_ALIGNMENT) alignment = MIN_ALIGNMENT;
++    if (alignment < 0 && alignment > -MIN_ALIGNMENT) alignment = -MIN_ALIGNMENT;
++#endif
+     NNS_ASSERT(IsValidExpHeapHandle(heap));
+     NNS_ASSERT(alignment % MIN_ALIGNMENT == 0);
+     NNS_ASSERT(MIN_ALIGNMENT <= abs(alignment) && abs(alignment) <= 32);

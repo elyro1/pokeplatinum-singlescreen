@@ -3,7 +3,7 @@ url = https://github.com/cybervisi0n/libntrsystem.git
 revision = main
 depth = 1
 directory = libntrsystem
-diff_files = libntrsystem_patch/fast-forward-players.patch, libntrsystem_patch/extended-field-textures.patch, libntrsystem_patch/simulator-feature-detection.patch, libntrsystem_patch/bwbattle-multicell-banks.patch
+diff_files = libntrsystem_patch/fast-forward-players.patch, libntrsystem_patch/extended-field-textures.patch, libntrsystem_patch/simulator-feature-detection.patch, libntrsystem_patch/bwbattle-multicell-banks.patch, libntrsystem_patch/native-heap-alignment.patch
 
 [provide]
 dependency_names = NitroSystem

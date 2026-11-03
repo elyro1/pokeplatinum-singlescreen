@@ -2,6 +2,28 @@
 
 Checked November 3, 2026. Recommendation: integrate HeartGold's `libntrsystem-native-heap.patch`. It fixes two reproduced native alignment defects and preserves Platinum's four-byte allocation requests.
 
+## Integration status
+
+Integrated November 3, 2026 as `subprojects/packagefiles/libntrsystem_patch/native-heap-alignment.patch`, registered after the existing patches in `subprojects/libntrsystem.wrap`. The dependency revision is unchanged. The review below records the original investigation.
+
+The persistent regression suite compiles the production exp-heap, heap-common, list, allocator adapter and native memory sources using the configured Linux build flags. It runs ASan/UBSan with both the production definitions and `NNS_FINALROM` undefined so the actual heap consistency checker executes. Graphics cleanup hooks are stubs; their invocation counts are checked.
+
+After configuring/building `build_linux`, run:
+
+```sh
+python3 tools/scripts/test_libntrsystem_heap_alignment.py
+```
+
+Use `--build /path/to/build` to select another configured native Linux build. To also verify that both reproduction probes detect the original defects, run:
+
+```sh
+python3 tools/scripts/test_libntrsystem_heap_alignment.py --check-unpatched
+```
+
+That option reverses only the alignment patch in a temporary source copy and requires the `patch` utility. It leaves the dependency checkout unchanged and requires each original probe to fail with the matching UBSan misalignment diagnostic. LeakSanitizer is disabled for this environment; address and undefined-behavior checks remain enabled.
+
+Integration validation passed both reproduction probes and the full allocation/resize/adapter sweep in both configurations, plus a full incremental `ninja -C build_linux` build. The complete wrap patch sequence also applied to a clean archive of the cached upstream `origin/main` (`cd778c9d5e45869f8ecb8245b316ac20ea576958`), producing the same `expheap.c` as the tested checkout. Existing native SDK, lifecycle, upstream-fix, lighting and field-visual regression suites passed. No interactive gameplay or whole-game peak heap usage measurement was performed.
+
 ## Scope
 
 - Current NitroSystem checkout: `subprojects/libntrsystem`, HEAD `9c2309a2c995c919a67093858677f0f43459d7fc`.
