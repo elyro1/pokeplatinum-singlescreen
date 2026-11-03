@@ -124,12 +124,3 @@ void GFL_HeapCreateAllocator(NNSFndAllocator *allocator, HeapID heapId, int alig
     allocator->heapParam1 = alignment < 0 ? -alignment : alignment;
     allocator->heapParam2 = 0;
 }
-
-// libntr declares MIi_CpuClearFast but builds it only for ARM
-void MIi_CpuClearFast(u32 data, void *destp, u32 size) {
-    u32 *dest = destp;
-
-    for (u32 i = 0; i < size / 4; i++) {
-        dest[i] = data;
-    }
-}

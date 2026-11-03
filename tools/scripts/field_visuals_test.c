@@ -261,7 +261,7 @@ int main(void)
     }
     SIM_Config_prj_type defaults = { 0 }, loaded = { 0 };
     SIM_Config_prj_LoadDefaults(&defaults);
-    assert(defaults.enhancedDayNight && defaults.regionalAtmosphere && defaults.antialias3D);
+    assert(defaults.enhancedDayNight && defaults.regionalAtmosphere && !defaults.antialias3D);
     assert(defaults.correctLighting && defaults.environmentalParticles && defaults.softContactShadows && defaults.castShadows && defaults.waterEffects
         && defaults.weatherEffects);
     assert(defaults.nightLighting && defaults.nightGlows && defaults.emissiveBloom);
@@ -270,7 +270,11 @@ int main(void)
     fclose(legacy);
     loaded = defaults;
     assert(SIM_Config_prj_LoadConfigFile(&loaded));
-    assert(!loaded.enable60fps && loaded.enhancedDayNight && loaded.regionalAtmosphere && loaded.antialias3D);
+    assert(!loaded.enable60fps && loaded.enhancedDayNight && loaded.regionalAtmosphere && !loaded.antialias3D);
+    loaded.antialias3D = TRUE;
+    SIM_Config_prj_SaveConfigFile(&loaded);
+    SIM_Config_prj_type enabled = defaults;
+    assert(SIM_Config_prj_LoadConfigFile(&enabled) && enabled.antialias3D);
     loaded.nightLighting = loaded.nightGlows = loaded.emissiveBloom = FALSE;
     loaded.enhancedDayNight = loaded.regionalAtmosphere = loaded.antialias3D = FALSE;
     loaded.correctLighting = loaded.environmentalParticles = loaded.softContactShadows = loaded.castShadows = loaded.waterEffects = loaded.weatherEffects = FALSE;

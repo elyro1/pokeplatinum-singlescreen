@@ -31,6 +31,8 @@ def main():
             (ROOT / 'subprojects/libntr/libraries/sim/src/g3_handler.cpp', cpp_flags),
             (ROOT / 'subprojects/libntr/libraries/sim/src/sim_g3_CommandProcessor.cpp', cpp_flags),
             (ROOT / 'subprojects/libntr/libraries/gx/src/g3imm.c', c_flags),
+            (ROOT / 'subprojects/libntr/libraries/mi/src/mi_dma_gxcommand.c', c_flags),
+            (ROOT / 'subprojects/libntr/libraries/sim/src/sim_vars.c', c_flags),
             (ROOT / 'tools/scripts/lighting_correctness_test.cpp', cpp_flags),
         ]
         for source, flags in sources:

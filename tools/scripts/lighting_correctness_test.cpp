@@ -30,11 +30,7 @@ extern "C" u32 SIM_DecodeTextureAddress(u32 *)
     std::abort();
 }
 u8 s_SIM_useWBuffer = 0;
-// The emulator writes all sixteen adjacent clip-matrix register words.
-asm(".comm s_reg_G3X_CLIPMTX_RESULT_0,64,16");
-// This branch also exposes the nine words of the vector-matrix result.
-asm(".comm s_reg_G3X_VECMTX_RESULT_0,36,16");
-REGType32v s_reg_G3X_GXSTAT;
+// Register storage is supplied by the production sim_vars.c implementation.
 
 static u32 Vector(int x, int y, int z)
 {
@@ -55,6 +51,13 @@ static void Expect(int r, int g, int b)
     assert(abs((int)s_g3CurColor[1] - g) <= 1);
     assert(abs((int)s_g3CurColor[2] - b) <= 1);
 }
+static void DisplayListCompleted(void *arg)
+{
+    // Async completion must observe the decoded state, not just a queued copy.
+    Expect(255, 0, 0);
+    ++*static_cast<int *>(arg);
+}
+
 int main()
 {
     G3SIM_SetLightingCorrection(TRUE);
@@ -144,5 +147,19 @@ int main()
     G3SIM_SpecEmi(GX_RGB(0, 31, 0) << 16);
     G3SIM_Normal(0);
     Expect(0, 255, 0);
+    // All native submission variants must reach the real packed-command decoder.
+    u32 displayList[] = { G3OP_COLOR, GX_RGB(31, 0, 0) };
+    for (int variant = 0; variant < 4; ++variant) {
+        memset(s_g3CurColor, 0, sizeof(s_g3CurColor));
+        int completed = 0;
+        if (variant == 0) MI_SendGXCommand(3, displayList, sizeof(displayList));
+        if (variant == 1) MI_SendGXCommandAsync(3, displayList, sizeof(displayList), DisplayListCompleted, &completed);
+        if (variant == 2) MI_SendGXCommandFast(3, displayList, sizeof(displayList));
+        if (variant == 3) MI_SendGXCommandAsyncFast(3, displayList, sizeof(displayList), DisplayListCompleted, &completed);
+        Expect(255, 0, 0);
+        assert(completed == (variant == 1 || variant == 3));
+        assert(displayList[0] == G3OP_COLOR && displayList[1] == GX_RGB(31, 0, 0));
+    }
     puts("PASS: signed vectors, submission-time transforms, scaled models, directional specular and direct/packed shininess tables");
+    puts("PASS: every GX submission variant reaches the real decoder before completion");
 }
