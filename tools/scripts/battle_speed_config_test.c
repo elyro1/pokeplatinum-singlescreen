@@ -23,6 +23,25 @@ int main(void)
     assert(config->textSpeed == PORT_SPEED_FAST && config->battleBarSpeed == PORT_SPEED_FAST);
     assert(config->nicknameMode == NICKNAME_MODE_ASK);
     assert(config->fastWildBattleIntro == TRUE);
+    assert(config->overworldEncounterCount == OVERWORLD_ENCOUNTER_DEFAULT_COUNT);
+    const int encounterCounts[] = { 0, 12, OVERWORLD_ENCOUNTER_CAPACITY };
+    for (unsigned i = 0; i < NELEMS(encounterCounts); i++) {
+        char text[80];
+        snprintf(text, sizeof(text), "[Developer]\nOverworldEncounterCount=%d\n", encounterCounts[i]);
+        Load(text);
+        assert(config->overworldEncounterCount == encounterCounts[i]);
+        SIM_Config_prj_SaveConfigFile(config);
+        SIM_Config_prj_LoadDefaults(config);
+        assert(SIM_Config_prj_LoadConfigFile(config));
+        assert(config->overworldEncounterCount == encounterCounts[i]);
+    }
+    const char *invalidCounts[] = { "-1", "31", "2oops", "2.5", "", "999999999999999999999999999999999999" };
+    for (unsigned i = 0; i < NELEMS(invalidCounts); i++) {
+        char text[120];
+        snprintf(text, sizeof(text), "[Developer]\nOverworldEncounterCount=%s\n", invalidCounts[i]);
+        Load(text);
+        assert(config->overworldEncounterCount == OVERWORLD_ENCOUNTER_DEFAULT_COUNT);
+    }
     const char *nicknameModes[] = { "Ask", "Always", "Never" };
     for (int mode = 0; mode < NICKNAME_MODE_COUNT; mode++) {
         char text[80];

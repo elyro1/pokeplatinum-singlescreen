@@ -29,7 +29,6 @@
 #include "unk_020655F4.h"
 
 #ifdef SDK_PORT
-#include "port/gameplay_config.h"
 #include "port/sim_config_prj.h"
 #include "port/follower_assets.h"
 #endif
@@ -340,7 +339,7 @@ void OverworldEncounters_Update(FieldSystem *field)
     }
     int spawnLimit = OVERWORLD_ENCOUNTER_DEFAULT_COUNT;
 #ifdef SDK_PORT
-    spawnLimit = GameplayConfig_Get()->overworldEncounterCount;
+    spawnLimit = SIM_Config_prj_GetConfig()->overworldEncounterCount;
 #endif
     if (count < spawnLimit && freeSlot >= 0 && --manager->spawnTicks <= 0) {
         Spawn(field, &manager->sprites[freeSlot], freeSlot);

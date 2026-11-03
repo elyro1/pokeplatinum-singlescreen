@@ -38,6 +38,7 @@ typedef struct {
     BOOL fastWildBattleIntro; // Shorten eligible BW2 wild battle intros.
     BOOL bw2BattleVisuals; // Show battles with Black 2 / White 2's view when its assets are extracted (docs/bwbattle.md)
     BOOL overworldEncounters;
+    int overworldEncounterCount; // Maximum visible wild Pokemon, 0-30.
     BOOL pokemonFollower;
     BOOL enableAsserts; // Should asserts cause a communication error?
     BOOL breakDebuggerOnGfAssert; // When true, break the debugger when a GF_ASSERT fails

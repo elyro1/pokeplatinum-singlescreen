@@ -4,7 +4,7 @@ The PC port creates `gameplay_config.ini` with its built-in defaults on first st
 
 ## Edit through the TAB menu
 
-Open **Tab → Gameplay** to change all 24 options. The page groups them into battle rules, moves and tutors, evolution and eggs, encounters and events, progression and prices, and developer settings. Each option includes its description. All numeric controls use sliders and display their valid range. Drag to adjust, or Ctrl+click to type an exact value; both methods stay within the displayed limits.
+Open **Tab → Gameplay** to change all 23 options. The page groups them into battle rules, moves and tutors, evolution and eggs, encounters and events, and progression and prices. Each option includes its description. All numeric controls use sliders and display their valid range. Drag to adjust, or Ctrl+click to type an exact value; both methods stay within the displayed limits.
 
 Choose **Save changes**, then restart the game to apply the saved rules. The page displays **Unsaved changes** while you edit and **Saved changes apply after restart** when the file differs from the running game. Both messages appear in yellow while action is pending. Draft values remain available when switching categories or closing and reopening TAB during the session.
 
@@ -96,11 +96,14 @@ Fast openings skip the encounter text and opening camera shots, show the player 
 
 With BW2 battle visuals, a successful capture of a new species fades from the capture camera directly into its Pokédex entry. The camera return and the brief “data was added” message are hidden during this transition. Previously registered species and special capture modes keep their existing flow.
 
+## Developer encounter settings
+
+**Tab → Developer → Overworld encounters → Overworld encounter count** controls the maximum number of visible wild Pokémon. It defaults to `8`, accepts `0–30`, and saves automatically as `OverworldEncounterCount` under `[Developer]` in `sim_config_prj.ini`. Changes affect new spawns immediately; existing Pokémon remain until they leave. `0` stops new spawns. Available space and map objects can limit the actual count. Overworld encounters must be enabled.
+
 ## Numeric options
 
 | Option | Default | Accepted range | Effect |
 | --- | --- | --- | --- |
-| `overworldEncounterCount` | `8` | `0–30` | Maximum visible wild Pokémon at once when overworld encounters are enabled. `0` prevents visible spawns. Available space and map objects can limit the actual number. |
 | `bpPricePercent` | `100` | `0–65535` | Percentage of original BP prices, rounded up and capped at 65535 BP. `50` halves prices; `0` makes them free. Rare Candy uses its separate price below. |
 | `rareCandyBPPrice` | `48` | `0–65535` | Exact Rare Candy BP price. Overrides `bpPricePercent`; `0` makes Rare Candy free. |
 | `tradeEvolutionLevel` | `0` | `0–100` | `0` retains trade-only evolution. `1–100` also allows plain trade evolutions on level-up at or above that level. Held-item trades use `levelUpHeldItemEvolutions` instead. |

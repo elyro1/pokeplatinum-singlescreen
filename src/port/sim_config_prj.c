@@ -1,7 +1,10 @@
 #include <nitro.h>
+#include <errno.h>
 #include <simulator/config/ini.h>
+#include <stdlib.h>
 
 #include "port/sim_config_prj.h"
+#include "constants/overworld_encounters.h"
 
 #define SIM_CONFIG_PRJ_FILE_PATH "./sim_config_prj.ini"
 
@@ -100,6 +103,16 @@ static int IniHandler(void* user, const char* section, const char* name,
     if (MATCH("Graphics", "EmissiveBloom"))
         config->emissiveBloom = StringToBool(value);
 
+    if (MATCH("Developer", "OverworldEncounterCount")) {
+        char *end;
+        errno = 0;
+        long count = strtol(value, &end, 10);
+        if (end != value && *end == '\0' && errno != ERANGE
+            && count >= 0 && count <= OVERWORLD_ENCOUNTER_CAPACITY) {
+            config->overworldEncounterCount = (int)count;
+        }
+    }
+
     // Cheats section
     if(MATCH("Cheats", "WalkThroughWalls")) {
         config->walkThroughWalls = StringToBool(value);
@@ -149,6 +162,7 @@ void SIM_Config_prj_LoadDefaults(SIM_Config_prj_type * aConfig)
   aConfig->fastWildBattleIntro = TRUE;
   aConfig->bw2BattleVisuals = FALSE;
   aConfig->overworldEncounters = TRUE;
+  aConfig->overworldEncounterCount = OVERWORLD_ENCOUNTER_DEFAULT_COUNT;
   aConfig->pokemonFollower = TRUE;
   aConfig->enableAsserts = FALSE;
   aConfig->breakDebuggerOnGfAssert = FALSE;
@@ -219,6 +233,9 @@ void SIM_Config_prj_SaveConfigFile(SIM_Config_prj_type * aConfig)
     fprintf(configFile, "NightLighting=%s\n", BoolToString(aConfig->nightLighting));
     fprintf(configFile, "NightGlows=%s\n", BoolToString(aConfig->nightGlows));
     fprintf(configFile, "EmissiveBloom=%s\n\n", BoolToString(aConfig->emissiveBloom));
+
+    fprintf(configFile, "[Developer]\n");
+    fprintf(configFile, "OverworldEncounterCount=%d\n\n", aConfig->overworldEncounterCount);
 
     fprintf(configFile, "[Cheats]\n");
     fprintf(configFile, "WalkThroughWalls=%s\n", BoolToString(aConfig->walkThroughWalls));

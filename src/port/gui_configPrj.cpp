@@ -10,6 +10,7 @@
 #include "port/field_lights.h"
 #include "port/field_visuals.h"
 #include "port/field_visual_effects.h"
+#include "constants/overworld_encounters.h"
 extern "C" {
 #include "rtc.h"
 }
@@ -187,6 +188,17 @@ void DeveloperContentsPrj()
             myConfig->enable60fps = frameRate == 1;
             configChanged = true;
         }
+        ImGui::EndTable();
+    }
+    ImGui::SeparatorText("Overworld encounters");
+    if (BeginSettings("OverworldEncounterSettings")) {
+        SettingsRow("Overworld encounter count", "Maximum visible wild Pokemon at once. 0 stops new spawns; existing Pokemon remain until they leave.");
+        if (ImGui::SliderInt("##OverworldEncounterCount", &myConfig->overworldEncounterCount,
+                0, OVERWORLD_ENCOUNTER_CAPACITY, "%d", ImGuiSliderFlags_AlwaysClamp))
+            configChanged = true;
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Ctrl+click to type an exact value.");
+        ImGui::TextDisabled("Range: 0-%d", OVERWORLD_ENCOUNTER_CAPACITY);
         ImGui::EndTable();
     }
     ImGui::SeparatorText("Assertions");
