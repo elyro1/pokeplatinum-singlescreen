@@ -11,6 +11,7 @@
 #include "overlay005/ov5_021DFB54.h"
 #include "overlay005/ov5_021F5A10.h"
 #include "overlay006/wild_encounters.h"
+#include "port/gameplay_config.h"
 
 #include "bg_window.h"
 #include "encounter.h"
@@ -262,7 +263,7 @@ static BOOL FishingTask_WaitForFish(FishingTask *fishingTask, PlayerAvatar *play
 {
     fishingTask->fishDelayCounter--;
 
-    if (TryPressA() == TRUE) {
+    if (TryPressA() == TRUE && !GameplayConfig_Get()->guaranteedFishing) {
         fishingTask->fishingTask = FUNC_FishingTask_ReeledInEarly;
         return TRUE;
     }
@@ -283,7 +284,7 @@ static BOOL FishingTask_CheckForReelInFish(FishingTask *fishingTask, PlayerAvata
 {
     fishingTask->fishHookedCounter--;
 
-    if (TryPressA() == TRUE) {
+    if (TryPressA() == TRUE || GameplayConfig_Get()->guaranteedFishing) {
         fishingTask->fishingTask = FUNC_FishingTask_CaughtFish;
         return TRUE;
     }

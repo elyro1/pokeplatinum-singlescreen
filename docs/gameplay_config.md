@@ -72,6 +72,7 @@ All options in this table default to `false`. Set an option to `true` to enable 
 | `unlimitedGreatMarshSteps` | Stops counting Great Marsh steps and disables the 500-step exit. The entry fee and Safari Ball limit remain. Disabling this resumes counting from the saved counter. |
 | `zeroEggCycles` | New eggs have zero remaining hatch cycles; existing party eggs are set to zero at their next hatch check. Hatching still needs a hatch check. Disabling this does not restore cycles already removed. |
 | `instantHoneyTrees` | Unexpired, slathered trees become encounter-ready when checked again, skipping the six-hour wait. Already-slathered trees work too. Encounter tables, failure chances, Honey costs, and the 24-hour expiration remain. |
+| `guaranteedFishing` | Guarantees a bite at valid fishing spots and automatically reels in the Pokémon. Encounter selection and battle capture rates remain unchanged. |
 | `infiniteTMs` | Teaching a move does not consume its TM. Selling or discarding it still removes it. HMs remain reusable either way. |
 | `levelUpHeldItemEvolutions` | Held-item evolutions, including held-item trade evolutions, trigger on the next level-up with the required item at any time of day. The item is consumed. Normal trade evolution remains available. |
 | `instantSpiritomb` | Skips Underground conversations when encountering Spiritomb. An Odd Keystone is still required; already-inserted Keystones work, and each successful encounter still uses one. |

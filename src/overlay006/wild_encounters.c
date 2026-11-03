@@ -25,6 +25,7 @@
 #include "overlay006/special_dates.h"
 #include "overlay006/swarm.h"
 #include "overlay006/wild_encounters.h"
+#include "port/gameplay_config.h"
 
 #include "encounter.h"
 #include "field_battle_data_transfer.h"
@@ -463,7 +464,7 @@ BOOL WildEncounters_TryFishingEncounter(FieldSystem *fieldSystem, enum Encounter
     InitEncounterFieldParams(fieldSystem, firstPartyMon, NULL, &encounterFieldParams);
     encounterRate = ModifyEncounterRateWithFieldParams(TRUE, encounterRate, &encounterFieldParams, FieldOverworldState_GetWeather(SaveData_GetFieldOverworldState(fieldSystem->saveData)), firstPartyMon);
 
-    if (LCRNG_RandMod(100) >= encounterRate) {
+    if (LCRNG_RandMod(100) >= encounterRate && !GameplayConfig_Get()->guaranteedFishing) {
         return FALSE;
     }
 

@@ -40,6 +40,7 @@ static void AssertOriginalDefaults(void)
     assert(config->unlimitedGreatMarshSteps == FALSE);
     assert(config->zeroEggCycles == FALSE);
     assert(config->instantHoneyTrees == FALSE);
+    assert(config->guaranteedFishing == FALSE);
     assert(config->infiniteTMs == FALSE);
     assert(config->levelUpHeldItemEvolutions == FALSE);
     assert(config->instantSpiritomb == FALSE);
@@ -80,6 +81,7 @@ static void TestConfigFile(void)
     assert(strstr(template, "unlimitedGreatMarshSteps=false\n"));
     assert(strstr(template, "zeroEggCycles=false\n"));
     assert(strstr(template, "instantHoneyTrees=false\n"));
+    assert(strstr(template, "guaranteedFishing=false\n"));
     assert(strstr(template, "infiniteTMs=false\n"));
     assert(strstr(template, "levelUpHeldItemEvolutions=false\n"));
     assert(strstr(template, "instantSpiritomb=false\n"));
@@ -108,6 +110,7 @@ static void TestConfigFile(void)
                 "unlimitedGreatMarshSteps=true\n"
                 "zeroEggCycles=TRUE\n"
                 "instantHoneyTrees=1\n"
+                "guaranteedFishing=true\n"
                 "infiniteTMs=true\n"
                 "levelUpHeldItemEvolutions=TRUE\n"
                 "instantSpiritomb=1\n"
@@ -134,6 +137,7 @@ static void TestConfigFile(void)
     assert(config->unlimitedGreatMarshSteps == TRUE);
     assert(config->zeroEggCycles == TRUE);
     assert(config->instantHoneyTrees == TRUE);
+    assert(config->guaranteedFishing == TRUE);
     assert(config->infiniteTMs == TRUE);
     assert(config->levelUpHeldItemEvolutions == TRUE);
     assert(config->instantSpiritomb == TRUE);

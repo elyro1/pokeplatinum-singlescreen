@@ -21,6 +21,7 @@ typedef struct {
     BOOL unlimitedGreatMarshSteps;
     BOOL zeroEggCycles; // Eggs start ready to hatch; also applies to existing eggs at the next hatch check.
     BOOL instantHoneyTrees;
+    BOOL guaranteedFishing;
     BOOL infiniteTMs;
     BOOL levelUpHeldItemEvolutions;
     BOOL instantSpiritomb;

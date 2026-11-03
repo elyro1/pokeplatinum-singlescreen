@@ -59,6 +59,9 @@ void GameplayConfig_LoadDefaults(GameplayConfig *config)
     // FALSE restores the six-hour wait; Honey costs and the 24-hour expiration remain unchanged in either mode.
     config->instantHoneyTrees = FALSE;
 
+    // Guarantee a bite and automatically reel in fish at valid fishing spots.
+    config->guaranteedFishing = FALSE;
+
     // Keep a TM in the Bag after successfully teaching its move; selling or discarding it still removes it normally.
     // FALSE consumes TMs after teaching, while HMs remain reusable in either mode.
     config->infiniteTMs = FALSE;
@@ -132,6 +135,7 @@ static const ConfigField sConfigFields[] = {
     FIELD(unlimitedGreatMarshSteps, CONFIG_BOOL, 1, "Disable the Great Marsh step limit; entry fee and Safari Ball limit still apply.", "Unlimited Great Marsh steps", "Encounters & events"),
     FIELD(zeroEggCycles, CONFIG_BOOL, 1, "New and existing eggs become ready to hatch at the next hatch check.", "Eggs ready at next hatch check", "Evolution & eggs"),
     FIELD(instantHoneyTrees, CONFIG_BOOL, 1, "Skip the Honey Tree wait; normal encounter chances and expiration still apply.", "Instant Honey Tree encounters", "Encounters & events"),
+    FIELD(guaranteedFishing, CONFIG_BOOL, 1, "Guarantee a bite and automatically reel in fish at valid fishing spots.", "Guaranteed fishing", "Encounters & events"),
     FIELD(infiniteTMs, CONFIG_BOOL, 1, "Teaching a move does not consume its TM.", "Reusable TMs", "Moves & tutors"),
     FIELD(levelUpHeldItemEvolutions, CONFIG_BOOL, 1, "Held-item evolutions trigger on level-up at any time of day; the item is consumed.", "Held-item evolutions on level-up", "Evolution & eggs"),
     FIELD(instantSpiritomb, CONFIG_BOOL, 1, "Skip Underground conversations for Spiritomb; an Odd Keystone is still required.", "Skip Spiritomb conversations", "Encounters & events"),
