@@ -1099,7 +1099,14 @@ if build_target == 'linux' or build_target == 'win64'
             files('../res/graphics/start_menu/start_menu.order')],
         depends: py_consts_generators,
     )
-    pokeplatinum_c += [files('port/map_patches.cpp', 'port/rom_setup.cpp', 'port/hgss_assets.cpp'), map_patches_header]
+    follower_bw2_data = custom_target('follower_bw2_data.inc',
+        output: 'follower_bw2_data.inc',
+        input: files('../res/graphics/following_pokemon/bw2_sprites.json'),
+        command: [find_program('python3', native: true), files('../tools/scripts/embed_follower_bw2.py'),
+            '@INPUT@', '@OUTPUT@'],
+    )
+    pokeplatinum_c += [files('port/map_patches.cpp', 'port/rom_setup.cpp', 'port/follower_assets.cpp'),
+        map_patches_header, follower_bw2_data]
     public_includes = [public_includes, include_directories('.')]
 endif
 

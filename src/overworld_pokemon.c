@@ -28,7 +28,7 @@
 #include "vars_flags.h"
 #ifdef SDK_PORT
 #include "port/sim_config_prj.h"
-#include "port/hgss_assets.h"
+#include "port/follower_assets.h"
 #endif
 
 #define FOLLOW_TRAIL_LENGTH       32
@@ -355,7 +355,7 @@ void FollowingPokemon_Resume(FieldSystem *fieldSystem, enum FollowingPokemonSupp
 static BOOL FollowerAllowed(FieldSystem *fieldSystem)
 {
 #ifdef SDK_PORT
-    if (!SIM_Config_prj_GetConfig()->pokemonFollower || !HgssAssets_Ready()) return FALSE;
+    if (!SIM_Config_prj_GetConfig()->pokemonFollower || !FollowerAssets_Ready()) return FALSE;
 #endif
     MapObject *player = PlayerAvatar_GetMapObject(fieldSystem->playerAvatar);
     BOOL sliding = TileBehavior_IsIce(MapObject_GetCurrTileBehavior(player))

@@ -144,5 +144,3 @@ compile_commands.json
 # Optional resources extracted from the player's BW2 ROM
 /bw2/
 
-# Optional resources extracted from the player's HG/SS ROM
-/hgss/

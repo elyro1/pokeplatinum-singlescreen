@@ -9,7 +9,7 @@ static SIM_Config_prj_type config;
 static BOOL assetsReady, hasEncounters = TRUE, radarActive, inPalPark;
 static int randomCalls, radarCalls;
 SIM_Config_prj_type *SIM_Config_prj_GetConfig(void) { return &config; }
-int HgssAssets_Ready(void) { return assetsReady; }
+int FollowerAssets_Ready(void) { return assetsReady; }
 int PlayerAvatar_GetXPos(PlayerAvatar *const avatar) { return 0; }
 int PlayerAvatar_GetZPos(PlayerAvatar *const avatar) { return 0; }
 int PlayerAvatar_GetPlayerState(PlayerAvatar *avatar) { return PLAYER_AVATAR_WALKING; }

@@ -2,7 +2,8 @@
 """Import HG/SS overworld metadata and mappings without copying texture assets.
 
 Usage: python3 tools/scripts/import_following_pokemon.py /path/to/pokeheartgold
-Normal builds use the generated metadata; desktop graphics come from the user's HG/SS ROM extraction.
+Normal builds use the generated metadata; desktop graphics are converted from the player's BW2 extraction
+(src/port/follower_assets.cpp, with shiny palettes from import_follower_shiny_palettes.py).
 """
 import argparse
 import csv

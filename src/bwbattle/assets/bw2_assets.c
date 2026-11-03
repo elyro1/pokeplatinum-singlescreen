@@ -301,9 +301,10 @@ BwBattleExtractResult BwBattle_ExtractAssets(const char *romPath) {
             result = Bw2Rom_ExtractFile(&rom, Bw2Rom_FindArc(&rom, sNeededArcs[i]), path);
         }
     }
-    // Iris's overworld and VS mugshot archives are optional to the battle view,
-    // but extracted by the same action. Older extractions can be upgraded.
-    static const u16 optionalArcs[] = { 48, 267 };
+    // Optional to the battle view, but extracted by the same action, and older extractions are upgraded: the overworld
+    // models' records (47) and textures (48, also Iris's), the VS mugshots (267), and the walking Pokémon's object
+    // codes (208), which the followers and overworld encounters use (port/follower_assets.cpp)
+    static const u16 optionalArcs[] = { 47, 48, 208, 267 };
     for (size_t i = 0; i < NELEMS(optionalArcs) && result == BWBATTLE_EXTRACT_OK; i++) {
         if (!BwAssets_ArcExists(optionalArcs[i])) {
             ArcPath(optionalArcs[i], path, sizeof(path));
@@ -322,7 +323,7 @@ BwBattleExtractResult BwBattle_ExtractAssets(const char *romPath) {
 const char *BwBattle_ExtractResultMessage(BwBattleExtractResult result) {
     switch (result) {
     case BWBATTLE_EXTRACT_OK:
-        return "BW2 battle graphics extracted.";
+        return "BW2 graphics extracted.";
     case BWBATTLE_EXTRACT_CANT_OPEN:
         return "The ROM file couldn't be opened.";
     case BWBATTLE_EXTRACT_NOT_BW2:

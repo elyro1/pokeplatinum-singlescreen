@@ -6,7 +6,7 @@
 #include "sim_gui_prj.hpp"
 
 #include "port/sim_config_prj.h"
-#include "port/hgss_assets.h"
+#include "port/follower_assets.h"
 #include "port/field_lights.h"
 #include "port/field_visuals.h"
 #include "port/field_visual_effects.h"
@@ -33,7 +33,6 @@ static void ConfigCheckBox(const char *label, BOOL *configVar, bool &configChang
 }
 
 static std::string sBw2ExtractMessage;
-static std::string sHgssExtractMessage;
 
 void BattleSpeedContents() {
     SIM_Config_prj_type * myConfig = SIM_Config_prj_GetConfig();
@@ -143,6 +142,7 @@ void GeneralContentsPrj()
         if (ImGui::Button(buttonLabel)) {
             OpenFileDialog([](std::string path) {
                 auto result = BwBattle_ExtractAssets(path.c_str());
+                FollowerAssets_Reload();
                 sBw2ExtractMessage = BwBattle_ExtractResultMessage(result);
                 if (result == BWBATTLE_EXTRACT_OK && BwBattle_AssetsReady()) {
                     auto *config = SIM_Config_prj_GetConfig();
@@ -153,35 +153,20 @@ void GeneralContentsPrj()
                 }
             });
         }
+        bool overworldReady = FollowerAssets_Ready();
+        ImGui::BeginDisabled(!overworldReady);
+        ConfigCheckBox("Overworld encounters", &myConfig->overworldEncounters, configChanged, overworldReady);
+        ConfigCheckBox("Pokémon follower", &myConfig->pokemonFollower, configChanged, overworldReady);
+        ImGui::EndDisabled();
         ImGui::EndTable();
     }
     if (!sBw2ExtractMessage.empty()) ImGui::TextWrapped("%s", sBw2ExtractMessage.c_str());
-    if (!ready) ImGui::TextWrapped("BW2 battle graphics not extracted.");
+    if (!ready) ImGui::TextWrapped("BW2 graphics not extracted.");
+    else if (!FollowerAssets_Ready())
+        ImGui::TextWrapped("Re-extract your BW2 ROM to enable followers and overworld encounters.");
     else if (!BwBattle_IrisAssetsReady() || !BwBattle_IrisVsReady())
         ImGui::TextWrapped("Re-extract your BW2 ROM to enable all Iris graphics.");
 
-    ImGui::SeparatorText("HeartGold / SoulSilver ROM features");
-    bool hgssReady = HgssAssets_Ready();
-    if (BeginSettings("OverworldPokemon")) {
-        ImGui::BeginDisabled(!hgssReady);
-        ConfigCheckBox("Overworld encounters", &myConfig->overworldEncounters, configChanged, hgssReady);
-        ImGui::EndDisabled();
-        const char *label = hgssReady ? "Re-extract HG/SS ROM..." : "Select HG/SS ROM...";
-        const float buttonWidth = ImGui::CalcTextSize(label).x + ImGui::GetStyle().FramePadding.x * 2;
-        if (ImGui::GetContentRegionAvail().x >= ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.x + buttonWidth)
-            ImGui::SameLine();
-        if (ImGui::Button(label)) {
-            OpenFileDialog([](std::string path) {
-                sHgssExtractMessage = HgssAssets_Extract(path.c_str());
-            });
-        }
-        ImGui::BeginDisabled(!hgssReady);
-        ConfigCheckBox("Pokémon follower", &myConfig->pokemonFollower, configChanged, hgssReady);
-        ImGui::EndDisabled();
-        ImGui::EndTable();
-    }
-    if (!sHgssExtractMessage.empty()) ImGui::TextWrapped("%s", sHgssExtractMessage.c_str());
-    if (!hgssReady) ImGui::TextWrapped("HG/SS overworld graphics not extracted.");
 
     if(configChanged) {
         SIM_Config_prj_SaveConfigFile(myConfig);

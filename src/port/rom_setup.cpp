@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "bwbattle/bwbattle.h"
+#include "port/follower_assets.h"
 #include "port/sim_config_prj.h"
 
 // The simulator's existing Platinum extractor.
@@ -73,6 +74,7 @@ extern "C" void RomSetup_AutoExtractBw2(void)
     for (const auto &rom : FindRoms(true)) {
         // The extractor skips existing files, including on subsequent launches.
         auto result = BwBattle_ExtractAssets(rom.string().c_str());
+        FollowerAssets_Reload();
         if (result != BWBATTLE_EXTRACT_OK || !BwBattle_AssetsReady()) {
             std::fprintf(stderr, "Automatic BW2 extraction (%s): %s\n",
                 rom.string().c_str(), BwBattle_ExtractResultMessage(result));

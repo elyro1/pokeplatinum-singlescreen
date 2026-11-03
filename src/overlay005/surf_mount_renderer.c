@@ -28,7 +28,7 @@
 #include "simple3d.h"
 #include "sys_task_manager.h"
 #ifdef SDK_PORT
-#include "port/hgss_assets.h"
+#include "port/follower_assets.h"
 #include "port/sim_config_prj.h"
 #endif
 
@@ -204,7 +204,7 @@ static void SurfPokemonVisual_Upload(SysTask *task, void *context)
 PokemonMountVisual *PokemonMountVisual_New(MapObject *player, u16 graphicsID, BOOL reflection)
 {
 #ifdef SDK_PORT
-    if (!HgssAssets_Ready()) {
+    if (!FollowerAssets_Ready()) {
         return NULL;
     }
 #endif

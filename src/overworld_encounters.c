@@ -31,7 +31,7 @@
 #ifdef SDK_PORT
 #include "port/gameplay_config.h"
 #include "port/sim_config_prj.h"
-#include "port/hgss_assets.h"
+#include "port/follower_assets.h"
 #endif
 
 typedef struct WildSprite {
@@ -68,7 +68,7 @@ static int Abs(int value)
 static BOOL Enabled(FieldSystem *field)
 {
 #ifdef SDK_PORT
-    if (!SIM_Config_prj_GetConfig()->overworldEncounters || !HgssAssets_Ready()
+    if (!SIM_Config_prj_GetConfig()->overworldEncounters || !FollowerAssets_Ready()
         || SIM_Config_prj_GetConfig()->disableRandomEncounters) {
         return FALSE;
     }

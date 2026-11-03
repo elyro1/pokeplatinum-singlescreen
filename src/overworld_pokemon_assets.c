@@ -3,7 +3,7 @@
 #include <nitro.h>
 #include <string.h>
 #ifdef SDK_PORT
-#include "port/hgss_assets.h"
+#include "port/follower_assets.h"
 #endif
 
 #include "constants/map_object.h"
@@ -94,7 +94,7 @@ const void *OverworldPokemonAssets_GetResource(u32 resourceID, u32 *size)
     if (resourceID >= OVERWORLD_POKEMON_RESOURCE_BASE && resourceID < OVERWORLD_POKEMON_SEQUENCE_NORMAL) {
         const PokemonTextureEntry *entry = &sPokemonTextures[resourceID - OVERWORLD_POKEMON_RESOURCE_BASE];
         *size = entry->size;
-        // Textures are read from the player's HG/SS extraction on desktop.
+        // Textures are converted from the player's BW2 extraction on desktop.
         return NULL;
     }
 
@@ -119,7 +119,7 @@ BOOL OverworldPokemonAssets_ReadResource(u32 resourceID, void *dest)
 #ifdef SDK_PORT
     if (resourceID >= OVERWORLD_POKEMON_RESOURCE_BASE && resourceID < OVERWORLD_POKEMON_SEQUENCE_NORMAL) {
         const PokemonTextureEntry *entry = &sPokemonTextures[resourceID - OVERWORLD_POKEMON_RESOURCE_BASE];
-        return HgssAssets_ReadTexture(entry->offset, entry->size, dest);
+        return FollowerAssets_ReadTexture(entry->offset, entry->size, dest);
     }
 #endif
     u32 size;
