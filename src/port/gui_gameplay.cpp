@@ -53,9 +53,15 @@ void GameplayContents()
                     GameplayConfig_SetOptionValue(&editor.values, i, checked);
             } else {
                 int number = static_cast<int>(value);
-                if (ImGui::InputInt("##Value", &number, 1, 10))
+                const int maximum = static_cast<int>(option.maximum);
+                const bool changed = ImGui::SliderInt("##Value", &number, 0, maximum,
+                    "%d", ImGuiSliderFlags_AlwaysClamp);
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("Ctrl+click to type an exact value.");
+                if (changed)
                     GameplayConfig_SetOptionValue(&editor.values, i,
-                        std::clamp(number, 0, static_cast<int>(option.maximum)));
+                        std::clamp(number, 0, maximum));
+                ImGui::TextDisabled("Range: 0-%u", option.maximum);
             }
             ImGui::PopID();
         }
