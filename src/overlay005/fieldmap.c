@@ -835,6 +835,7 @@ static void ov5_021D15F4(FieldSystem *fieldSystem)
     G3_ResetG3X();
 
 #ifdef SDK_PORT
+    SIM_SetFieldCoverageRepair(TRUE);
     // The field remains alive behind Poketch; only widen it while it is on top.
     u32 viewWidth = SIM_SetFieldWidescreen(GX_GetDispSelect() == GX_DISP_SELECT_MAIN_SUB
         && (!fieldSystem->encounterEffectBorders || BwAdapter_IsEnabled())

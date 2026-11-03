@@ -272,17 +272,28 @@ resume it to see the selected lighting. Compare the same outdoor scene with
 
 ## Implementation and validation
 
+At internal resolution 1 with MSAA off, a separate 448×384 pass repairs isolated
+empty pixels surrounded by opaque terrain. This closes subpixel gaps at mesh
+T-junctions that can otherwise appear black at certain window widths. The
+replacement follows the most consistent neighboring texture samples and their
+fog; larger transparent openings and partially transparent pixels are preserved.
+This runs once per native scene texel before presentation. The display-resolution
+compositor retains its original shader, so repair cost does not scale with the
+window size.
+
 Game-side math is in `src/port/field_visuals.c`. Field rendering selects the
 region, time and scene eligibility; the 3D shader applies tint/haze before the
 existing authored fog and background composition. Enhancements reset to neutral
 for each new frame until the field explicitly opts in. The Nintendo DS target
 keeps the original rendering path.
 
-Backend changes are committed in libntr. `subprojects/libntr.wrap` pins the SDK
-commit directly, including the visual
+Backend graphics features are provided by libntr. `subprojects/libntr.wrap` pins
+the SDK commit directly, including the visual
 upgrades, extended battle VRAM, matrix and DMA behavior, widescreen edge
 rendering, compressed-texture cache support, simulator automation hooks, and
 gamepad settings, and the centered PC settings panel and its menu categories.
+The native field coverage repair is carried in
+`subprojects/packagefiles/libntr_patch/native-field-coverage.patch`.
 
 Android compatibility changes live on separate Android branches.
 
@@ -291,6 +302,9 @@ After building the Linux executable, run:
 ```sh
 python3 tools/scripts/test_field_visuals.py --build build_linux
 python3 tools/scripts/test_lighting_correctness.py --build build_linux
+python3 tools/scripts/test_terrain_coverage.py --build build_linux
+# Optional: also measure compositor GPU time at 4K output.
+python3 tools/scripts/test_terrain_coverage.py --build build_linux --benchmark
 ```
 
 The first suite samples all four real lighting archives at every second of the
@@ -301,7 +315,10 @@ authored fog, edge coverage, resize, toggling, downsampling and memory fallback.
 particle fade and restoring ordinary model materials. The lighting suite exercises
 the real CPU decoder, all signed 10-bit normals, submission-time transforms,
 directional specular and packed shininess-table command framing. SDL's offscreen
-driver with Mesa can run these checks without opening a window.
+driver with Mesa can run these checks without opening a window. The terrain
+coverage suite exercises the native repair pass and actual 2D compositor with
+isolated gaps, fog, texture boundaries, larger openings, translucency, ordinary
+2D backgrounds and renderer state restoration.
 
 Visual acceptance in game should include an outdoor town at dawn/sunset,
 Eterna Forest, a snow route, a coast, a cave, a Flash area, authored fog and a

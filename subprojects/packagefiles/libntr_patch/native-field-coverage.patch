@@ -1,0 +1,309 @@
+diff --git a/include/simulator/sim.h b/include/simulator/sim.h
+index 9f1513f..0e0c31b 100644
+--- a/include/simulator/sim.h
++++ b/include/simulator/sim.h
+@@ -119,6 +119,8 @@ SIM_config_type * SIM_GetConfigPtr();
+ // Field rendering opts in each logic frame; all other scenes use 4:3.
+ // Returns the logical width for the matching projection (256..448).
+ u32 SIM_SetFieldWidescreen(BOOL enabled);
++// Repair isolated native-resolution terrain raster gaps for this field frame.
++void SIM_SetFieldCoverageRepair(BOOL enabled);
+ #if defined(SDK_BUILD_LINUX) || defined(SDK_BUILD_WIN64)
+ void SIM_ResetVirtualTextureAddresses(void);
+ void *SIM_GetExtendedTextureStorage(u32 address, u32 size);
+diff --git a/include/simulator/sim_shaders.hpp b/include/simulator/sim_shaders.hpp
+index 5bef41e..fef4677 100644
+--- a/include/simulator/sim_shaders.hpp
++++ b/include/simulator/sim_shaders.hpp
+@@ -11,6 +11,7 @@ extern const char * G2FragmentShader;
+ 
+ extern const char * BloomVertexShader;
+ extern const char * BloomFragmentShader;
++extern const char * FieldCoverageFragmentShader;
+ 
+ }
+ 
+diff --git a/libraries/sim/src/sim_main.cpp b/libraries/sim/src/sim_main.cpp
+index 2e9e695..5897361 100644
+--- a/libraries/sim/src/sim_main.cpp
++++ b/libraries/sim/src/sim_main.cpp
+@@ -33,6 +33,7 @@ extern "C" int NitroSpMain(void *arg);
+ #include <simulator/sim.h>
+ #include <simulator/sim_3d_target.hpp>
+ #include <simulator/sim_bloom.hpp>
++#include <simulator/sim_field_coverage.hpp>
+ #include <simulator/sim_audio.h>
+ #include <simulator/sim_frame_pacer.h>
+ #include <simulator/sim_frame_profile.h>
+@@ -347,6 +348,8 @@ static GLuint g2vertexBuffer;
+ static GLuint g3RenderBufferId;
+ static SIM3DTarget s3DTarget;
+ static SIMBloom sBloom;
++static SIMFieldCoverage sFieldCoverage;
++static bool sFieldCoverageApplied = false;
+ static constexpr GLint s_BloomTexUnit = 15;
+ static float sBloomRequested, sBloomApplied;
+ static bool sAntialiasRequested = false;
+@@ -410,6 +413,10 @@ void SIM_SetFieldGrade(const float shadows[3], const float highlights[3], float
+ 
+ // The field camera of this frame, for collecting reflected lights.
+ static float sFieldWorldFromClip[9], sFieldWorldOffset[3];
++static bool sFieldCoverageRepair = false;
++void SIM_SetFieldCoverageRepair(BOOL enabled) {
++  sFieldCoverageRepair = enabled;
++}
+ void SIM_SetFieldWorld(const float worldFromClip[9], const float offset[3], const float camera[3], float time) {
+   G3SIM_FlushArray();
+   G3SIM_DrawItems();
+@@ -965,6 +972,7 @@ void *SIM_RenderInit(void *arg) {
+   CompileFragmentShader(g2FragmentShader, SIM::G2FragmentShader);
+   LinkShader(g2shaderProgramID, g2VertexShader, g2FragmentShader);
+ 
++  sFieldCoverage.Init(SIM::BloomVertexShader, SIM::FieldCoverageFragmentShader, s_MaxViewWidth, SIM_NDS_SCREEN_HEIGHT * 2);
+   sBloom.Init(SIM::BloomVertexShader, SIM::BloomFragmentShader);
+   sBloom.Resize(s_MaxViewWidth, SIM_NDS_SCREEN_HEIGHT * 2, s_SIM_config.internalResolutionScale);
+   glUseProgram(g2shaderProgramID);
+@@ -1276,7 +1284,7 @@ static void DrawEngine(BOOL isSub) {
+ 
+   if (bgEnabled[0]) {
+     if (bg0as3d) {
+-      glBindTexture(GL_TEXTURE_2D, g3RenderTextureId);
++      glBindTexture(GL_TEXTURE_2D, sFieldCoverageApplied ? sFieldCoverage.Color() : g3RenderTextureId);
+     } else {
+       glBindTexture(GL_TEXTURE_2D, s_bgTextureId[0]);
+     }
+@@ -1285,7 +1293,7 @@ static void DrawEngine(BOOL isSub) {
+   }
+ 
+   glActiveTexture(GL_TEXTURE11);
+-  glBindTexture(GL_TEXTURE_2D, g3FogTextureId);
++  glBindTexture(GL_TEXTURE_2D, sFieldCoverageApplied ? sFieldCoverage.Fog() : g3FogTextureId);
+   glProgramUniform1i(g2shaderProgramID, glGetUniformLocation(g2shaderProgramID, "g3FogTexture"), 11);
+   glActiveTexture(GL_TEXTURE0 + s_BloomTexUnit);
+   glBindTexture(GL_TEXTURE_2D, sBloom.Texture());
+@@ -1576,6 +1584,9 @@ void *SIM_Render(void *arg) {
+   // Draw the translucent 3D stuff
+   G3SIM_DrawItems();
+   s3DTarget.Resolve(g3FrameBuffer);
++  sFieldCoverageApplied = sFieldCoverageRepair && s_SIM_config.internalResolutionScale == 1
++      && !s3DTarget.Enabled() && sFieldCoverage.Ready();
++  if (sFieldCoverageApplied) sFieldCoverage.Run(g3RenderTextureId, g3FogTextureId);
+   sBloomApplied = sBloom.Ready() ? sBloomRequested : 0;
+   if (sBloomApplied > 0) {
+     sBloom.Run(g3EmissionTextureId, s_MaxViewWidth * s_SIM_config.internalResolutionScale,
+@@ -2074,6 +2085,7 @@ void *SIM_Render(void *arg) {
+   G3SIM_SetFieldContactShadow(noContactShadow);
+   SIM_SetFieldEmissionDebug(FALSE);
+   // Enhancements are opt-in per field frame, including native-width fields.
++  sFieldCoverageRepair = false;
+   ResetFieldGrade();
+   glProgramUniform4f(g3shaderProgramID, glGetUniformLocation(g3shaderProgramID, "atmosphereFog"), 0, 0, 0, 0);
+   glProgramUniform1i(g3shaderProgramID, glGetUniformLocation(g3shaderProgramID, "fieldWorld"), 0);
+@@ -2268,7 +2280,7 @@ int main(int argc, char *argv[]) {
+ 
+   SIM_RenderInit(NULL);
+   G3SIM_DrawInit();
+-  atexit([] { s3DTarget.Destroy(); G3SIM_ClearTextureCache(); });
++  atexit([] { sFieldCoverage.Destroy(); s3DTarget.Destroy(); G3SIM_ClearTextureCache(); });
+ 
+ // Init Sockets (only needed on windows)
+ #ifdef SDK_BUILD_WIN64
+diff --git a/libraries/sim/src/sim_shaders.cpp b/libraries/sim/src/sim_shaders.cpp
+index 8abfc35..d0f3fa5 100644
+--- a/libraries/sim/src/sim_shaders.cpp
++++ b/libraries/sim/src/sim_shaders.cpp
+@@ -28,5 +28,9 @@ const char * BloomFragmentShader =
+ #include "shaders/bloom_fragment.glsl"
+ ;
+ 
++const char * FieldCoverageFragmentShader =
++#include "shaders/field_coverage_fragment.glsl"
++;
++
+ }
+ 
+diff --git a/include/simulator/sim_field_coverage.hpp b/include/simulator/sim_field_coverage.hpp
+new file mode 100644
+index 0000000..7670e15
+--- /dev/null
++++ b/include/simulator/sim_field_coverage.hpp
+@@ -0,0 +1,130 @@
++#ifndef LIBNTR_SIM_FIELD_COVERAGE_HPP
++#define LIBNTR_SIM_FIELD_COVERAGE_HPP
++
++#include <cstdio>
++#ifdef SDK_BUILD_NX
++#include <glad/glad.h>
++#else
++#include <simulator/glad/glad.h>
++#endif
++
++// Repair once per native scene texel, before the display-resolution compositor.
++// Keeping the neighborhood search out of that shader avoids penalizing
++// ordinary composition, even when repair is disabled.
++class SIMFieldCoverage {
++    GLuint program = 0, vertexArray = 0, framebuffer = 0, textures[2] = {};
++    int width = 0, height = 0;
++
++public:
++    bool Ready() const { return framebuffer != 0; }
++    GLuint Color() const { return textures[0]; }
++    GLuint Fog() const { return textures[1]; }
++
++    void Destroy()
++    {
++        glDeleteFramebuffers(1, &framebuffer);
++        glDeleteTextures(2, textures);
++        glDeleteVertexArrays(1, &vertexArray);
++        glDeleteProgram(program);
++        framebuffer = program = vertexArray = textures[0] = textures[1] = 0;
++    }
++
++    void Init(const char *vertexSource, const char *fragmentSource, int w, int h)
++    {
++        width = w;
++        height = h;
++        GLuint shaders[] = { glCreateShader(GL_VERTEX_SHADER), glCreateShader(GL_FRAGMENT_SHADER) };
++        const char *sources[] = { vertexSource, fragmentSource };
++        for (int i = 0; i < 2; ++i) {
++            glShaderSource(shaders[i], 1, &sources[i], nullptr);
++            glCompileShader(shaders[i]);
++        }
++        program = glCreateProgram();
++        for (GLuint shader : shaders) {
++            glAttachShader(program, shader);
++            glDeleteShader(shader);
++        }
++        glLinkProgram(program);
++        GLint status;
++        glGetProgramiv(program, GL_LINK_STATUS, &status);
++        if (status != GL_TRUE) {
++            char log[2048];
++            glGetProgramInfoLog(program, sizeof(log), nullptr, log);
++            std::fprintf(stderr, "Field coverage repair unavailable: %s\n", log);
++            Destroy();
++            return;
++        }
++        glProgramUniform1i(program, glGetUniformLocation(program, "sceneTexture"), 0);
++        glProgramUniform1i(program, glGetUniformLocation(program, "fogTexture"), 1);
++        GLint previousFramebuffer, previousTexture;
++        glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previousFramebuffer);
++        glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousTexture);
++        glGenVertexArrays(1, &vertexArray);
++        glGenFramebuffers(1, &framebuffer);
++        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
++        glGenTextures(2, textures);
++        for (int i = 0; i < 2; ++i) {
++            glBindTexture(GL_TEXTURE_2D, textures[i]);
++            glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, width, height);
++            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, i == 0 ? GL_LINEAR : GL_NEAREST);
++            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
++            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
++            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
++            glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, textures[i], 0);
++        }
++        const GLenum attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
++        glDrawBuffers(2, attachments);
++        if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
++            std::fprintf(stderr, "Field coverage repair unavailable: framebuffer incomplete\n");
++            Destroy();
++        }
++        glBindTexture(GL_TEXTURE_2D, previousTexture);
++        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, previousFramebuffer);
++    }
++
++    void Run(GLuint scene, GLuint fog)
++    {
++        if (!Ready()) return;
++        GLint previousFramebuffer, previousProgram, previousVertexArray, previousActive, previousTextures[2], viewport[4];
++        glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previousFramebuffer);
++        glGetIntegerv(GL_CURRENT_PROGRAM, &previousProgram);
++        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &previousVertexArray);
++        glGetIntegerv(GL_ACTIVE_TEXTURE, &previousActive);
++        glGetIntegerv(GL_VIEWPORT, viewport);
++        const GLenum capabilities[] = { GL_DEPTH_TEST, GL_CULL_FACE, GL_SCISSOR_TEST, GL_STENCIL_TEST };
++        GLboolean enabled[4], blend[2], masks[2][4];
++        for (int i = 0; i < 4; ++i) {
++            enabled[i] = glIsEnabled(capabilities[i]);
++            glDisable(capabilities[i]);
++        }
++        const GLuint inputs[] = { scene, fog };
++        for (int i = 0; i < 2; ++i) {
++            blend[i] = glIsEnabledi(GL_BLEND, i);
++            glGetBooleani_v(GL_COLOR_WRITEMASK, i, masks[i]);
++            glDisablei(GL_BLEND, i);
++            glColorMaski(i, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
++            glActiveTexture(GL_TEXTURE0 + i);
++            glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousTextures[i]);
++            glBindTexture(GL_TEXTURE_2D, inputs[i]);
++        }
++        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
++        glViewport(0, 0, width, height);
++        glUseProgram(program);
++        glBindVertexArray(vertexArray);
++        glDrawArrays(GL_TRIANGLES, 0, 3);
++        for (int i = 0; i < 2; ++i) {
++            if (blend[i]) glEnablei(GL_BLEND, i);
++            glColorMaski(i, masks[i][0], masks[i][1], masks[i][2], masks[i][3]);
++            glActiveTexture(GL_TEXTURE0 + i);
++            glBindTexture(GL_TEXTURE_2D, previousTextures[i]);
++        }
++        for (int i = 0; i < 4; ++i) if (enabled[i]) glEnable(capabilities[i]);
++        glActiveTexture(previousActive);
++        glBindVertexArray(previousVertexArray);
++        glUseProgram(previousProgram);
++        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, previousFramebuffer);
++        glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
++    }
++};
++
++#endif
+diff --git a/libraries/sim/src/shaders/field_coverage_fragment.glsl b/libraries/sim/src/shaders/field_coverage_fragment.glsl
+new file mode 100644
+index 0000000..e449364
+--- /dev/null
++++ b/libraries/sim/src/shaders/field_coverage_fragment.glsl
+@@ -0,0 +1,43 @@
++R""(
++#version 420 core
++
++uniform sampler2D sceneTexture;
++uniform sampler2D fogTexture;
++layout (location = 0) out vec4 color;
++layout (location = 1) out vec4 fog;
++
++// T-junctions in the field mesh can leave a single uncovered raster sample
++// after the GPU rounds edge endpoints to its subpixel grid. At native
++// resolution that sample becomes a black DS pixel. Repair only an empty
++// sample completely enclosed by opaque samples; silhouettes, larger openings
++// and translucent effects retain their coverage. Pick the least-changing
++// opposite pair to continue the surface's texture, including its fog state.
++ivec2 sourcePixel(ivec2 p, vec4 scene) {
++    if (scene.a != 0.0) return p;
++    ivec2 size = textureSize(sceneTexture, 0);
++    if (p.x < 1 || p.y < 1 || p.x >= size.x - 1 || p.y >= size.y - 1) return p;
++    const ivec2 offsets[8] = ivec2[8](ivec2(-1, 0), ivec2(1, 0), ivec2(0, -1), ivec2(0, 1),
++        ivec2(-1, -1), ivec2(1, 1), ivec2(-1, 1), ivec2(1, -1));
++    vec4 neighbors[8];
++    for (int i = 0; i < 8; i++) {
++        neighbors[i] = texelFetch(sceneTexture, p + offsets[i], 0);
++        if (neighbors[i].a < 1.0) return p;
++    }
++    int best = 0;
++    float difference = 4.0;
++    for (int i = 0; i < 8; i += 2) {
++        vec3 delta = neighbors[i].rgb - neighbors[i + 1].rgb;
++        float d = dot(delta, delta);
++        if (d < difference) { difference = d; best = i; }
++    }
++    return p + offsets[best];
++}
++
++void main() {
++    ivec2 p = ivec2(gl_FragCoord.xy);
++    vec4 scene = texelFetch(sceneTexture, p, 0);
++    ivec2 source = sourcePixel(p, scene);
++    color = source == p ? scene : texelFetch(sceneTexture, source, 0);
++    fog = texelFetch(fogTexture, source, 0);
++}
++)""

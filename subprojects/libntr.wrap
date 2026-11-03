@@ -3,6 +3,7 @@ url = https://github.com/elyro1/libntr.git
 revision = 9598b3986027e81bdecc49225a4d73209f5db19c
 depth = 1
 directory = libntr
+diff_files = libntr_patch/native-field-coverage.patch
 
 [provide]
 dependency_names = NitroSDK
