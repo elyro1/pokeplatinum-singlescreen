@@ -22,6 +22,7 @@ int main(void)
     assert(config->enable60fps && config->battlePacing == BATTLE_PACING_SMOOTH);
     assert(config->textSpeed == PORT_SPEED_FAST && config->battleBarSpeed == PORT_SPEED_FAST);
     assert(config->nicknameMode == NICKNAME_MODE_ASK);
+    assert(config->fastWildBattleIntro == TRUE);
     const char *nicknameModes[] = { "Ask", "Always", "Never" };
     for (int mode = 0; mode < NICKNAME_MODE_COUNT; mode++) {
         char text[80];
@@ -37,7 +38,7 @@ int main(void)
     assert(config->nicknameMode == NICKNAME_MODE_ASK);
     Load("[General]\n");
     assert(config->nicknameMode == NICKNAME_MODE_ASK);
-    assert(config->fastWildBattleIntro == FALSE);
+    assert(config->fastWildBattleIntro == TRUE);
     Load("[General]\nFastWildBattleIntro=true\n");
     assert(config->fastWildBattleIntro == TRUE);
     SIM_Config_prj_SaveConfigFile(config);
@@ -45,6 +46,9 @@ int main(void)
     assert(SIM_Config_prj_LoadConfigFile(config) && config->fastWildBattleIntro == TRUE);
     Load("[General]\nFastWildBattleIntro=false\n");
     assert(config->fastWildBattleIntro == FALSE);
+    SIM_Config_prj_SaveConfigFile(config);
+    SIM_Config_prj_LoadDefaults(config);
+    assert(SIM_Config_prj_LoadConfigFile(config) && config->fastWildBattleIntro == FALSE);
     Load("[General]\nBattlePacing=Original\nBattleUiSpeedFix=true\n");
     assert(config->battlePacing == BATTLE_PACING_SMOOTH);
     Load("[General]\nBattleAnimationSpeedFix=false\nSmoothBattleAnimations=true\n");

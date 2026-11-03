@@ -146,6 +146,7 @@ void SIM_Config_prj_LoadDefaults(SIM_Config_prj_type * aConfig)
   aConfig->nicknameMode = NICKNAME_MODE_ASK;
   aConfig->textSpeed = PORT_SPEED_FAST;
   aConfig->battleBarSpeed = PORT_SPEED_FAST;
+  aConfig->fastWildBattleIntro = TRUE;
   aConfig->bw2BattleVisuals = FALSE;
   aConfig->overworldEncounters = TRUE;
   aConfig->pokemonFollower = TRUE;

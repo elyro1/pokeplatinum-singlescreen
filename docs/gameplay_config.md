@@ -90,7 +90,7 @@ Changes save automatically to `[General]` in `sim_config_prj.ini` as `NicknameMo
 
 ## Fast BW battle introductions
 
-Enable **Tab → Speed & text → Fast wild battle intro** for shorter wild encounters. This setting saves automatically to `sim_config_prj.ini` and applies to the next battle. Trainer battles use their full introductions. The former `fastTrainerBattleIntro` gameplay option has been removed; existing entries are ignored.
+**Tab → Speed & text → Fast wild battle intro** is enabled by default for shorter wild encounters. This setting saves automatically to `sim_config_prj.ini` and applies to the next battle when BW2 visuals and extracted assets are available. It has no effect on Platinum visuals. An explicitly saved `FastWildBattleIntro=false` remains disabled. Trainer battles use their full introductions. The former `fastTrainerBattleIntro` gameplay option has been removed; existing entries are ignored.
 
 Fast openings skip the encounter text and opening camera shots, show the player throwing their Poké Ball and releasing their Pokémon at twice the usual effect speed, and then proceed to battle. Opponent and health-box setup still runs. The option applies only when BW battle view is active. Link and recorded battles, the first battle, catching tutorial, Safari Zone, Pal Park, and Giratina's special entrance retain their existing presentation. Later switches and battle animations are unaffected. The exact speedup varies with text, encounter animations, and system performance.
 

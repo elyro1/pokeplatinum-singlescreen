@@ -63,7 +63,7 @@ and 30 FPS mode retain their existing behavior.
 
 ## BW2 intro shortening
 
-**Tab → Speed & text** offers a fast wild battle intro toggle. It saves
+**Tab → Speed & text** offers a fast wild battle intro toggle, enabled by default. It saves
 automatically and applies to the next battle when BW2 visuals are active; it
 has no effect on Platinum visuals or trainer battles. Trainer battles use their
 full introductions. Special-battle exceptions and the faster player send-out
@@ -88,7 +88,7 @@ The `[General]` section of `sim_config_prj.ini` stores:
 BattlePacing=Smooth
 TextSpeed=Fast
 BattleBarSpeed=Fast
-FastWildBattleIntro=false
+FastWildBattleIntro=true
 ```
 
 `BattlePacing=Original` migrates to Smooth. Old `BattleAnimationSpeedFix=false`
