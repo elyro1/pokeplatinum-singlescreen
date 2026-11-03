@@ -1038,6 +1038,8 @@ pokeplatinum_c += files(
     'port/gui_configPrj.cpp',
     'port/gui_createitem.cpp',
     'port/gui_createitem_utils.c',
+    'port/gui_progression.cpp',
+    'port/gui_progression_utils.c',
     'port/gui_createmon.cpp',
     'port/gui_createmon_utils.c',
     'port/gui_mapjump.cpp',

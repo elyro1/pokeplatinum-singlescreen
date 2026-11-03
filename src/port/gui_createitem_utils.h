@@ -8,7 +8,8 @@ extern "C" {
 // NOTE: You will need to free the pointer returned by this!
 const char * GUI_CreateItem_GetItemName(int itemId);
 
-void GUI_CreateItem_GenItems(int itemId, int quantity);
+int GUI_CreateItem_GetPocket(int itemId);
+int GUI_CreateItem_GenItems(int itemId, int quantity);
 
 #ifdef __cplusplus
 }

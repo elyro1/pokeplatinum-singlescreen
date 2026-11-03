@@ -5,7 +5,7 @@
 #include "port/debug_field.h"
 
 namespace SIM::GUI {
-enum class Tool { Cheats, Pokemon, Items, Map };
+enum class Tool { Cheats, Pokemon, Items, Map, Progression };
 static Tool sTool = Tool::Cheats;
 static bool sMonInitialized;
 static bool sItemsInitialized;
@@ -31,6 +31,7 @@ static void ToolsContents() {
         if (ImGui::Button("Create Pokemon", ImVec2(-1, 0))) sTool = Tool::Pokemon;
         if (ImGui::Button("Give items", ImVec2(-1, 0))) sTool = Tool::Items;
         if (ImGui::Button("Jump to map", ImVec2(-1, 0))) sTool = Tool::Map;
+        if (ImGui::Button("Progression", ImVec2(-1, 0))) sTool = Tool::Progression;
         ImGui::EndDisabled();
         return;
     }
@@ -52,6 +53,10 @@ static void ToolsContents() {
     case Tool::Map:
         ImGui::SeparatorText("Jump to map");
         MapJumpContents();
+        break;
+    case Tool::Progression:
+        ImGui::SeparatorText("Progression");
+        ProgressionContents();
         break;
     default: break;
     }

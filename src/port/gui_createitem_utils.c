@@ -24,7 +24,11 @@ const char * GUI_CreateItem_GetItemName(int itemId) {
     return itemNameBuf;
 }
 
-void GUI_CreateItem_GenItems(int itemId, int quantity) {
+int GUI_CreateItem_GetPocket(int itemId) {
+    return Item_LoadParam(itemId, ITEM_PARAM_FIELD_POCKET, HEAP_ID_SYSTEM);
+}
+
+int GUI_CreateItem_GenItems(int itemId, int quantity) {
     SaveData * mySaveData = SaveData_Ptr();
-    Bag_TryAddItem(SaveData_GetBag(mySaveData), itemId, quantity, HEAP_ID_SYSTEM);
+    return Bag_TryAddItem(SaveData_GetBag(mySaveData), itemId, quantity, HEAP_ID_SYSTEM);
 }

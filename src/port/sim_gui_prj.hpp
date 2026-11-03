@@ -12,5 +12,6 @@ void CreateItemContents();
 void CreateMonInit();
 void CreateMonContents();
 void MapJumpContents();
+void ProgressionContents();
 }
 #endif
