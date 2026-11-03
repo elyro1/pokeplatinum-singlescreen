@@ -101,6 +101,8 @@ PC settings save automatically to **sim_config.ini** and **sim_config_prj.ini**.
 The three slots use `save1.bin`, `save2.bin`, and `save3.bin` in the game folder. Save through the normal in-game Save action before quitting.
 
 The native game also creates a separate autosave every two minutes of real time.
+**Tab → Developer → Saving → Autosave** enables or disables this immediately and
+saves the choice as `[Developer] Autosave` in `sim_config_prj.ini` (default: `true`).
 During dialogue, menus, battles, transitions, communication or special activities,
 it waits until normal overworld control resumes at a tile boundary. Each autosave
 stores the current progress in the game folder's `autosave/` directory, for

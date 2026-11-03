@@ -23,6 +23,16 @@ int main(void)
     assert(config->textSpeed == PORT_SPEED_FAST && config->battleBarSpeed == PORT_SPEED_FAST);
     assert(config->nicknameMode == NICKNAME_MODE_ASK);
     assert(config->fastWildBattleIntro == TRUE);
+    assert(config->autosave == TRUE);
+    Load("[Developer]\nAutosave=false\n");
+    assert(config->autosave == FALSE);
+    SIM_Config_prj_SaveConfigFile(config);
+    SIM_Config_prj_LoadDefaults(config);
+    assert(SIM_Config_prj_LoadConfigFile(config) && config->autosave == FALSE);
+    Load("[Developer]\nAutosave=true\n");
+    assert(config->autosave == TRUE);
+    Load("[Developer]\nAutosave=invalid\n");
+    assert(config->autosave == TRUE);
     assert(config->overworldEncounterCount == OVERWORLD_ENCOUNTER_DEFAULT_COUNT);
     const int encounterCounts[] = { 0, 12, OVERWORLD_ENCOUNTER_CAPACITY };
     for (unsigned i = 0; i < NELEMS(encounterCounts); i++) {

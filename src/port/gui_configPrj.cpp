@@ -180,6 +180,13 @@ void DeveloperContentsPrj()
 {
     auto *myConfig = SIM_Config_prj_GetConfig();
     bool configChanged = false;
+    ImGui::SeparatorText("Saving");
+    if (BeginSettings("AutosaveSettings")) {
+        ConfigCheckBox("Autosave", &myConfig->autosave, configChanged);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Archive progress every two minutes when overworld control is safe. Keeps the newest ten autosaves per slot.");
+        ImGui::EndTable();
+    }
     ImGui::SeparatorText("Frame rate");
     if (BeginSettings("FrameRateSettings")) {
         SettingsRow("Frame rate");

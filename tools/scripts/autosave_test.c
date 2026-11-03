@@ -43,6 +43,8 @@ const char *CARD_PortSavePath = "save2.bin";
 static BOOL fadeFinished = TRUE, forcedMovement, communication;
 static BOOL safari, palPark, failSave;
 static int moveState, saveCalls;
+static SIM_Config_prj_type sConfig = { .autosave = TRUE };
+SIM_Config_prj_type *SIM_Config_prj_GetConfig(void) { return &sConfig; }
 
 BOOL IsScreenFadeDone(void) { return fadeFinished; }
 BOOL CommManager_IsInitializedNotPoketch(void) { return communication; }
@@ -134,6 +136,15 @@ int main(void)
     };
     WriteFile("save2.bin", "old save");
     WriteFile("save.bin", "legacy save");
+    // An overdue disabled autosave must not write; enabling restores normal scheduling.
+    PC_AutosaveReset();
+    sConfig.autosave = FALSE;
+    seconds = 240;
+    PC_AutosaveUpdate(&field);
+    assert(saveCalls == 0 && access("autosave", F_OK) != 0);
+    ExpectFile("save2.bin", "old save");
+    sConfig.autosave = TRUE;
+    seconds = 0;
     PC_AutosaveReset();
     seconds = 119;
     PC_AutosaveUpdate(&field);

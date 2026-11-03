@@ -1,4 +1,5 @@
 #include "port/autosave.h"
+#include "port/sim_config_prj.h"
 
 #include "constants/field/map_load.h"
 #include "constants/player_avatar.h"
@@ -286,6 +287,7 @@ cleanup:
 
 void PC_AutosaveUpdate(FieldSystem *fieldSystem)
 {
+    if (!SIM_Config_prj_GetConfig()->autosave) return;
     struct timespec now;
     if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) return;
     double elapsed = (double)(now.tv_sec - sLastAttempt.tv_sec)
