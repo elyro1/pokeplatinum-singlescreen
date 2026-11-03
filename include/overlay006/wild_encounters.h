@@ -2,6 +2,7 @@
 #define POKEPLATINUM_WILD_ENCOUNTERS_H
 
 #include "constants/wild_encounters.h"
+#include "generated/map_headers.h"
 
 #include "field/field_system_decl.h"
 
@@ -55,7 +56,9 @@ typedef struct WildEncounters {
 void WildEncounters_ReplaceTimedEncounters(const WildEncounters *encounterData, int *param1, int *param2);
 BOOL WildEncounters_TryWildEncounter(FieldSystem *fieldSystem);
 BOOL WildEncounters_TryRadarEncounter(FieldSystem *fieldSystem);
-BOOL WildEncounters_GenerateVisiblePokemon(FieldSystem *fieldSystem, int x, int z, OverworldEncounterPokemon *encounter);
+// Generates a visible Pokemon for tile x,z of zone mapID from that zone's table,
+// which may be a connected neighbor of the player's zone.
+BOOL WildEncounters_GenerateVisiblePokemon(FieldSystem *fieldSystem, int x, int z, enum MapHeaderID mapID, WildEncounters *encounterData, OverworldEncounterPokemon *encounter);
 void WildEncounters_StartVisibleBattle(FieldSystem *fieldSystem, const OverworldEncounterPokemon *encounter);
 BOOL WildEncounters_TryFishingEncounter(FieldSystem *fieldSystem, enum EncounterFishingRodType fishingRodType, FieldBattleDTO **param2);
 BOOL WildEncounters_TrySweetScentEncounter(FieldSystem *fieldSystem, FieldTask *param1);

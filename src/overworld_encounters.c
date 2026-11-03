@@ -14,6 +14,7 @@
 #include "heap.h"
 #include "inlines.h"
 #include "map_header.h"
+#include "map_header_data.h"
 #include "map_object.h"
 #include "map_object_move.h"
 #include "map_tile_behavior.h"
@@ -40,6 +41,9 @@
 // the perspective camera. Sprites leave only beyond the view plus a margin.
 #define VIEW_HALF_HEIGHT 7
 #define CULL_MARGIN      2
+// Encounter tables of connected zones, so their visible grass is populated
+// before the player enters. The player's own zone uses the map header data.
+#define ZONE_TABLE_CACHE_SIZE 4
 
 typedef struct WildSprite {
     OverworldPokemonHandle handle;
@@ -54,11 +58,18 @@ typedef struct WildSprite {
     BOOL stepping;
 } WildSprite;
 
+typedef struct ZoneTable {
+    int mapID;
+    WildEncounters encounters;
+} ZoneTable;
+
 typedef struct OverworldEncounterManager {
     WildSprite sprites[OVERWORLD_ENCOUNTER_CAPACITY];
     int mapID;
     int spawnTicks;
     u32 context;
+    ZoneTable tables[ZONE_TABLE_CACHE_SIZE];
+    int nextTable;
 } OverworldEncounterManager;
 
 static int FrameTicks(int ticks)
@@ -86,8 +97,8 @@ static int ViewHalfWidth(void)
     return 256 / 32 + 1;
 }
 
-// Whether visible encounters may exist at all. Spawning additionally needs the
-// current zone to have wild encounters (see CanSpawn).
+// Whether visible encounters may exist and spawn. Each spawn additionally needs
+// its tile's zone to have wild encounters (see ZoneEncounters).
 static BOOL Active(FieldSystem *field)
 {
 #ifdef SDK_PORT
@@ -107,15 +118,10 @@ static BOOL Active(FieldSystem *field)
     return state == PLAYER_AVATAR_WALKING || state == PLAYER_AVATAR_CYCLING || state == PLAYER_AVATAR_SURFING;
 }
 
-static BOOL CanSpawn(FieldSystem *field)
-{
-    return Active(field) && MapHeader_HasWildEncounters(field->location->mapHeaderID);
-}
-
 BOOL OverworldEncounters_ReplaceRandom(FieldSystem *field)
 {
 #ifdef SDK_PORT
-    return CanSpawn(field);
+    return Active(field) && MapHeader_HasWildEncounters(field->location->mapHeaderID);
 #else
     return FALSE;
 #endif
@@ -184,6 +190,42 @@ static BOOL LoadedTile(FieldSystem *field, int x, int z, u16 mapID)
     return TRUE;
 }
 
+// The zone a tile belongs to. Off the main matrix zones are not connected, so
+// every tile counts as the player's zone.
+static u16 TileZone(FieldSystem *field, int x, int z)
+{
+    int localX = x - LandDataManager_GetOffsetTileX(field->landDataMan);
+    int localZ = z - LandDataManager_GetOffsetTileZ(field->landDataMan);
+    if (!MapHeader_IsOnMainMatrix(field->location->mapHeaderID) || localX < 0 || localZ < 0
+        || localX >= MapMatrix_GetWidth(field->mapMatrix) * MAP_TILES_COUNT_X
+        || localZ >= MapMatrix_GetHeight(field->mapMatrix) * MAP_TILES_COUNT_Z) {
+        return field->location->mapHeaderID;
+    }
+    return MapMatrix_GetMapHeaderIDAtCoords(field->mapMatrix, localX / MAP_TILES_COUNT_X, localZ / MAP_TILES_COUNT_Z);
+}
+
+// The encounter table of a zone, or NULL when it has no wild encounters (such
+// as a town). Neighbor tables are read once and kept in a small cache.
+static WildEncounters *ZoneEncounters(FieldSystem *field, OverworldEncounterManager *manager, u16 mapID)
+{
+    if (mapID == MAP_HEADER_EVERYWHERE || mapID >= MAP_HEADER_COUNT || !MapHeader_HasWildEncounters(mapID)) {
+        return NULL;
+    }
+    if (mapID == field->location->mapHeaderID) {
+        return (WildEncounters *)MapHeaderData_GetWildEncounters(field);
+    }
+    for (int i = 0; i < ZONE_TABLE_CACHE_SIZE; i++) {
+        if (manager->tables[i].mapID == mapID) {
+            return &manager->tables[i].encounters;
+        }
+    }
+    ZoneTable *table = &manager->tables[manager->nextTable];
+    manager->nextTable = (manager->nextTable + 1) % ZONE_TABLE_CACHE_SIZE;
+    MapHeaderData_LoadWildEncounters(&table->encounters, mapID);
+    table->mapID = mapID;
+    return &table->encounters;
+}
+
 static BOOL HabitatTile(FieldSystem *field, int x, int z, BOOL water, u16 mapID)
 {
     if (!LoadedTile(field, x, z, mapID)) {
@@ -250,7 +292,11 @@ static BOOL Spawn(FieldSystem *field, WildSprite *sprite, int slot)
             continue;
         }
         int x = MapObject_GetX(player) + dx, z = MapObject_GetZ(player) + dz;
-        if (!HabitatTile(field, x, z, water, field->location->mapHeaderID)
+        // Tiles across a zone border spawn from that zone's table, so grass
+        // in sight is populated whichever zone the player stands in.
+        u16 zone = TileZone(field, x, z);
+        WildEncounters *table = ZoneEncounters(field, field->overworldEncounters, zone);
+        if (table == NULL || !HabitatTile(field, x, z, water, zone)
             || TerrainCollisionManager_WillMapObjectCollide(field, MapObject_GetPos(player), x, z, NULL)
             || sub_02063F00(player, x, MapObject_GetY(player), z)) {
             continue;
@@ -270,7 +316,7 @@ static BOOL Spawn(FieldSystem *field, WildSprite *sprite, int slot)
         if (occupied) {
             continue;
         }
-        if (!WildEncounters_GenerateVisiblePokemon(field, x, z, &sprite->encounter)) {
+        if (!WildEncounters_GenerateVisiblePokemon(field, x, z, zone, table, &sprite->encounter)) {
             return FALSE;
         }
         // A roamer is a single persistent Pokemon, never multiple copies of it.
@@ -290,7 +336,7 @@ static BOOL Spawn(FieldSystem *field, WildSprite *sprite, int slot)
                 .gender = Pokemon_GetGender(mon),
                 .shiny = Pokemon_IsShiny(mon),
             },
-            .ownerMap = field->location->mapHeaderID,
+            .ownerMap = zone,
             .ownerID = slot,
             .x = x,
             .y = MapObject_GetY(player),
@@ -307,7 +353,7 @@ static BOOL Spawn(FieldSystem *field, WildSprite *sprite, int slot)
         }
         sprite->anchorX = x;
         sprite->anchorZ = z;
-        sprite->ownerMap = field->location->mapHeaderID;
+        sprite->ownerMap = zone;
         sprite->habitat = TerrainCollisionManager_GetTileBehavior(field, x, z);
         sprite->wanderTicks = FrameTicks(30 + LCRNG_RandMod(60));
         return TRUE;
@@ -322,8 +368,8 @@ static BOOL Offscreen(FieldSystem *field, MapObject *object, int margin)
     return dx > ViewHalfWidth() + margin || dz > VIEW_HALF_HEIGHT + margin;
 }
 
-// At the spawn limit, the current zone gets room by retiring the farthest
-// offscreen sprite left behind in another zone.
+// At the spawn limit, new spawns get room by retiring the farthest offscreen
+// sprite of another zone (left behind, or populating a neighbor's grass).
 static int FindForeignSprite(FieldSystem *field, OverworldEncounterManager *manager)
 {
     int best = -1, bestDistance = -1;
@@ -364,6 +410,9 @@ void OverworldEncounters_Update(FieldSystem *field)
         memset(manager, 0, sizeof(*manager));
         field->overworldEncounters = manager;
         manager->mapID = -1;
+        for (int i = 0; i < ZONE_TABLE_CACHE_SIZE; i++) {
+            manager->tables[i].mapID = -1;
+        }
         manager->context = Context(field);
     }
     if (manager->context != Context(field)) {
@@ -413,15 +462,12 @@ void OverworldEncounters_Update(FieldSystem *field)
             Wander(field, sprite, object);
         }
     }
-    if (!CanSpawn(field)) {
-        return;
-    }
     int spawnLimit = OVERWORLD_ENCOUNTER_DEFAULT_COUNT;
 #ifdef SDK_PORT
     spawnLimit = SIM_Config_prj_GetConfig()->overworldEncounterCount;
 #endif
-    // At the limit, the current zone takes over a sprite left behind in another
-    // zone. Above it (the limit was lowered) or at 0, nothing new appears.
+    // At the limit, a new spawn takes over an offscreen sprite of another zone.
+    // Above it (the limit was lowered) or at 0, nothing new appears.
     int retire = -1;
     if (count >= spawnLimit) {
         retire = spawnLimit > 0 && count == spawnLimit ? FindForeignSprite(field, manager) : -1;

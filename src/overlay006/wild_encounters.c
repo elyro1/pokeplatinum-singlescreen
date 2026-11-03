@@ -91,6 +91,7 @@ typedef struct UnownFormsGroup {
 
 static BOOL ShouldGetRandomEncounter(FieldSystem *fieldSystem, const u32 encounterRate, const u8 tileBehavior);
 static u8 GetTileEncounterRateAndType(FieldSystem *fieldSystem, u8 tileBehavior, u8 *encounterType);
+static u8 GetZoneTileEncounterRateAndType(const WildEncounters *encounterData, u8 tileBehavior, u8 *encounterType);
 static BOOL GracePeriodStepsUsed(FieldSystem *fieldSystem, u32 param1);
 static BOOL CheckEncounterRateSuccess(FieldSystem *fieldSystem, u32 encounterRate);
 static BOOL TryGetSlotForTypeMatchAbility(Pokemon *unused, const WildEncounters_FieldParams *encParams, const EncounterSlot *encTable, const u8 maxEncounters, const u8 type, const u8 ability, u8 *encSlot);
@@ -107,7 +108,7 @@ static BOOL CreateWildMon_FromRadarNoChain(FieldSystem *fieldSystem, Pokemon *pa
 static BOOL CreateWildMon_FromRadarKeepChain(const int species, const int level, const int partyDest, const BOOL isShiny, const u32 trainerId, const WildEncounters_FieldParams *fieldParams, Pokemon *mon, FieldBattleDTO *battleParams);
 static u8 ModifyEncounterRateWithFieldParams(const BOOL isFishingEncounter, const u8 encounterRate, const WildEncounters_FieldParams *fieldParams, const u32 weatherEffect, Pokemon *unused);
 static void CreateWildSingleBattle(FieldSystem *fieldSystem, const BOOL param1, FieldBattleDTO **param2);
-static void WildEncounters_ReplaceGreatMarshDailyEncounters(FieldSystem *fieldSystem, const BOOL safariGameActive, const BOOL param2, EncounterSlot *encTable);
+static void WildEncounters_ReplaceGreatMarshDailyEncounters(FieldSystem *fieldSystem, enum MapHeaderID mapID, const BOOL safariGameActive, const BOOL param2, EncounterSlot *encTable);
 static BOOL RepelPreventsEncounter(const u8 param0, const WildEncounters_FieldParams *param1);
 static void AddRoamerToEnemyParty(const u32 param0, Roamer *param1, FieldBattleDTO *param2);
 static BOOL TryEncounterRoamer(FieldSystem *fieldSystem, Roamer **param1);
@@ -196,23 +197,23 @@ void WildEncounters_ReplaceTimedEncounters(const WildEncounters *encounterData, 
     }
 }
 
-static void WildEncounters_ReplaceSwarmEncounters(FieldSystem *fieldSystem, const WildEncounters *encounterData, int *radarSlot1, int *radarSlot2)
+static void WildEncounters_ReplaceSwarmEncounters(FieldSystem *fieldSystem, enum MapHeaderID mapID, const WildEncounters *encounterData, int *radarSlot1, int *radarSlot2)
 {
     SpecialEncounter *specialEncounter = SaveData_GetSpecialEncounters(fieldSystem->saveData);
 
     if (SpecialEncounter_IsSwarmEnabled(specialEncounter)) {
         u32 swarmId = SpecialEncounter_GetDailyMon(specialEncounter, DAILY_SWARM);
 
-        if (fieldSystem->location->mapHeaderID == Swarm_GetMapId(swarmId)) {
+        if (mapID == Swarm_GetMapId(swarmId)) {
             *radarSlot1 = encounterData->swarmEncounters[0];
             *radarSlot2 = encounterData->swarmEncounters[1];
         }
     }
 }
 
-static void WildEncounters_ReplaceTrophyGardenEncounters(FieldSystem *fieldSystem, const BOOL nationalDexObtained, int *trophySlot1, int *trophySlot2)
+static void WildEncounters_ReplaceTrophyGardenEncounters(FieldSystem *fieldSystem, enum MapHeaderID mapID, const BOOL nationalDexObtained, int *trophySlot1, int *trophySlot2)
 {
-    if (MapHeader_IsTrophyGarden(fieldSystem->location->mapHeaderID)) {
+    if (MapHeader_IsTrophyGarden(mapID)) {
         u16 index1, index2;
         SpecialEncounter_GetTrophyGardenMons(fieldSystem->saveData, &index1, &index2);
 
@@ -234,7 +235,9 @@ static void WildEncounters_ReplaceTrophyGardenEncounters(FieldSystem *fieldSyste
 
 // Visible spawns use the same slot, level, ability, form and personality rules
 // as stepping encounters, but do not roll a battle or mutate a Radar chain.
-static FieldBattleDTO *GenerateWalkingEncounter(FieldSystem *fieldSystem, int playerX, int playerZ, BOOL visible, BOOL radarOnly)
+// mapID and encounterData name the zone the tile belongs to, which for visible
+// spawns can be a connected neighbor of the player's zone.
+static FieldBattleDTO *GenerateWalkingEncounter(FieldSystem *fieldSystem, int playerX, int playerZ, enum MapHeaderID mapID, WildEncounters *encounterData, BOOL visible, BOOL radarOnly)
 {
     FieldBattleDTO *battleParams;
     Pokemon *firstPartyMon;
@@ -250,14 +253,13 @@ static FieldBattleDTO *GenerateWalkingEncounter(FieldSystem *fieldSystem, int pl
 
     tileBehavior = TerrainCollisionManager_GetTileBehavior(fieldSystem, playerX, playerZ);
 
-    u8 encounterRate = GetTileEncounterRateAndType(fieldSystem, tileBehavior, &encounterType);
+    u8 encounterRate = GetZoneTileEncounterRateAndType(encounterData, tileBehavior, &encounterType);
 
     if (encounterRate == 0) {
         return NULL;
     }
 
     Party *party = SaveData_GetParty(fieldSystem->saveData);
-    WildEncounters *encounterData = MapHeaderData_GetWildEncounters(fieldSystem);
     firstPartyMon = Party_GetPokemonBySlotIndex(party, 0);
 
     InitEncounterFieldParams(fieldSystem, firstPartyMon, encounterData, &encounterFieldParams);
@@ -300,8 +302,9 @@ static FieldBattleDTO *GenerateWalkingEncounter(FieldSystem *fieldSystem, int pl
         withPartner = FALSE;
     }
 
-    // Roamers can't appear in Poke Radar patches or double battles.
-    if (!withPartner && !radarData.isRadarEncounter) {
+    // Roamers can't appear in Poke Radar patches or double battles. A roamer's
+    // route is only tracked for the player's zone; it moves when they leave.
+    if (!withPartner && !radarData.isRadarEncounter && mapID == fieldSystem->location->mapHeaderID) {
         Roamer *roamer;
 
         if (TryEncounterRoamer(fieldSystem, &roamer)) {
@@ -336,12 +339,12 @@ static FieldBattleDTO *GenerateWalkingEncounter(FieldSystem *fieldSystem, int pl
         BOOL nationalDexObtained = Pokedex_IsNationalDexObtained(SaveData_GetPokedex(FieldSystem_GetSaveData(fieldSystem)));
 
         WildEncounters_ReplaceTimedEncounters(encounterData, &encounterTable[2].species, &encounterTable[3].species);
-        WildEncounters_ReplaceSwarmEncounters(fieldSystem, encounterData, &encounterTable[0].species, &encounterTable[1].species);
-        WildEncounters_ReplaceTrophyGardenEncounters(fieldSystem, nationalDexObtained, &encounterTable[6].species, &encounterTable[7].species);
+        WildEncounters_ReplaceSwarmEncounters(fieldSystem, mapID, encounterData, &encounterTable[0].species, &encounterTable[1].species);
+        WildEncounters_ReplaceTrophyGardenEncounters(fieldSystem, mapID, nationalDexObtained, &encounterTable[6].species, &encounterTable[7].species);
         WildEncounters_ReplaceDualSlotEncounters(encounterData, nationalDexObtained, &encounterTable[8].species, &encounterTable[9].species);
 
         if (!withPartner) {
-            WildEncounters_ReplaceGreatMarshDailyEncounters(fieldSystem, safariGameActive, nationalDexObtained, encounterTable);
+            WildEncounters_ReplaceGreatMarshDailyEncounters(fieldSystem, mapID, safariGameActive, nationalDexObtained, encounterTable);
 
             encounterSuccess = visible
                 ? TryGenerateWildMon(firstPartyMon, 0xff, &encounterFieldParams, encounterTable, ENCOUNTER_TYPE_GRASS, BATTLER_ENEMY_1, battleParams)
@@ -382,7 +385,7 @@ static FieldBattleDTO *GenerateWalkingEncounter(FieldSystem *fieldSystem, int pl
 
 BOOL WildEncounters_TryWildEncounter(FieldSystem *fieldSystem)
 {
-    FieldBattleDTO *dto = GenerateWalkingEncounter(fieldSystem, PlayerAvatar_GetXPos(fieldSystem->playerAvatar), PlayerAvatar_GetZPos(fieldSystem->playerAvatar), FALSE, FALSE);
+    FieldBattleDTO *dto = GenerateWalkingEncounter(fieldSystem, PlayerAvatar_GetXPos(fieldSystem->playerAvatar), PlayerAvatar_GetZPos(fieldSystem->playerAvatar), fieldSystem->location->mapHeaderID, MapHeaderData_GetWildEncounters(fieldSystem), FALSE, FALSE);
     if (dto == NULL) {
         return FALSE;
     }
@@ -396,7 +399,7 @@ BOOL WildEncounters_TryWildEncounter(FieldSystem *fieldSystem)
 
 BOOL WildEncounters_TryRadarEncounter(FieldSystem *fieldSystem)
 {
-    FieldBattleDTO *dto = GenerateWalkingEncounter(fieldSystem, PlayerAvatar_GetXPos(fieldSystem->playerAvatar), PlayerAvatar_GetZPos(fieldSystem->playerAvatar), FALSE, TRUE);
+    FieldBattleDTO *dto = GenerateWalkingEncounter(fieldSystem, PlayerAvatar_GetXPos(fieldSystem->playerAvatar), PlayerAvatar_GetZPos(fieldSystem->playerAvatar), fieldSystem->location->mapHeaderID, MapHeaderData_GetWildEncounters(fieldSystem), FALSE, TRUE);
     if (dto == NULL) {
         return FALSE;
     }
@@ -405,12 +408,12 @@ BOOL WildEncounters_TryRadarEncounter(FieldSystem *fieldSystem)
     return TRUE;
 }
 
-BOOL WildEncounters_GenerateVisiblePokemon(FieldSystem *fieldSystem, int x, int z, OverworldEncounterPokemon *encounter)
+BOOL WildEncounters_GenerateVisiblePokemon(FieldSystem *fieldSystem, int x, int z, enum MapHeaderID mapID, WildEncounters *encounterData, OverworldEncounterPokemon *encounter)
 {
     if (Party_GetCurrentCount(SaveData_GetParty(fieldSystem->saveData)) == 0) {
         return FALSE;
     }
-    FieldBattleDTO *dto = GenerateWalkingEncounter(fieldSystem, x, z, TRUE, FALSE);
+    FieldBattleDTO *dto = GenerateWalkingEncounter(fieldSystem, x, z, mapID, encounterData, TRUE, FALSE);
     if (dto == NULL) {
         return FALSE;
     }
@@ -539,6 +542,7 @@ BOOL WildEncounters_TrySweetScentEncounter(FieldSystem *fieldSystem, FieldTask *
     Party *party = SaveData_GetParty(fieldSystem->saveData);
     WildEncounters *encounterData = MapHeaderData_GetWildEncounters(fieldSystem);
     firstPartyMon = Party_GetPokemonBySlotIndex(party, 0);
+    enum MapHeaderID mapID = fieldSystem->location->mapHeaderID;
 
     InitEncounterFieldParams(fieldSystem, firstPartyMon, encounterData, &encounterFieldParams);
 
@@ -586,12 +590,12 @@ BOOL WildEncounters_TrySweetScentEncounter(FieldSystem *fieldSystem, FieldTask *
         BOOL nationalDexObtained = Pokedex_IsNationalDexObtained(SaveData_GetPokedex(FieldSystem_GetSaveData(fieldSystem)));
 
         WildEncounters_ReplaceTimedEncounters(encounterData, &encounterTable[2].species, &encounterTable[3].species);
-        WildEncounters_ReplaceSwarmEncounters(fieldSystem, encounterData, &encounterTable[0].species, &encounterTable[1].species);
-        WildEncounters_ReplaceTrophyGardenEncounters(fieldSystem, nationalDexObtained, &encounterTable[6].species, &encounterTable[7].species);
+        WildEncounters_ReplaceSwarmEncounters(fieldSystem, mapID, encounterData, &encounterTable[0].species, &encounterTable[1].species);
+        WildEncounters_ReplaceTrophyGardenEncounters(fieldSystem, mapID, nationalDexObtained, &encounterTable[6].species, &encounterTable[7].species);
         WildEncounters_ReplaceDualSlotEncounters(encounterData, nationalDexObtained, &encounterTable[8].species, &encounterTable[9].species);
 
         if (!withPartner) {
-            WildEncounters_ReplaceGreatMarshDailyEncounters(fieldSystem, safariGameActive, nationalDexObtained, encounterTable);
+            WildEncounters_ReplaceGreatMarshDailyEncounters(fieldSystem, mapID, safariGameActive, nationalDexObtained, encounterTable);
 
             encounterSuccess = TryGenerateGrassEncounter_WithRadar(fieldSystem, firstPartyMon, battleParams, encounterData, encounterTable, &encounterFieldParams, &radarData);
         } else {
@@ -650,6 +654,7 @@ BOOL WildEncounters_TryMudEncounter(FieldSystem *fieldSystem, FieldBattleDTO **b
     Party *party = SaveData_GetParty(fieldSystem->saveData);
     WildEncounters *encounterData = MapHeaderData_GetWildEncounters(fieldSystem);
     firstPartyMon = Party_GetPokemonBySlotIndex(party, 0);
+    enum MapHeaderID mapID = fieldSystem->location->mapHeaderID;
 
     InitEncounterFieldParams(fieldSystem, firstPartyMon, encounterData, &encounterFieldParams);
 
@@ -716,12 +721,12 @@ BOOL WildEncounters_TryMudEncounter(FieldSystem *fieldSystem, FieldBattleDTO **b
         BOOL nationalDexObtained = Pokedex_IsNationalDexObtained(SaveData_GetPokedex(FieldSystem_GetSaveData(fieldSystem)));
 
         WildEncounters_ReplaceTimedEncounters(encounterData, &encounterTable[2].species, &encounterTable[3].species);
-        WildEncounters_ReplaceSwarmEncounters(fieldSystem, encounterData, &encounterTable[0].species, &encounterTable[1].species);
-        WildEncounters_ReplaceTrophyGardenEncounters(fieldSystem, nationalDexObtained, &encounterTable[6].species, &encounterTable[7].species);
+        WildEncounters_ReplaceSwarmEncounters(fieldSystem, mapID, encounterData, &encounterTable[0].species, &encounterTable[1].species);
+        WildEncounters_ReplaceTrophyGardenEncounters(fieldSystem, mapID, nationalDexObtained, &encounterTable[6].species, &encounterTable[7].species);
         WildEncounters_ReplaceDualSlotEncounters(encounterData, nationalDexObtained, &encounterTable[8].species, &encounterTable[9].species);
 
         if (!withPartner) {
-            WildEncounters_ReplaceGreatMarshDailyEncounters(fieldSystem, safariGameActive, nationalDexObtained, encounterTable);
+            WildEncounters_ReplaceGreatMarshDailyEncounters(fieldSystem, mapID, safariGameActive, nationalDexObtained, encounterTable);
 
             encounterSuccess = TryGenerateGrassEncounter_WithRadar(fieldSystem, firstPartyMon, *battleParams, encounterData, encounterTable, &encounterFieldParams, &radarData);
         } else {
@@ -854,13 +859,18 @@ static BOOL ShouldGetRandomEncounter(FieldSystem *fieldSystem, const u32 encount
 // Returns encounter rate. Assigns encounter type to third parameter.
 static u8 GetTileEncounterRateAndType(FieldSystem *fieldSystem, u8 tileBehavior, u8 *encounterType)
 {
+    return GetZoneTileEncounterRateAndType(MapHeaderData_GetWildEncounters(fieldSystem), tileBehavior, encounterType);
+}
+
+static u8 GetZoneTileEncounterRateAndType(const WildEncounters *encounterData, u8 tileBehavior, u8 *encounterType)
+{
     if (TileBehavior_HasEncounters(tileBehavior)) {
         if (TileBehavior_IsSurfable(tileBehavior)) {
             *encounterType = ENCOUNTER_TYPE_SURF;
-            return GetSurfEncounterRate(fieldSystem);
+            return encounterData->surfEncounters.encounterRate;
         } else {
             *encounterType = ENCOUNTER_TYPE_GRASS;
-            return GetGrassEncounterRate(fieldSystem);
+            return encounterData->grassEncounters.encounterRate;
         }
     }
 
@@ -1460,10 +1470,10 @@ static void CreateWildSingleBattle(FieldSystem *fieldSystem, const BOOL safariGa
     }
 }
 
-static void WildEncounters_ReplaceGreatMarshDailyEncounters(FieldSystem *fieldSystem, const BOOL safariGameActive, const BOOL nationalDexObtained, EncounterSlot *encTable)
+static void WildEncounters_ReplaceGreatMarshDailyEncounters(FieldSystem *fieldSystem, enum MapHeaderID mapID, const BOOL safariGameActive, const BOOL nationalDexObtained, EncounterSlot *encTable)
 {
     if (safariGameActive) {
-        ReplaceGreatMarshDailyEncounters(SpecialEncounter_GetDailyMon(SaveData_GetSpecialEncounters(fieldSystem->saveData), DAILY_MARSH), nationalDexObtained, fieldSystem->location->mapHeaderID, &encTable[6].species, &encTable[7].species);
+        ReplaceGreatMarshDailyEncounters(SpecialEncounter_GetDailyMon(SaveData_GetSpecialEncounters(fieldSystem->saveData), DAILY_MARSH), nationalDexObtained, mapID, &encTable[6].species, &encTable[7].species);
     }
 }
 
