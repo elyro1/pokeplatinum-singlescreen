@@ -32,6 +32,14 @@
 #include "port/sim_config_prj.h"
 #include "port/follower_assets.h"
 #endif
+#ifndef SDK_BUILD_ARM
+#include <simulator/sim.h>
+#endif
+
+// Half extents of the visible field in tiles from the player, with slack for
+// the perspective camera. Sprites leave only beyond the view plus a margin.
+#define VIEW_HALF_HEIGHT 7
+#define CULL_MARGIN      2
 
 typedef struct WildSprite {
     OverworldPokemonHandle handle;
@@ -39,6 +47,9 @@ typedef struct WildSprite {
     int anchorX, anchorZ;
     int wanderTicks;
     int age;
+    // The zone whose encounter table generated this sprite. It keeps wandering
+    // within that zone after the player crosses into a connected one.
+    u16 ownerMap;
     u8 habitat;
     BOOL stepping;
 } WildSprite;
@@ -64,7 +75,20 @@ static int Abs(int value)
     return value < 0 ? -value : value;
 }
 
-static BOOL Enabled(FieldSystem *field)
+static int ViewHalfWidth(void)
+{
+#ifndef SDK_BUILD_ARM
+    // The port widens the field (up to 448 dots) only in the top-only layout.
+    if (SIM_GetConfigPtr()->screenLayout == SIM_CONFIG_SCREEN_LAYOUT_TOP_ONLY) {
+        return 448 / 32 + 1;
+    }
+#endif
+    return 256 / 32 + 1;
+}
+
+// Whether visible encounters may exist at all. Spawning additionally needs the
+// current zone to have wild encounters (see CanSpawn).
+static BOOL Active(FieldSystem *field)
 {
 #ifdef SDK_PORT
     if (!SIM_Config_prj_GetConfig()->overworldEncounters || !FollowerAssets_Ready()
@@ -75,7 +99,6 @@ static BOOL Enabled(FieldSystem *field)
     if (field->overworldPokemon == NULL || field->playerAvatar == NULL || field->mapObjMan == NULL
         || !MapObjectMan_IsDrawInitialized(field->mapObjMan)
         || field->mapLoadType != MAP_LOAD_TYPE_OVERWORLD
-        || !MapHeader_HasWildEncounters(field->location->mapHeaderID)
         || PlayerAvatar_MapDistortionState(field->playerAvatar) != AVATAR_DISTORTION_STATE_NONE
         || SystemFlag_CheckInPalPark(SaveData_GetVarsFlags(field->saveData))) {
         return FALSE;
@@ -84,10 +107,15 @@ static BOOL Enabled(FieldSystem *field)
     return state == PLAYER_AVATAR_WALKING || state == PLAYER_AVATAR_CYCLING || state == PLAYER_AVATAR_SURFING;
 }
 
+static BOOL CanSpawn(FieldSystem *field)
+{
+    return Active(field) && MapHeader_HasWildEncounters(field->location->mapHeaderID);
+}
+
 BOOL OverworldEncounters_ReplaceRandom(FieldSystem *field)
 {
 #ifdef SDK_PORT
-    return Enabled(field);
+    return CanSpawn(field);
 #else
     return FALSE;
 #endif
@@ -127,15 +155,17 @@ void OverworldEncounters_Free(FieldSystem *field)
     }
 }
 
+// Battle types baked into stored encounters. Surfing is not part of it: each
+// sprite keeps its own land/water habitat when the player gets on or off water.
 static u32 Context(FieldSystem *field)
 {
     return (SystemFlag_CheckHasPartner(SaveData_GetVarsFlags(field->saveData)) ? 1 : 0)
-        | (SystemFlag_CheckSafariGameActive(SaveData_GetVarsFlags(field->saveData)) ? 2 : 0)
-        | (PlayerAvatar_GetPlayerState(field->playerAvatar) == PLAYER_AVATAR_SURFING ? 4 : 0);
+        | (SystemFlag_CheckSafariGameActive(SaveData_GetVarsFlags(field->saveData)) ? 2 : 0);
 }
 
-// Never sample an unloaded neighboring zone using this map's encounter table.
-static BOOL LoadedTile(FieldSystem *field, int x, int z)
+// Never sample an unloaded neighboring zone using another zone's encounter
+// table, and keep sprites within the zone that generated them.
+static BOOL LoadedTile(FieldSystem *field, int x, int z, u16 mapID)
 {
     int localX = x - LandDataManager_GetOffsetTileX(field->landDataMan);
     int localZ = z - LandDataManager_GetOffsetTileZ(field->landDataMan);
@@ -146,17 +176,17 @@ static BOOL LoadedTile(FieldSystem *field, int x, int z)
         || !LandDataManager_GetRelativeLoadedMapsQuadrantOfTile(field->landDataMan, x, z, NULL)) {
         return FALSE;
     }
-    if (MapHeader_IsOnMainMatrix(field->location->mapHeaderID)) {
-        if (MapMatrix_GetMapHeaderIDAtCoords(field->mapMatrix, localX / MAP_TILES_COUNT_X, localZ / MAP_TILES_COUNT_Z) != field->location->mapHeaderID) {
+    if (MapHeader_IsOnMainMatrix(mapID)) {
+        if (MapMatrix_GetMapHeaderIDAtCoords(field->mapMatrix, localX / MAP_TILES_COUNT_X, localZ / MAP_TILES_COUNT_Z) != mapID) {
             return FALSE;
         }
     }
     return TRUE;
 }
 
-static BOOL HabitatTile(FieldSystem *field, int x, int z, BOOL water)
+static BOOL HabitatTile(FieldSystem *field, int x, int z, BOOL water, u16 mapID)
 {
-    if (!LoadedTile(field, x, z)) {
+    if (!LoadedTile(field, x, z, mapID)) {
         return FALSE;
     }
     u8 tile = TerrainCollisionManager_GetTileBehavior(field, x, z);
@@ -191,7 +221,7 @@ static void Wander(FieldSystem *field, WildSprite *sprite, MapObject *object)
     int z = MapObject_GetZ(object) + MapObject_GetDzFromDir(dir);
     BOOL water = TileBehavior_IsSurfable(sprite->habitat);
     if (Abs(x - sprite->anchorX) > 2 || Abs(z - sprite->anchorZ) > 2
-        || !HabitatTile(field, x, z, water)
+        || !HabitatTile(field, x, z, water, sprite->ownerMap)
         || TerrainCollisionManager_GetTileBehavior(field, x, z) != sprite->habitat
         || sub_02063E94(object, x, MapObject_GetY(object), z, dir) != MAP_OBJ_COLLISION_NONE) {
         MapObject_TryFace(object, dir);
@@ -220,7 +250,7 @@ static BOOL Spawn(FieldSystem *field, WildSprite *sprite, int slot)
             continue;
         }
         int x = MapObject_GetX(player) + dx, z = MapObject_GetZ(player) + dz;
-        if (!HabitatTile(field, x, z, water)
+        if (!HabitatTile(field, x, z, water, field->location->mapHeaderID)
             || TerrainCollisionManager_WillMapObjectCollide(field, MapObject_GetPos(player), x, z, NULL)
             || sub_02063F00(player, x, MapObject_GetY(player), z)) {
             continue;
@@ -277,6 +307,7 @@ static BOOL Spawn(FieldSystem *field, WildSprite *sprite, int slot)
         }
         sprite->anchorX = x;
         sprite->anchorZ = z;
+        sprite->ownerMap = field->location->mapHeaderID;
         sprite->habitat = TerrainCollisionManager_GetTileBehavior(field, x, z);
         sprite->wanderTicks = FrameTicks(30 + LCRNG_RandMod(60));
         return TRUE;
@@ -284,9 +315,37 @@ static BOOL Spawn(FieldSystem *field, WildSprite *sprite, int slot)
     return FALSE;
 }
 
+static BOOL Offscreen(FieldSystem *field, MapObject *object, int margin)
+{
+    int dx = Abs(MapObject_GetX(object) - PlayerAvatar_GetXPos(field->playerAvatar));
+    int dz = Abs(MapObject_GetZ(object) - PlayerAvatar_GetZPos(field->playerAvatar));
+    return dx > ViewHalfWidth() + margin || dz > VIEW_HALF_HEIGHT + margin;
+}
+
+// At the spawn limit, the current zone gets room by retiring the farthest
+// offscreen sprite left behind in another zone.
+static int FindForeignSprite(FieldSystem *field, OverworldEncounterManager *manager)
+{
+    int best = -1, bestDistance = -1;
+    for (int i = 0; i < OVERWORLD_ENCOUNTER_CAPACITY; i++) {
+        WildSprite *sprite = &manager->sprites[i];
+        MapObject *object = OverworldPokemon_GetObject(field, sprite->handle);
+        if (object == NULL || sprite->ownerMap == field->location->mapHeaderID || !Offscreen(field, object, 0)) {
+            continue;
+        }
+        int distance = Abs(MapObject_GetX(object) - PlayerAvatar_GetXPos(field->playerAvatar))
+            + Abs(MapObject_GetZ(object) - PlayerAvatar_GetZPos(field->playerAvatar));
+        if (distance > bestDistance) {
+            best = i;
+            bestDistance = distance;
+        }
+    }
+    return best;
+}
+
 void OverworldEncounters_Update(FieldSystem *field)
 {
-    if (!Enabled(field)) {
+    if (!Active(field)) {
         OverworldEncounters_Clear(field);
         return;
     }
@@ -294,9 +353,6 @@ void OverworldEncounters_Update(FieldSystem *field)
     // ordinary sprites while it is active so they cannot interrupt a chain.
     if (GetRadarChainActive(field->chain)) {
         OverworldEncounters_Clear(field);
-        return;
-    }
-    if (Paused(field)) {
         return;
     }
     OverworldEncounterManager *manager = field->overworldEncounters;
@@ -308,11 +364,30 @@ void OverworldEncounters_Update(FieldSystem *field)
         memset(manager, 0, sizeof(*manager));
         field->overworldEncounters = manager;
         manager->mapID = -1;
-    }
-    if (manager->mapID != field->location->mapHeaderID || manager->context != Context(field)) {
-        OverworldEncounters_Clear(field);
-        manager->mapID = field->location->mapHeaderID;
         manager->context = Context(field);
+    }
+    if (manager->context != Context(field)) {
+        OverworldEncounters_Clear(field);
+        manager->context = Context(field);
+    }
+    if (manager->mapID != field->location->mapHeaderID) {
+        // Zone ownership of tiles is only known on the main matrix; elsewhere
+        // a zone change still starts over.
+        if (!MapHeader_IsOnMainMatrix(field->location->mapHeaderID)) {
+            OverworldEncounters_Clear(field);
+        }
+        // Roamers relocate on every zone change, so a sprite left behind no
+        // longer matches the roamer's saved route. Ordinary sprites remain.
+        for (int i = 0; i < OVERWORLD_ENCOUNTER_CAPACITY; i++) {
+            WildSprite *sprite = &manager->sprites[i];
+            if (sprite->handle != 0 && (sprite->encounter.battleType & BATTLE_TYPE_ROAMER)) {
+                RemoveSprite(field, sprite);
+            }
+        }
+        manager->mapID = field->location->mapHeaderID;
+    }
+    if (Paused(field)) {
+        return;
     }
     int count = 0, freeSlot = -1;
     for (int i = 0; i < OVERWORLD_ENCOUNTER_CAPACITY; i++) {
@@ -322,7 +397,8 @@ void OverworldEncounters_Update(FieldSystem *field)
             int dx = Abs(MapObject_GetX(object) - PlayerAvatar_GetXPos(field->playerAvatar));
             int dz = Abs(MapObject_GetZ(object) - PlayerAvatar_GetZPos(field->playerAvatar));
             sprite->age++;
-            if (dx > 11 || dz > 8
+            if (Offscreen(field, object, CULL_MARGIN)
+                || !LandDataManager_GetRelativeLoadedMapsQuadrantOfTile(field->landDataMan, MapObject_GetX(object), MapObject_GetZ(object), NULL)
                 || (sprite->age > FrameTicks(45 * 30) && !Pokemon_IsShiny(&sprite->encounter.mons[0]) && dx + dz > 2)) {
                 RemoveSprite(field, sprite);
                 object = NULL;
@@ -337,20 +413,45 @@ void OverworldEncounters_Update(FieldSystem *field)
             Wander(field, sprite, object);
         }
     }
+    if (!CanSpawn(field)) {
+        return;
+    }
     int spawnLimit = OVERWORLD_ENCOUNTER_DEFAULT_COUNT;
 #ifdef SDK_PORT
     spawnLimit = SIM_Config_prj_GetConfig()->overworldEncounterCount;
 #endif
-    if (count < spawnLimit && freeSlot >= 0 && --manager->spawnTicks <= 0) {
-        Spawn(field, &manager->sprites[freeSlot], freeSlot);
-        manager->spawnTicks = FrameTicks(count < spawnLimit - 2 ? 15 : 90);
+    // At the limit, the current zone takes over a sprite left behind in another
+    // zone. Above it (the limit was lowered) or at 0, nothing new appears.
+    int retire = -1;
+    if (count >= spawnLimit) {
+        retire = spawnLimit > 0 && count == spawnLimit ? FindForeignSprite(field, manager) : -1;
+        if (retire < 0) {
+            return;
+        }
     }
+    if (--manager->spawnTicks > 0) {
+        return;
+    }
+    if (freeSlot < 0) {
+        if (retire < 0) {
+            return;
+        }
+        RemoveSprite(field, &manager->sprites[retire]);
+        freeSlot = retire;
+        retire = -1;
+    }
+    // Retire only once the replacement exists, so failed spawn attempts do not
+    // drain the sprites the player may walk back to.
+    if (Spawn(field, &manager->sprites[freeSlot], freeSlot) && retire >= 0) {
+        RemoveSprite(field, &manager->sprites[retire]);
+    }
+    manager->spawnTicks = FrameTicks(count < spawnLimit - 2 ? 15 : 90);
 }
 
 BOOL OverworldEncounters_TryContact(FieldSystem *field)
 {
     OverworldEncounterManager *manager = field->overworldEncounters;
-    if (manager == NULL || !Enabled(field) || Paused(field) || GetRadarChainActive(field->chain)
+    if (manager == NULL || !Active(field) || Paused(field) || GetRadarChainActive(field->chain)
         || manager->mapID != field->location->mapHeaderID || manager->context != Context(field)) {
         return FALSE;
     }
@@ -362,7 +463,9 @@ BOOL OverworldEncounters_TryContact(FieldSystem *field)
     for (int i = 0; i < OVERWORLD_ENCOUNTER_CAPACITY; i++) {
         WildSprite *sprite = &manager->sprites[i];
         MapObject *object = OverworldPokemon_GetObject(field, sprite->handle);
-        if (object == NULL || Repelled(field, sprite)
+        // Sprites only walk within their own zone, so contact always happens
+        // there; this keeps battle backgrounds and met locations correct.
+        if (object == NULL || sprite->ownerMap != field->location->mapHeaderID || Repelled(field, sprite)
             || MapObject_IsStatusOnElevatedBridge(player) != MapObject_IsStatusOnElevatedBridge(object)
             || Abs(MapObject_GetY(player) - MapObject_GetY(object)) >= 2) {
             continue;
