@@ -1634,7 +1634,7 @@ JubilifeCity_CoordEvent_LookerPalPad:
     SetObjectEventDir LOCALID_LOOKER, DIR_EAST
     SetObjectEventMovementType LOCALID_LOOKER, MOVEMENT_TYPE_LOOK_EAST
     ClearFlag FLAG_HIDE_JUBILIFE_CITY_LOOKER
-    AddObjectFromEdge LOCALID_LOOKER, MOVEMENT_ACTION_WALK_SLOW_EAST
+    AddObjectFromEdge LOCALID_LOOKER, MOVEMENT_ACTION_WALK_FAST_EAST
     ApplyMovement LOCALID_LOOKER, JubilifeCity_Movement_LookerNoticePlayer
     WaitMovement
     Common_SetLookerBGM
@@ -1653,7 +1653,7 @@ JubilifeCity_CoordEvent_LookerPalPad:
 
     .balign 4, 0
 JubilifeCity_Movement_LookerNoticePlayer:
-    WalkSlowEast 2
+    WalkFastEast 2
     EmoteExclamationMark
     EndMovement
 
@@ -1664,7 +1664,7 @@ JubilifeCity_Movement_LookerWalkToPlayer:
 
     .balign 4, 0
 JubilifeCity_Movement_LookerLeavePalPad:
-    WalkSlowWest
+    WalkFastWest
     WalkFastWest 8
     EndMovement
 
