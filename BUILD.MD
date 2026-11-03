@@ -9,6 +9,12 @@ cd pokeplatinum
 
 The Makefile fetches Meson and the compiler tools as needed, and Meson fetches the SDK subprojects. The initial build requires network access. You still need your own ROM to run the PC port.
 
+Git-based subprojects use a `lib_<subproject>` branch in the corresponding
+`elyro1` fork, for example `lib_libntr` in `elyro1/libntr`. The SDK patches
+previously applied by Meson are committed on those branches. Make SDK dependency
+changes in the corresponding fork branch. RapidJSON and yyjson retain their
+WrapDB releases and local wrap patches.
+
 ### Linux with Docker
 
 Install Docker and ensure your user can run it, then run:

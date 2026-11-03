@@ -1,9 +1,8 @@
 [wrap-git]
-url = https://github.com/cybervisi0n/libntrwifi.git
-revision = main
+url = https://github.com/elyro1/libntrwifi.git
+revision = lib_libntrwifi
 depth = 1
 directory = libntrwifi
 
 [provide]
 dependency_names = NitroWiFi
-
