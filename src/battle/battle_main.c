@@ -38,6 +38,7 @@
 #include "battle_anim/battle_anim_system.h"
 #include "overlay010/ov10_0221F800.h"
 #include "overlay011/particle_helper.h"
+#include "port/gameplay_config.h"
 
 #include "bag.h"
 #include "bg_window.h"
@@ -1644,7 +1645,8 @@ static void SysTask_UpdateRedHPSound(SysTask *task, void *inBattleSys)
     int redHPSoundFlag = BattleSystem_GetRedHPSoundFlag(battleSys);
     int redHPSoundDelay = 4; // Pause in 30 Hz frames, independent of battle pacing.
 
-    if (BattleSystem_GetBattleType(battleSys) & (BATTLE_TYPE_SAFARI | BATTLE_TYPE_PAL_PARK)) {
+    if (GameplayConfig_Get()->disableLowHPBeep
+        || (BattleSystem_GetBattleType(battleSys) & (BATTLE_TYPE_SAFARI | BATTLE_TYPE_PAL_PARK))) {
         return;
     }
 

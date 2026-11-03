@@ -34,7 +34,7 @@ int main()
     return 0;
 #else
     assert(GameplayConfig_UsesFileOverrides());
-    assert(GameplayConfig_OptionCount() == 24);
+    assert(GameplayConfig_OptionCount() == 25);
     GameplayConfig values;
     GameplayConfig_LoadDefaults(&values);
     for (unsigned i = 0; i < GameplayConfig_OptionCount(); ++i) {
@@ -62,6 +62,7 @@ int main()
     assert(editor.Load() && !editor.IsDirty() && !editor.NeedsRestart());
     editor.values.infiniteTMs = TRUE;
     editor.values.guaranteedFishing = TRUE;
+    editor.values.disableLowHPBeep = TRUE;
     editor.values.shinyRolls = 65535;
     editor.values.tradeEvolutionLevel = 100;
     editor.values.catchRateMultiplier = 255;
@@ -73,6 +74,7 @@ int main()
     assert(saved.find("\xef\xbb\xbf; My configuration\r\n") == 0);
     assert(saved.find("infiniteTMs = true  ; keep this comment\r\n") != std::string::npos);
     assert(saved.find("infiniteTMs=true\r\n") != std::string::npos);
+    assert(saved.find("disableLowHPBeep=true\r\n") != std::string::npos);
     assert(saved.find("guaranteedFishing=true\r\n") != std::string::npos);
     assert(saved.find("shinyRolls: 65535 ; odds\r\n") != std::string::npos);
     assert(saved.find("fastTrainerBattleIntro=") == std::string::npos);
@@ -82,7 +84,7 @@ int main()
         if (saved[i] == '\n') assert(i > 0 && saved[i - 1] == '\r');
     GameplayConfig_Init();
     assert(GameplayConfig_Get()->infiniteTMs && GameplayConfig_Get()->shinyRolls == 65535);
-    assert(GameplayConfig_Get()->guaranteedFishing);
+    assert(GameplayConfig_Get()->guaranteedFishing && GameplayConfig_Get()->disableLowHPBeep);
     assert(GameplayConfig_Get()->tradeEvolutionLevel == 100 && GameplayConfig_Get()->catchRateMultiplier == 255);
     assert(!editor.NeedsRestart());
     assert(editor.Save() && Read() == saved); // Saving again does not append duplicate blocks.

@@ -21,6 +21,9 @@ void GameplayConfig_LoadDefaults(GameplayConfig *config)
     // Always use Set battle style, regardless of the saved Options selection.
     config->forceSetBattleStyle = FALSE;
 
+    // Disable the low-HP warning beep in either battle presentation.
+    config->disableLowHPBeep = FALSE;
+
     // Let all six vitamins raise a stat past 100 EVs, up to the normal 255/510 limits.
     config->unlimitedVitaminEVs = FALSE;
 
@@ -124,6 +127,7 @@ typedef struct {
 static const ConfigField sConfigFields[] = {
     FIELD(prohibitBattleItems, CONFIG_BOOL, 1, "Block player Bag items in battle except Poke Balls; held and opponent items are unaffected.", "Block player battle items", "Battle rules"),
     FIELD(forceSetBattleStyle, CONFIG_BOOL, 1, "Always use Set battle style, regardless of the saved Options selection.", "Always use Set battle style", "Battle rules"),
+    FIELD(disableLowHPBeep, CONFIG_BOOL, 1, "Disable the low-HP warning beep in both battle presentations.", "Disable low-HP beep", "Battle rules"),
     FIELD(unlimitedVitaminEVs, CONFIG_BOOL, 1, "Vitamins work past 100 EVs; normal per-stat and total EV limits still apply.", "Vitamins past 100 EVs", "Progression & prices"),
     FIELD(bpPricePercent, CONFIG_U16, 65535, "Global BP price percentage, rounded up: 100 = original, 0 = free.", "BP price percentage", "Progression & prices"),
     FIELD(rareCandyBPPrice, CONFIG_U16, 65535, "Exact Rare Candy BP price, overriding the percentage: 0 = free.", "Rare Candy BP price", "Progression & prices"),

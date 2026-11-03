@@ -41,6 +41,7 @@ static void AssertOriginalDefaults(void)
     assert(config->zeroEggCycles == FALSE);
     assert(config->instantHoneyTrees == FALSE);
     assert(config->guaranteedFishing == FALSE);
+    assert(config->disableLowHPBeep == FALSE);
     assert(config->infiniteTMs == FALSE);
     assert(config->levelUpHeldItemEvolutions == FALSE);
     assert(config->instantSpiritomb == FALSE);
@@ -82,6 +83,7 @@ static void TestConfigFile(void)
     assert(strstr(template, "zeroEggCycles=false\n"));
     assert(strstr(template, "instantHoneyTrees=false\n"));
     assert(strstr(template, "guaranteedFishing=false\n"));
+    assert(strstr(template, "disableLowHPBeep=false\n"));
     assert(strstr(template, "infiniteTMs=false\n"));
     assert(strstr(template, "levelUpHeldItemEvolutions=false\n"));
     assert(strstr(template, "instantSpiritomb=false\n"));
@@ -111,6 +113,7 @@ static void TestConfigFile(void)
                 "zeroEggCycles=TRUE\n"
                 "instantHoneyTrees=1\n"
                 "guaranteedFishing=true\n"
+                "disableLowHPBeep=true\n"
                 "infiniteTMs=true\n"
                 "levelUpHeldItemEvolutions=TRUE\n"
                 "instantSpiritomb=1\n"
@@ -138,6 +141,7 @@ static void TestConfigFile(void)
     assert(config->zeroEggCycles == TRUE);
     assert(config->instantHoneyTrees == TRUE);
     assert(config->guaranteedFishing == TRUE);
+    assert(config->disableLowHPBeep == TRUE);
     assert(config->infiniteTMs == TRUE);
     assert(config->levelUpHeldItemEvolutions == TRUE);
     assert(config->instantSpiritomb == TRUE);

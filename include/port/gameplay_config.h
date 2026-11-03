@@ -10,6 +10,7 @@ extern "C" {
 typedef struct {
     BOOL prohibitBattleItems; // Player Bag items except Poke Balls; held items and trainer items are unaffected.
     BOOL forceSetBattleStyle;
+    BOOL disableLowHPBeep;
     BOOL unlimitedVitaminEVs; // Retains the normal per-stat and total EV limits.
     u16 bpPricePercent; // Global BP price scale, rounded up; 100 = original, 0 = free.
     u16 rareCandyBPPrice; // Exact price; takes precedence over bpPricePercent. 0 = free.

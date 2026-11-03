@@ -63,6 +63,7 @@ All options in this table default to `false`. Set an option to `true` to enable 
 | --- | --- |
 | `prohibitBattleItems` | Blocks player Bag items in battle except Poké Balls. Held-item effects and opponents' items still work. |
 | `forceSetBattleStyle` | Always uses Set style, suppressing the Shift prompt regardless of the saved Options selection. |
+| `disableLowHPBeep` | Disables the low-HP warning beep in both Platinum and BW2 battle presentations. |
 | `unlimitedVitaminEVs` | Vitamins can raise a stat past 100 EVs, up to the normal 255 per-stat and 510 total EV limits. EV-reducing berries retain normal behavior. |
 | `forgettableHMs` | HM moves can be replaced when learning another move, including after leveling up in battle. |
 | `unlearnedHMs` | Compatible non-egg party members can use HMs without learning them or owning the HM item. Interact with obstacles or use **HMs** in the Pokémon's party menu. Badge and location restrictions still apply; non-HM field moves still need to be learned. |
