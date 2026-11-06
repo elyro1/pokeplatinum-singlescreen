@@ -483,6 +483,15 @@ void *BwBattle_ReadMember(const char *path, unsigned member, unsigned *size)
     return resource.data;
 }
 
+void *BwBattle_ReadMemberRaw(const char *path, unsigned member, unsigned *size)
+{
+    Resource resource = Member(path, member);
+    if (size) {
+        *size = resource.size;
+    }
+    return resource.data;
+}
+
 const void *BwBattle_IrisResource(const char *path, unsigned member, unsigned *size)
 {
     int index = -1;

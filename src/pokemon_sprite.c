@@ -13,6 +13,8 @@
 #include "pokemon_sprite.h"
 
 #ifdef SDK_PORT
+#include <stdlib.h>
+
 #include "port/bw_mon_sprites.h"
 #endif
 
@@ -29,6 +31,9 @@
 
 #define MON_SPRITE_CHAR_BUF_SIZE (MON_SPRITE_CHAR_BUF_TILES_W * MON_SPRITE_CHAR_BUF_TILES_H * TILE_SIZE_4BPP)
 #define MON_SPRITE_PLTT_BUF_SIZE (MAX_MON_SPRITE_PALETTES * PALETTE_SIZE_BYTES)
+#ifdef SDK_PORT
+#define LARGE_FRAME_CHAR_BUF_SIZE (MAX_MON_SPRITES * BW_MON_ANIM_ATLAS_SIZE)
+#endif
 
 #define NCGR_Y_OFFSET   0x50
 #define MAN_Y_OFFSET    0x80
@@ -412,6 +417,9 @@ void *PokemonSpriteManager_New(enum HeapID heapID)
     monSpriteMan->heapID = heapID;
 #ifdef SDK_PORT
     monSpriteMan->largeFrames = FALSE;
+    MI_CpuClear8(monSpriteMan->anims, sizeof(monSpriteMan->anims));
+    MI_CpuClear8(monSpriteMan->retiringAnims, sizeof(monSpriteMan->retiringAnims));
+    MI_CpuClear8(monSpriteMan->animsUploaded, sizeof(monSpriteMan->animsUploaded));
 #endif
     monSpriteMan->dummy330 = 0;
     monSpriteMan->charBaseAddr = 0;
@@ -565,7 +573,14 @@ void PokemonSpriteManager_DrawSprites(PokemonSpriteManager *monSpriteMan)
     NNS_G3dGeFlushBuffer();
 
     G3_PushMtx();
-    G3_TexImageParam(monSpriteMan->imageProxy.attr.fmt, GX_TEXGEN_TEXCOORD, monSpriteMan->imageProxy.attr.sizeS, monSpriteMan->imageProxy.attr.sizeT, GX_TEXREPEAT_NONE, GX_TEXFLIP_NONE, monSpriteMan->imageProxy.attr.plttUse, monSpriteMan->charBaseAddr);
+#ifdef SDK_PORT
+    // NitroSystem's image attributes stop at 256 dots, which large frames' texture is twice as tall as
+    const GXTexSizeT texSizeT = monSpriteMan->largeFrames ? GX_TEXSIZE_T512 : monSpriteMan->imageProxy.attr.sizeT;
+#else
+    const GXTexSizeT texSizeT = monSpriteMan->imageProxy.attr.sizeT;
+#endif
+
+    G3_TexImageParam(monSpriteMan->imageProxy.attr.fmt, GX_TEXGEN_TEXCOORD, monSpriteMan->imageProxy.attr.sizeS, texSizeT, GX_TEXREPEAT_NONE, GX_TEXFLIP_NONE, monSpriteMan->imageProxy.attr.plttUse, monSpriteMan->charBaseAddr);
 
     for (int i = 0; i < MAX_MON_SPRITES; i++) {
         if (monSpriteMan->sprites[i].active
@@ -623,6 +638,34 @@ void PokemonSpriteManager_DrawSprites(PokemonSpriteManager *monSpriteMan)
             } else {
                 width = (MON_SPRITE_FRAME_WIDTH * drawSprite->transforms.scaleX) >> MON_AFFINE_SHIFT;
                 height = (MON_SPRITE_FRAME_HEIGHT * drawSprite->transforms.scaleY) >> MON_AFFINE_SHIFT;
+#ifdef SDK_PORT
+                // The texture of an animation that's just been loaded reaches VRAM after this frame is shown. Until then
+                // its cells would show pieces of the old image, so the old animation stays up instead
+                BwMonAnim *anim = monSpriteMan->animsUploaded[i] ? monSpriteMan->anims[i] : monSpriteMan->retiringAnims[i];
+
+                if (monSpriteMan->anims[i] || monSpriteMan->retiringAnims[i]) {
+                    if (!anim) {
+                        continue;
+                    }
+
+                    const BwMonAnimDraw animDraw = {
+                        .x = drawSprite->transforms.xCenter + drawSprite->transforms.xOffset,
+                        .y = drawSprite->transforms.yCenter + drawSprite->transforms.yOffset - drawSprite->shadow.height,
+                        .z = drawSprite->transforms.zCenter + drawSprite->transforms.zOffset,
+                        .scaleX = drawSprite->transforms.scaleX,
+                        .scaleY = drawSprite->transforms.scaleY,
+                        .flipH = drawSprite->transforms.flipH,
+                        .flipV = drawSprite->transforms.flipV,
+                        .polygonID = drawSprite->polygonID,
+                        .alpha = drawSprite->transforms.alpha,
+                        .atlasY = i * BW_MON_ANIM_ATLAS_ROWS,
+                    };
+
+                    BwMonAnim_Tick(anim);
+                    BwMonAnim_Draw(anim, &animDraw);
+                    continue;
+                }
+#endif
                 u0 = sMonSpriteTextureCoords[i][drawSprite->currSpriteFrame][0];
                 u1 = sMonSpriteTextureCoords[i][drawSprite->currSpriteFrame][2];
                 v0 = sMonSpriteTextureCoords[i][drawSprite->currSpriteFrame][1];
@@ -707,7 +750,19 @@ void PokemonSpriteManager_DrawSprites(PokemonSpriteManager *monSpriteMan)
 
 void PokemonSpriteManager_Free(PokemonSpriteManager *monSpriteMan)
 {
+#ifdef SDK_PORT
+    for (int i = 0; i < MAX_MON_SPRITES; i++) {
+        BwMonAnim_Free(monSpriteMan->anims[i]);
+        BwMonAnim_Free(monSpriteMan->retiringAnims[i]);
+    }
+    if (monSpriteMan->largeFrames) {
+        free(monSpriteMan->charRawData);
+    } else {
+        Heap_Free(monSpriteMan->charRawData);
+    }
+#else
     Heap_Free(monSpriteMan->charRawData);
+#endif
     Heap_Free(monSpriteMan->plttRawData);
     Heap_Free(monSpriteMan->plttRawDataUnfaded);
     Heap_Free(monSpriteMan);
@@ -1435,6 +1490,14 @@ void PokemonSpriteManager_UpdateCharAndPltt(PokemonSpriteManager *monSpriteMan)
         monSpriteMan->charData.pRawData = monSpriteMan->charRawData;
 
         NNS_G2dLoadImage2DMapping(&monSpriteMan->charData, monSpriteMan->charBaseAddr, NNS_G2D_VRAM_TYPE_3DMAIN, &monSpriteMan->imageProxy);
+
+#ifdef SDK_PORT
+        for (int i = 0; i < MAX_MON_SPRITES; i++) {
+            BwMonAnim_Free(monSpriteMan->retiringAnims[i]);
+            monSpriteMan->retiringAnims[i] = NULL;
+            monSpriteMan->animsUploaded[i] = monSpriteMan->anims[i] != NULL;
+        }
+#endif
     }
 
     if (monSpriteMan->needLoadPltt) {
@@ -1473,7 +1536,15 @@ void PokemonSpriteManager_ClearHideShadows(PokemonSpriteManager *monSpriteMan, u
 #ifdef SDK_PORT
 void PokemonSpriteManager_SetLargeFrames(PokemonSpriteManager *monSpriteMan)
 {
+    if (monSpriteMan->largeFrames) {
+        return;
+    }
     monSpriteMan->largeFrames = TRUE;
+    monSpriteMan->charSize = LARGE_FRAME_CHAR_BUF_SIZE;
+    // Outside the game's heaps, which were sized for Platinum's smaller texture
+    Heap_Free(monSpriteMan->charRawData);
+    monSpriteMan->charRawData = calloc(1, LARGE_FRAME_CHAR_BUF_SIZE);
+    GF_ASSERT(monSpriteMan->charRawData);
 }
 
 BOOL PokemonSpriteManager_HasLargeFrames(const PokemonSpriteManager *monSpriteMan)
@@ -1483,8 +1554,8 @@ BOOL PokemonSpriteManager_HasLargeFrames(const PokemonSpriteManager *monSpriteMa
 
 static void LargeFrameOrigin(int slot, int *x, int *y)
 {
-    *x = (slot & 1) * BW_MON_SPRITE_SIZE;
-    *y = (slot >> 1) * BW_MON_SPRITE_SIZE;
+    *x = 0;
+    *y = slot * BW_MON_ANIM_ATLAS_ROWS;
 }
 
 // A Platinum sprite's first frame, in the middle of a large frame
@@ -1512,6 +1583,30 @@ static void LoadPlatinumImageForLargeFrame(PokemonSprite *monSprite, enum HeapID
 static void BufferLargeFrame(PokemonSpriteManager *monSpriteMan, int slot)
 {
     PokemonSprite *monSprite = &monSpriteMan->sprites[slot];
+    u8 *slotChars = monSpriteMan->charRawData + slot * BW_MON_ANIM_ATLAS_SIZE;
+
+    // An animation flips as it draws, so a flip alone doesn't need its files read again
+    if (monSpriteMan->anims[slot] && monSprite->template.narcID == MON_SPRITE_NARC_BW && BwMonAnim_IsFor(monSpriteMan->anims[slot], &monSprite->template)) {
+        return;
+    }
+
+    if (monSpriteMan->animsUploaded[slot]) {
+        BwMonAnim_Free(monSpriteMan->retiringAnims[slot]);
+        monSpriteMan->retiringAnims[slot] = monSpriteMan->anims[slot];
+    } else {
+        BwMonAnim_Free(monSpriteMan->anims[slot]);
+    }
+    monSpriteMan->anims[slot] = NULL;
+    monSpriteMan->animsUploaded[slot] = FALSE;
+    MI_CpuClear8(slotChars, BW_MON_ANIM_ATLAS_SIZE);
+
+    if (monSprite->template.narcID == MON_SPRITE_NARC_BW) {
+        monSpriteMan->anims[slot] = BwMonAnim_Load(&monSprite->template, slotChars);
+        if (monSpriteMan->anims[slot]) {
+            return;
+        }
+    }
+
     u8 *image = Heap_AllocAtEnd(monSpriteMan->heapID, BW_MON_SPRITE_IMAGE_SIZE);
     int originX, originY;
 

@@ -28,8 +28,36 @@ void BwMonSprites_Reload(void);
 #define BW_MON_SPRITE_SIZE       96
 #define BW_MON_SPRITE_IMAGE_SIZE (BW_MON_SPRITE_SIZE * BW_MON_SPRITE_SIZE / 2)
 
+// An animated sprite's cells are quads of a 256x128 image, 128 bytes a row
+#define BW_MON_ANIM_ATLAS_ROWS 128
+#define BW_MON_ANIM_ATLAS_SIZE (BW_MON_ANIM_ATLAS_ROWS * 128)
+
+typedef struct BwMonAnim BwMonAnim;
+
+typedef struct {
+    int x; // The middle of the sprite's frame
+    int y;
+    int z;
+    int scaleX; // 256 is its own size
+    int scaleY;
+    BOOL flipH;
+    BOOL flipV;
+    int polygonID;
+    int alpha;
+    int atlasY; // Where in the texture the image was put
+} BwMonAnimDraw;
+
 // The setting, when the extraction allows it
 BOOL BwMonSprites_Enabled(void);
+
+// Loads the animation of a template for BW2's art, and copies its image to atlas. NULL, with atlas untouched, for a
+// sprite whose files aren't all there, which can still show its single image
+BwMonAnim *BwMonAnim_Load(const PokemonSpriteTemplate *spriteTemplate, u8 *atlas);
+void BwMonAnim_Free(BwMonAnim *anim);
+BOOL BwMonAnim_IsFor(const BwMonAnim *anim, const PokemonSpriteTemplate *spriteTemplate);
+void BwMonAnim_Tick(BwMonAnim *anim);
+// With the texture and palette set, and the 3D view in screen pixels
+void BwMonAnim_Draw(const BwMonAnim *anim, const BwMonAnimDraw *draw);
 
 // Makes a template for BW2's art. FALSE, leaving the template alone, for a Pokémon that BW2 has no art for
 BOOL BwMonSprites_BuildTemplate(PokemonSpriteTemplate *spriteTemplate, u16 species, u8 gender, u8 face, u8 shiny, u8 form, u32 personality);
