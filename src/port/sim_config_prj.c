@@ -39,6 +39,9 @@ static int IniHandler(void* user, const char* section, const char* name,
     if(MATCH("General", "60Fps")) {
         config->enable60fps = StringToBool(value);
     }
+    if (MATCH("General", "BWMonSprites")) {
+        config->bwMonSprites = StringToBool(value);
+    }
     if (MATCH("General", "NewPokedex")) {
         config->newPokedex = StringToBool(value);
     }
@@ -179,6 +182,7 @@ void SIM_Config_prj_LoadDefaults(SIM_Config_prj_type * aConfig)
   aConfig->battleBarSpeed = PORT_SPEED_FAST;
   aConfig->fastWildBattleIntro = TRUE;
   aConfig->bw2BattleVisuals = FALSE;
+  aConfig->bwMonSprites = TRUE;
   aConfig->overworldEncounters = TRUE;
   aConfig->overworldEncounterCount = OVERWORLD_ENCOUNTER_DEFAULT_COUNT;
   aConfig->autosave = TRUE;
@@ -235,6 +239,7 @@ void SIM_Config_prj_SaveConfigFile(SIM_Config_prj_type * aConfig)
     fprintf(configFile, "PokedexUnits=%s\n", sPokedexUnitsNames[aConfig->pokedexUnits]);
     fprintf(configFile, "FastWildBattleIntro=%s\n", BoolToString(aConfig->fastWildBattleIntro));
     fprintf(configFile, "BW2BattleVisuals=%s\n", BoolToString(aConfig->bw2BattleVisuals));
+    fprintf(configFile, "BWMonSprites=%s\n", BoolToString(aConfig->bwMonSprites));
     fprintf(configFile, "OverworldEncounters=%s\n", BoolToString(aConfig->overworldEncounters));
     fprintf(configFile, "PokemonFollower=%s\n", BoolToString(aConfig->pokemonFollower));
     fprintf(configFile, "EnableAsserts=%s\n", BoolToString(aConfig->enableAsserts));

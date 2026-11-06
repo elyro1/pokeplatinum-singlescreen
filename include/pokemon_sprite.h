@@ -135,6 +135,9 @@ typedef struct PokemonSpriteManager {
     u8 needLoadPltt;
     u8 excludeIdentity;
     u32 hideShadows; // curiously, this field is treated like a bitmask, but it only ever uses a value of 0 or 1
+#ifdef SDK_PORT
+    BOOL largeFrames;
+#endif
 } PokemonSpriteManager;
 
 // used to run PokemonSprite animations in a task independent
@@ -155,6 +158,13 @@ void PokemonSpriteManager_DrawSprites(PokemonSpriteManager *monSpriteMan);
 void PokemonSpriteManager_UpdateWithoutDrawing(PokemonSpriteManager *monSpriteMan);
 #endif
 void PokemonSpriteManager_Free(PokemonSpriteManager *monSpriteMan);
+
+#ifdef SDK_PORT
+// Makes every sprite of a new manager a single frame of 96x96, for BW2's art (port/bw_mon_sprites.h). Platinum's sprites
+// can share it, as their first frame in the middle of the 96x96. Shadows aren't available
+void PokemonSpriteManager_SetLargeFrames(PokemonSpriteManager *monSpriteMan);
+BOOL PokemonSpriteManager_HasLargeFrames(const PokemonSpriteManager *monSpriteMan);
+#endif
 void PokemonSprite_InitAnim(PokemonSprite *monSprite, int dummy);
 void PokemonSprite_SetAnimFrames(PokemonSprite *monSprite, SpriteAnimFrame *animFrames);
 BOOL PokemonSprite_IsAnimActive(PokemonSprite *monSprite);

@@ -43,6 +43,7 @@
 #include "pokemon.h"
 #include "pokemon_icon.h"
 #include "pokemon_sprite.h"
+#include "port/bw_mon_sprites.h"
 #include "render_oam.h"
 #include "sound_playback.h"
 #include "sprite.h"
@@ -1348,6 +1349,14 @@ static void DrawInfoPage(PageGraphics *graphics, const PageData *data, enum Heap
 static void CenterSpriteArt(PokemonSprite *sprite, int x, int y, enum HeapID heapID)
 {
     const PokemonSpriteTemplate *template = PokemonSprite_GetTemplate(sprite);
+
+    // BW2's art is already centered by its offsets (PokedexGraphics_LoadPokemonSprite)
+    if (template->narcID == MON_SPRITE_NARC_BW) {
+        PokemonSprite_SetAttribute(sprite, MON_SPRITE_X_CENTER, x);
+        PokemonSprite_SetAttribute(sprite, MON_SPRITE_Y_CENTER, y);
+        return;
+    }
+
     void *file = NARC_AllocAndReadWholeMemberByIndexPair(template->narcID, template->character, heapID);
     NNSG2dCharacterData *charData;
     int minX = SPRITE_FRAME_SIZE, minY = SPRITE_FRAME_SIZE, maxX = -1, maxY = -1;

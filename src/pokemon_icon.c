@@ -8,6 +8,10 @@
 
 #include "pokemon.h"
 
+#ifdef SDK_PORT
+#include "port/bw_mon_sprites.h"
+#endif
+
 #include "res/pokemon/pl_poke_icon.naix"
 #include "res/pokemon/species_icon_palettes.h"
 
@@ -114,6 +118,12 @@ u16 BoxPokemon_IconFormOffset(const BoxPokemon *boxMon)
 
 const u8 PokeIconPaletteIndex(u32 species, u32 form, u32 isEgg)
 {
+#ifdef SDK_PORT
+    if (BwMonIcons_Active()) {
+        return BwMonIcons_PaletteIndex(species, form, isEgg);
+    }
+#endif
+
     if (isEgg == TRUE) {
         if (species == SPECIES_MANAPHY) {
             species = ICON_MANAPHY_EGG;

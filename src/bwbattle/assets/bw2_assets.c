@@ -302,9 +302,10 @@ BwBattleExtractResult BwBattle_ExtractAssets(const char *romPath) {
         }
     }
     // Optional to the battle view, but extracted by the same action, and older extractions are upgraded: the overworld
-    // models' records (47) and textures (48, also Iris's), the VS mugshots (267), and the walking Pokémon's object
-    // codes (208), which the followers and overworld encounters use (port/follower_assets.cpp)
-    static const u16 optionalArcs[] = { 47, 48, 208, 267 };
+    // models' records (47) and textures (48, also Iris's), the VS mugshots (267), the walking Pokémon's object codes
+    // (208), which the followers and overworld encounters use (port/follower_assets.cpp), and the icons (7), which
+    // the BW sprites setting uses (port/bw_mon_sprites.c)
+    static const u16 optionalArcs[] = { 7, 47, 48, 208, 267 };
     for (size_t i = 0; i < NELEMS(optionalArcs) && result == BWBATTLE_EXTRACT_OK; i++) {
         if (!BwAssets_ArcExists(optionalArcs[i])) {
             ArcPath(optionalArcs[i], path, sizeof(path));

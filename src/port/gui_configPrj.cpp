@@ -7,6 +7,7 @@
 
 #include "port/sim_config_prj.h"
 #include "port/follower_assets.h"
+#include "port/bw_mon_sprites.h"
 #include "port/field_lights.h"
 #include "port/field_visuals.h"
 #include "port/field_visual_effects.h"
@@ -159,6 +160,7 @@ void GeneralContentsPrj()
             OpenFileDialog([](std::string path) {
                 auto result = BwBattle_ExtractAssets(path.c_str());
                 FollowerAssets_Reload();
+                BwMonSprites_Reload();
                 sBw2ExtractMessage = BwBattle_ExtractResultMessage(result);
                 if (result == BWBATTLE_EXTRACT_OK && BwBattle_AssetsReady()) {
                     auto *config = SIM_Config_prj_GetConfig();
@@ -174,12 +176,20 @@ void GeneralContentsPrj()
         ConfigCheckBox("Overworld encounters", &myConfig->overworldEncounters, configChanged, overworldReady);
         ConfigCheckBox("Pokémon follower", &myConfig->pokemonFollower, configChanged, overworldReady);
         ImGui::EndDisabled();
+        bool monSpritesReady = BwMonSprites_Ready();
+        ImGui::BeginDisabled(!monSpritesReady);
+        ConfigCheckBox("BW sprites", &myConfig->bwMonSprites, configChanged, monSpritesReady);
+        ImGui::EndDisabled();
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            ImGui::SetTooltip("Black 2 / White 2 art for the summary screen, the Pok\xC3\xA9" "dex and Pok\xC3\xA9" "mon icons. Applies to screens opened after changing it.");
         ImGui::EndTable();
     }
     if (!sBw2ExtractMessage.empty()) ImGui::TextWrapped("%s", sBw2ExtractMessage.c_str());
     if (!ready) ImGui::TextWrapped("BW2 graphics not extracted.");
     else if (!FollowerAssets_Ready())
         ImGui::TextWrapped("Re-extract your BW2 ROM to enable followers and overworld encounters.");
+    else if (!BwMonSprites_Ready())
+        ImGui::TextWrapped("Re-extract your BW2 ROM to enable BW sprites.");
     else if (!BwBattle_IrisAssetsReady() || !BwBattle_IrisVsReady())
         ImGui::TextWrapped("Re-extract your BW2 ROM to enable all Iris graphics.");
 

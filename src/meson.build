@@ -1028,6 +1028,7 @@ pokeplatinum_c += files(
     'port/autosave.c',
     'port/battle_smoothing.c',
     'port/battle_timing.c',
+    'port/bw_mon_sprites.c',
     'port/charcode_convert.c',
     'port/debug_field.c',
     'port/field_lights.c',

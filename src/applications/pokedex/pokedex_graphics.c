@@ -8,6 +8,9 @@
 #include "font.h"
 #include "gx_layers.h"
 #include "pokemon.h"
+#ifdef SDK_PORT
+#include "port/bw_mon_sprites.h"
+#endif
 #include "software_sprite.h"
 #include "sprite_transfer.h"
 #include "sys_task.h"
@@ -158,9 +161,21 @@ void PokedexGraphics_LoadPokemonSprite(PokedexGraphicData *pokedexGraphicData, e
         gender = Pokemon_GetGenderOf(species, 0);
     }
 
-    BuildPokemonSpriteTemplate(&spriteTemplate, species, gender, face, shiny, form, personality);
+    BOOL bwSprite = FALSE;
 
-    if (face == 0) {
+#ifdef SDK_PORT
+    if (PokemonSpriteManager_HasLargeFrames(pokedexGraphicData->spriteMan)) {
+        bwSprite = BwMonSprites_BuildTemplate(&spriteTemplate, species, gender, face, shiny, form, personality);
+    }
+#endif
+
+    if (!bwSprite) {
+        BuildPokemonSpriteTemplate(&spriteTemplate, species, gender, face, shiny, form, personality);
+    }
+
+    if (bwSprite) {
+        yOffset = 0;
+    } else if (face == 0) {
         yOffset = LoadPokemonSpriteYOffset(species, gender, face, form, personality);
         yOffset += 0;
     } else {
@@ -168,6 +183,17 @@ void PokedexGraphics_LoadPokemonSprite(PokedexGraphicData *pokedexGraphicData, e
     }
 
     pokedexGraphicData->pokemonSprite[spriteIndex] = PokemonSpriteManager_CreateSprite(pokedexGraphicData->spriteMan, &spriteTemplate, x, y + yOffset, 0, 0, NULL, NULL);
+
+#ifdef SDK_PORT
+    // As offsets, since the screens move the sprites by their centers afterward
+    if (bwSprite) {
+        int xArtOffset, yArtOffset;
+
+        BwMonSprites_CenterArtOffset(&spriteTemplate, FALSE, &xArtOffset, &yArtOffset);
+        PokemonSprite_SetAttribute(pokedexGraphicData->pokemonSprite[spriteIndex], MON_SPRITE_X_OFFSET, xArtOffset);
+        PokemonSprite_SetAttribute(pokedexGraphicData->pokemonSprite[spriteIndex], MON_SPRITE_Y_OFFSET, yArtOffset);
+    }
+#endif
 }
 
 void PokemonGraphics_SetSpriteCenterXY(PokedexGraphicData *pokedexGraphicData, int x, int y, int spriteIndex)
@@ -745,6 +771,11 @@ static void FreeWindow(PokedexGraphicData *pokedexGraphicData)
 static void NewPokemonSprite(PokedexGraphicData *pokedexGraphicData, enum HeapID heapID)
 {
     pokedexGraphicData->spriteMan = PokemonSpriteManager_New(heapID);
+#ifdef SDK_PORT
+    if (BwMonSprites_Enabled()) {
+        PokemonSpriteManager_SetLargeFrames(pokedexGraphicData->spriteMan);
+    }
+#endif
 
     NNSGfdTexKey texKey = NNS_GfdAllocTexVram(0x8000, 0, 0);
     NNSGfdPlttKey plttKey = NNS_GfdAllocPlttVram(0x80, 0, NNS_GFD_ALLOC_FROM_LOW);

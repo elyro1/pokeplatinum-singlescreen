@@ -10,6 +10,9 @@
 
 #include "camera.h"
 #include "gx_layers.h"
+#ifdef SDK_PORT
+#include "port/bw_mon_sprites.h"
+#endif
 #include "pokemon.h"
 #include "pokemon_anim.h"
 #include "pokemon_sprite.h"
@@ -325,8 +328,19 @@ void PokemonSummaryScreen_LoadMonSprite(PokemonSummaryScreen *summaryScreen)
     void *monData = PokemonSummaryScreen_MonData(summaryScreen);
 
     PokemonSpriteTemplate spriteTemplate;
+    BOOL bwSprite = FALSE;
 
-    if (summaryScreen->data->dataType == SUMMARY_DATA_BOX_MON) {
+#ifdef SDK_PORT
+    if (BwMonSprites_Enabled()) {
+        BoxPokemon *boxMon = summaryScreen->data->dataType == SUMMARY_DATA_BOX_MON ? monData : Pokemon_GetBoxPokemon(monData);
+
+        bwSprite = BwMonSprites_BuildTemplateFromBoxMon(&spriteTemplate, boxMon, FACE_FRONT);
+    }
+#endif
+
+    if (bwSprite) {
+        // Built above
+    } else if (summaryScreen->data->dataType == SUMMARY_DATA_BOX_MON) {
         BoxPokemon_BuildSpriteTemplate(&spriteTemplate, monData, 2, 0);
     } else {
         Pokemon_BuildSpriteTemplate(&spriteTemplate, monData, 2);
@@ -335,7 +349,21 @@ void PokemonSummaryScreen_LoadMonSprite(PokemonSummaryScreen *summaryScreen)
     PokemonSprite_LoadAnimFrames(summaryScreen->narcPlPokeData, summaryScreen->monSprite.frames, summaryScreen->monData.species, 1);
 
     summaryScreen->monSprite.flip = SpeciesData_GetFormValue(summaryScreen->monData.species, summaryScreen->monData.form, SPECIES_DATA_FLIP_SPRITE) ^ 1;
-    summaryScreen->monSprite.sprite = PokemonSpriteManager_CreateSprite(summaryScreen->monSprite.spriteManager, &spriteTemplate, 52, 104, 0, 0, summaryScreen->monSprite.frames, NULL);
+    int spriteX = 52, spriteY = 104;
+
+#ifdef SDK_PORT
+    if (bwSprite) {
+        int xOffset, yOffset;
+
+        PokemonSpriteManager_SetLargeFrames(summaryScreen->monSprite.spriteManager);
+        // In the center position, because the Pokémon animations use the offsets
+        BwMonSprites_CenterArtOffset(&spriteTemplate, summaryScreen->monSprite.flip, &xOffset, &yOffset);
+        spriteX += xOffset;
+        spriteY += yOffset;
+    }
+#endif
+
+    summaryScreen->monSprite.sprite = PokemonSpriteManager_CreateSprite(summaryScreen->monSprite.spriteManager, &spriteTemplate, spriteX, spriteY, 0, 0, summaryScreen->monSprite.frames, NULL);
 
     PokemonSprite_SetAttribute(summaryScreen->monSprite.sprite, MON_SPRITE_FLIP_H, summaryScreen->monSprite.flip);
 }
