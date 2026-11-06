@@ -2,6 +2,15 @@
 
 #include <nnsys.h>
 
+#ifdef SDK_PORT
+static fx32 sHorizontalMargin = 0;
+
+void RenderView_SetHorizontalMargin(int dots)
+{
+    sHorizontalMargin = dots * FX32_ONE;
+}
+#endif
+
 void InitRenderer(NNSG2dRendererInstance *renderer, fx32 spriteZOffset)
 {
     NNS_G2dInitRenderer(renderer);
@@ -68,5 +77,9 @@ BOOL IsObjectInView(const NNSG2dCellData *cellData, const MtxFx32 *objectCoords,
         minX = tmp;
     }
 
+#ifdef SDK_PORT
+    return maxY > 0 && minY < viewRect->sizeView.y && maxX > -sHorizontalMargin && minX < viewRect->sizeView.x + sHorizontalMargin;
+#else
     return maxY > 0 && minY < viewRect->sizeView.y && maxX > 0 && minX < viewRect->sizeView.x;
+#endif
 }

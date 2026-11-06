@@ -17,6 +17,7 @@ enum SortOrder {
     SO_LIGHTEST,
     SO_TALLEST,
     SO_SMALLEST,
+    SO_HIGHEST_STATS, // PC search only; its name follows the others in the Pokédex text bank.
     MAX_SORT_ORDER
 };
 
@@ -126,7 +127,7 @@ BOOL PokedexSort_SetCurrentValues(PokedexSortData *param0, int param1);
 BOOL PokedexSort_TakeStep(PokedexSortData *param0, int param1);
 BOOL PokedexSort_IsValidStep(PokedexSortData *param0, int param1);
 int PokedexSort_CurrentDisplayIndex(const PokedexSortData *param0);
-int PokedexSort_NumSpeciesDisplayed(const PokedexSortData *param0);
+int PokedexSort_NumDisplayed(const PokedexSortData *param0);
 int PokedexSort_DisplayIndexToStatusIndex(const PokedexSortData *param0, int param1);
 void PokedexSort_UpdateCurrentValues(PokedexSortData *param0);
 int PokedexSort_NumEncountered(const PokedexSortData *param0);

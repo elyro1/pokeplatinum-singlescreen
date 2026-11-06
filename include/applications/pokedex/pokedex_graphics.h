@@ -37,6 +37,10 @@ typedef struct PokedexBlendTransition {
     int deltaSpriteBrightness;
     int numSteps;
     int step;
+#ifdef SDK_PORT
+    // PokedexWide_AdjustFade: the entry's tab strip stays lit through this fade.
+    BOOL keepStrip;
+#endif
 } PokedexBlendTransition;
 
 typedef struct PokedexCursorGraphics {

@@ -25,9 +25,11 @@
 #include "applications/pokedex/ov21_021E737C.h"
 #include "applications/pokedex/pokedex_app.h"
 #include "applications/pokedex/pokedex_graphics.h"
+#include "applications/pokedex/pokedex_pages.h"
 #include "applications/pokedex/pokedex_height_check.h"
 #include "applications/pokedex/pokedex_search.h"
 #include "applications/pokedex/pokedex_sort.h"
+#include "applications/pokedex/pokedex_wide.h"
 #include "applications/pokedex/pokedex_text.h"
 #include "applications/pokedex/pokedex_text_manager.h"
 #include "applications/pokedex/pokedex_updater.h"
@@ -85,7 +87,14 @@ int PokedexMain_Init(ApplicationManager *appMan, int *state)
     PokedexOverlayArgs pokedexOverlayArgs;
 
     Sound_SetSceneAndPlayBGM(SOUND_SCENE_SUB_54, SEQ_NONE, 0);
+#ifdef SDK_PORT
+    PokedexWide_LatchEnabled();
+    // The widescreen screens draw into canvases up to 448x192 dots, and the sprite
+    // list is half again Platinum's (pokedex_graphics.c).
+    Heap_Create(HEAP_ID_APPLICATION, HEAP_ID_POKEDEX, 0x90000);
+#else
     Heap_Create(HEAP_ID_APPLICATION, HEAP_ID_POKEDEX, 0x40000);
+#endif
 
     PokedexApp **appPtr = ApplicationManager_NewData(appMan, sizeof(PokedexApp **), HEAP_ID_POKEDEX);
 
@@ -146,6 +155,9 @@ int PokedexMain_Main(ApplicationManager *appMan, int *state)
         if (TransitionComplete(appPtr)) {
             ResetVisibleHardwareWindows(DS_SCREEN_MAIN);
             ResetVisibleHardwareWindows(DS_SCREEN_SUB);
+#ifdef SDK_PORT
+            PokedexWide_ResetFade();
+#endif
             G2_BlendNone();
             G2S_BlendNone();
             return 1;
@@ -191,6 +203,14 @@ static void EntranceTransition(PokedexApp **appPtr)
 
 static void ExitTransition(PokedexApp **appPtr)
 {
+#ifdef SDK_PORT
+    // The wide fades already took the main screen to black with master brightness;
+    // a fade of both screens would reset it to full brightness first.
+    if (PokedexWide_IsHoldingBlack()) {
+        StartScreenFade(FADE_SUB_ONLY, FADE_TYPE_BRIGHTNESS_OUT, FADE_TYPE_BRIGHTNESS_OUT, COLOR_BLACK, 6, 1, HEAP_ID_POKEDEX);
+        return;
+    }
+#endif
     StartScreenFade(FADE_BOTH_SCREENS, FADE_TYPE_BRIGHTNESS_OUT, FADE_TYPE_BRIGHTNESS_OUT, COLOR_BLACK, 6, 1, HEAP_ID_POKEDEX);
 }
 
@@ -199,17 +219,47 @@ static BOOL TransitionComplete(PokedexApp **appPtr)
     return IsScreenFadeDone();
 }
 
-const static UnkFuncPtr_ov21_021E9B74 Unk_ov21_021E9B74[10] = {
+#ifdef SDK_PORT
+// The info screen's slot holds the widescreen info page when the new Pokédex is on.
+static void InitInfoScreen(PokedexScreenManager *screenMan, PokedexApp *pokedexApp, enum HeapID heapID)
+{
+    if (PokedexWide_IsEnabled()) {
+        PokedexInfoPage_Init(screenMan, pokedexApp, heapID);
+    } else {
+        InfoMain_InitScreen(screenMan, pokedexApp, heapID);
+    }
+}
+
+static void FreeInfoScreen(PokedexScreenManager *screenMan)
+{
+    if (PokedexWide_IsEnabled()) {
+        PokedexWidePage_Free(screenMan);
+    } else {
+        InfoMain_FreeScreen(screenMan);
+    }
+}
+#endif
+
+const static UnkFuncPtr_ov21_021E9B74 Unk_ov21_021E9B74[POKEDEX_MAIN_SCREEN_COUNT] = {
     ov21_021D5AEC,
     PokedexSearch_TransitionFunctions,
+#ifdef SDK_PORT
+    InitInfoScreen,
+#else
     InfoMain_InitScreen,
+#endif
     FormMain_Init,
     InfoMainForeign_InitScreen,
     ov21_021E29DC,
     ov21_021DC9BC,
     ov21_021E3FFC,
     ov21_021E6014,
-    ov21_021E737C
+    ov21_021E737C,
+#ifdef SDK_PORT
+    PokedexStatsPage_Init,
+    PokedexMovesPage_Init,
+    PokedexEvosPage_Init,
+#endif
 };
 
 const static UnkFuncPtr_ov21_021E9B74 Unk_ov21_021E9B34[8] = {
@@ -223,17 +273,26 @@ const static UnkFuncPtr_ov21_021E9B74 Unk_ov21_021E9B34[8] = {
     FormSub_Init
 };
 
-const static UnkFuncPtr_ov21_021E9B9C Unk_ov21_021E9B9C[10] = {
+const static UnkFuncPtr_ov21_021E9B9C Unk_ov21_021E9B9C[POKEDEX_MAIN_SCREEN_COUNT] = {
     ov21_021D5B50,
     PokedexSearch_FreeData,
+#ifdef SDK_PORT
+    FreeInfoScreen,
+#else
     InfoMain_FreeScreen,
+#endif
     FormMain_Free,
     InfoMainForeign_FreeScreen,
     ov21_021E2A3C,
     ov21_021DCA14,
     ov21_021E4054,
     ov21_021E6074,
-    ov21_021E73D4
+    ov21_021E73D4,
+#ifdef SDK_PORT
+    PokedexWidePage_Free,
+    PokedexWidePage_Free,
+    PokedexWidePage_Free,
+#endif
 };
 
 const static UnkFuncPtr_ov21_021E9B9C Unk_ov21_021E9B54[8] = {
@@ -281,7 +340,7 @@ PokedexApp *PokedexMain_NewPokedexApp(enum HeapID heapID, const PokedexOverlayAr
     PokedexSort_DefaultPokedexSort(&pokedexApp->sortData, &sortParams, heapID);
     PokedexGraphics_Init(&pokedexApp->graphicData, heapID);
 
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < POKEDEX_MAIN_SCREEN_COUNT; i++) {
         if (Unk_ov21_021E9B74[i]) {
             Unk_ov21_021E9B74[i](&pokedexApp->unk_1A94[i], pokedexApp, heapID);
         }
@@ -474,7 +533,7 @@ PokedexGraphicData *PokedexMain_GetGraphicData(PokedexApp *pokedexApp)
 
 PokedexScreenManager *ov21_021D1410(PokedexApp *pokedexApp, int param1)
 {
-    GF_ASSERT(param1 < 10);
+    GF_ASSERT(param1 < POKEDEX_MAIN_SCREEN_COUNT);
     return &pokedexApp->unk_1A94[param1];
 }
 
@@ -928,7 +987,7 @@ static void FreePokedexApp(PokedexApp *pokedexApp)
     GF_ASSERT(pokedexApp->unk_1D70);
     Heap_Free(pokedexApp->unk_1D70);
 
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < POKEDEX_MAIN_SCREEN_COUNT; i++) {
         if (Unk_ov21_021E9B9C[i]) {
             Unk_ov21_021E9B9C[i](&pokedexApp->unk_1A94[i]);
         }

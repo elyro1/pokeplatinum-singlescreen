@@ -8,6 +8,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SOUND = 'data/sound/pl_sound_data.sdat'
+# The end of generated/text_banks.txt: the follower dialogue, then the Pokédex's metric units.
+APPENDED_TEXT_BANKS = (
+    'following_pokemon',
+    'species_weight_metric',
+    'species_weight_gira_metric',
+    'species_height_metric',
+    'species_height_gira_metric',
+)
 
 
 def build_tool(build, name):
@@ -37,11 +45,12 @@ def resources(build, members):
         text = members((build / 'res/text/pl_msg.narc').read_bytes())
         order = [s.removeprefix('TEXT_BANK_').lower() for s in
                  (ROOT / 'generated/text_banks.txt').read_text().splitlines()]
-        # The follower dialogue is a new bank, not part of the retail archive.
-        # Keep it out of the baseline so the patcher appends it at startup.
-        if len(text) != len(order) or order[-1] != 'following_pokemon':
+        # New banks are not part of the retail archive. Keep them out of the
+        # baseline so the patcher appends them at startup.
+        appended = len(APPENDED_TEXT_BANKS)
+        if len(text) != len(order) or tuple(order[-appended:]) != APPENDED_TEXT_BANKS:
             raise ValueError('Unexpected appended text bank order')
-        text = text[:-1]
+        text = text[:-appended]
         for name, source, count in [
             ('iron_island', ROOT / 'res/text/iron_island.json', 6),
             ('scratch_off_cards_app', ROOT / 'res/text/scratch_off_cards_app.json', 13),

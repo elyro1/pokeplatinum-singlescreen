@@ -11,6 +11,7 @@
 #include "applications/pokedex/pokedex_graphics_manager.h"
 #include "applications/pokedex/pokedex_main.h"
 #include "applications/pokedex/pokedex_sort.h"
+#include "applications/pokedex/pokedex_wide.h"
 #include "applications/pokedex/pokedex_sort_data.h"
 #include "applications/pokedex/pokedex_text_manager.h"
 #include "applications/pokedex/struct_ov21_021D4660.h"
@@ -264,7 +265,8 @@ static int ov21_021D7860(PokedexDataManager *dataMan, void *data)
     ov21_021D8434(v1, v0->unk_1C->unk_0C, v0->unk_1C->unk_08);
     ov21_021D7B20(v1, v0);
 #ifndef SDK_BUILD_ARM
-    if (gSystem.pressedKeys & (PAD_BUTTON_L | PAD_BUTTON_R)) {
+    // The new Pokédex's L/R page through its grid instead (PokedexGrid_HandleInput).
+    if (!PokedexWide_IsEnabled() && (gSystem.pressedKeys & (PAD_BUTTON_L | PAD_BUTTON_R))) {
         int target = (gSystem.pressedKeys & PAD_BUTTON_L) ? 0 : PokedexSort_CaughtStatusLength(v0->unk_1C->unk_04) - 1;
         if (PokedexSort_IsValidStatusIndex(v0->unk_1C->unk_04, target)
             && target != PokedexSort_CurrentStatusIndex(v0->unk_1C->unk_04)

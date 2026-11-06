@@ -359,6 +359,10 @@
       "en_US": "Smallest"
     },
     {
+      "id": "pl_msg_pokedex_wide_highest_stats",
+      "en_US": "Highest stats"
+    },
+    {
       "id": "pl_msg_pokedex_alphabetical_description",
       "en_US": [
         "List by the first letter\n",
@@ -524,6 +528,248 @@
     {
       "id": "pl_msg_pokedex_nonetype",
       "en_US": "- - - -"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_sinnoh",
+      "en_US": "SINNOH POKéDEX"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_national",
+      "en_US": "NATIONAL POKéDEX"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_tab_stats",
+      "en_US": "STATS"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_tab_moves",
+      "en_US": "MOVES"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_tab_evos",
+      "en_US": "EVOS"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_lucasheight_metric",
+      "en_US": "1.4 m"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_dawnheight_metric",
+      "en_US": "1.4 m"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_lucasweight_metric",
+      "en_US": "38.0 kg"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_dawnweight_metric",
+      "en_US": "34.0 kg"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_title_stats",
+      "en_US": "BASE STATS"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_title_moves",
+      "en_US": "MOVES"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_title_evos",
+      "en_US": "EVOLUTIONS"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_stat_hp",
+      "en_US": "HP"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_stat_atk",
+      "en_US": "ATTACK"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_stat_def",
+      "en_US": "DEFENSE"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_stat_spatk",
+      "en_US": "SP. ATK"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_stat_spdef",
+      "en_US": "SP. DEF"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_stat_speed",
+      "en_US": "SPEED"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_stat_total",
+      "en_US": "TOTAL"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_abilities",
+      "en_US": "ABILITIES"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_number",
+      "en_US": "No."
+    },
+    {
+      "id": "pl_msg_pokedex_wide_moves_level",
+      "en_US": "LEVEL UP"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_moves_tm",
+      "en_US": "TM / HM"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_moves_tutor",
+      "en_US": "MOVE TUTOR"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_moves_egg",
+      "en_US": "EGG MOVES"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_lv",
+      "en_US": "Lv."
+    },
+    {
+      "id": "pl_msg_pokedex_wide_tm",
+      "en_US": "TM"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_hm",
+      "en_US": "HM"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_pow",
+      "en_US": "POW"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_acc",
+      "en_US": "ACC"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_pp",
+      "en_US": "PP"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_unknown",
+      "en_US": "?????"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_no_evolution",
+      "en_US": "Does not evolve."
+    },
+    {
+      "id": "pl_msg_pokedex_wide_evo_level",
+      "en_US": "Lv. "
+    },
+    {
+      "id": "pl_msg_pokedex_wide_evo_atk",
+      "en_US": " Atk"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_evo_def",
+      "en_US": "Def"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_evo_beauty",
+      "en_US": "Beauty"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_evo_coronet",
+      "en_US": "Mt. Coronet"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_evo_moss",
+      "en_US": "Moss Rock"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_evo_ice",
+      "en_US": "Ice Rock"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_title_search",
+      "en_US": "SEARCH"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_search_type1",
+      "en_US": "TYPE 1"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_search_type2",
+      "en_US": "TYPE 2"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_search_start",
+      "en_US": "START SEARCH"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_search_info_order",
+      "en_US": [
+        "Choose the order\n",
+        "the Pokémon are\n",
+        "listed in."
+      ]
+    },
+    {
+      "id": "pl_msg_pokedex_wide_search_info_name",
+      "en_US": [
+        "Only list Pokémon\n",
+        "whose names start\n",
+        "with these letters."
+      ]
+    },
+    {
+      "id": "pl_msg_pokedex_wide_search_info_type",
+      "en_US": [
+        "Only list Pokémon\n",
+        "of this type. Set\n",
+        "both for dual types."
+      ]
+    },
+    {
+      "id": "pl_msg_pokedex_wide_search_info_form",
+      "en_US": [
+        "Only list Pokémon\n",
+        "with this body style."
+      ]
+    },
+    {
+      "id": "pl_msg_pokedex_wide_search_info_start",
+      "en_US": [
+        "Search the Pokédex\n",
+        "with these settings."
+      ]
+    },
+    {
+      "id": "pl_msg_pokedex_wide_key_a",
+      "en_US": "A"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_key_b",
+      "en_US": "B"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_key_start",
+      "en_US": "START"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_hint_change",
+      "en_US": "Change"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_hint_select",
+      "en_US": "Change / Start"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_hint_search",
+      "en_US": "Search"
+    },
+    {
+      "id": "pl_msg_pokedex_wide_hint_back",
+      "en_US": "Back"
     }
   ]
 }

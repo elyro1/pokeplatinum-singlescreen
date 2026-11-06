@@ -8,6 +8,8 @@
 #include "applications/pokedex/pokedex_data_manager.h"
 #include "applications/pokedex/pokedex_graphics.h"
 #include "applications/pokedex/pokedex_graphics_manager.h"
+#include "applications/pokedex/pokedex_grid.h"
+#include "applications/pokedex/pokedex_wide.h"
 #include "applications/pokedex/pokedex_main.h"
 #include "applications/pokedex/pokedex_sort.h"
 #include "applications/pokedex/pokedex_text_manager.h"
@@ -340,6 +342,28 @@ static int ov21_021D5D48(void *graphics, PokedexGraphicsManager *graphicsMan, co
     UnkStruct_ov21_021D71A8 *v3 = graphicsMan->pageGraphics;
     BOOL v4;
 
+#ifdef SDK_PORT
+    // The PC Pokédex shows a widescreen grid instead of the scrolling list.
+    if (PokedexWide_IsEnabled()) {
+        switch (graphicsMan->state) {
+        case 0:
+            graphicsMan->pageGraphics = PokedexGrid_New(*v0, v1->unk_04, graphicsMan->heapID);
+            PokedexGrid_StartFade(graphicsMan->pageGraphics, TRUE);
+            graphicsMan->state++;
+            break;
+        case 1:
+            PokedexGrid_Update(graphicsMan->pageGraphics, v1->unk_04);
+
+            if (PokedexGrid_FadeStep(graphicsMan->pageGraphics)) {
+                return 1;
+            }
+            break;
+        }
+
+        return 0;
+    }
+#endif
+
     switch (graphicsMan->state) {
     case 0:
         v3 = Heap_Alloc(graphicsMan->heapID, sizeof(UnkStruct_ov21_021D71A8));
@@ -394,6 +418,13 @@ static int ov21_021D5E2C(void *graphics, PokedexGraphicsManager *graphicsMan, co
     UnkStruct_ov21_021D71A8 *v3 = graphicsMan->pageGraphics;
     int v4;
 
+#ifdef SDK_PORT
+    if (PokedexWide_IsEnabled()) {
+        PokedexGrid_Update(graphicsMan->pageGraphics, v1->unk_04);
+        return 0;
+    }
+#endif
+
     if (v1->unk_1C == 0) {
         return 0;
     }
@@ -424,6 +455,28 @@ static int ov21_021D5EA8(void *graphics, PokedexGraphicsManager *graphicsMan, co
     const UnkStruct_ov21_021D7464 *v2 = dataMan->pageData;
     UnkStruct_ov21_021D71A8 *v3 = graphicsMan->pageGraphics;
     BOOL v4;
+
+#ifdef SDK_PORT
+    if (PokedexWide_IsEnabled()) {
+        switch (graphicsMan->state) {
+        case 0:
+            PokedexGrid_StartFade(graphicsMan->pageGraphics, FALSE);
+            graphicsMan->state++;
+            break;
+        case 1:
+            if (PokedexGrid_FadeStep(graphicsMan->pageGraphics)) {
+                PokedexGrid_Free(graphicsMan->pageGraphics, v1->unk_04);
+                graphicsMan->pageGraphics = NULL;
+                graphicsMan->state++;
+            }
+            break;
+        case 2:
+            return 1;
+        }
+
+        return 0;
+    }
+#endif
 
     switch (graphicsMan->state) {
     case 0:
@@ -489,6 +542,14 @@ static void ov21_021D5F7C(UnkStruct_ov21_021D5B68 *param0, UnkStruct_ov21_021D74
 
     ov21_021D5FC4(param0);
 
+#ifdef SDK_PORT
+    if (PokedexWide_IsEnabled()) {
+        PokedexGrid_HandleInput(param0->unk_04);
+        ov21_021D5FD4(param0);
+        return;
+    }
+#endif
+
     if (param1->unk_00 == 0) {
         if (param1->unk_14 == 1) {
             ov21_021D7590(param1, param0);
@@ -535,6 +596,13 @@ static void ov21_021D5FD4(UnkStruct_ov21_021D5B68 *param0)
         return;
     }
 
+#ifdef SDK_PORT
+    if (PokedexWide_IsEnabled() && (gSystem.pressedKeys & PAD_BUTTON_Y)) {
+        PokedexGrid_PlayCry(param0->unk_04);
+        return;
+    }
+#endif
+
     if (gSystem.pressedKeys & PAD_BUTTON_SELECT) {
         param0->unk_30 = 1;
         return;
@@ -559,6 +627,11 @@ static BOOL ov21_021D601C(UnkStruct_ov21_021D5B68 *param0, UnkStruct_ov21_021D74
         int v0 = PokedexSort_CurrentDisplayIndex(param0->unk_04);
 
         if (PokedexSort_DisplayIndexToStatusIndex(param0->unk_04, v0) != (NATIONAL_DEX_COUNT + 1)) {
+#ifdef SDK_PORT
+            if (PokedexWide_IsEnabled()) {
+                PokedexWide_CrossfadeScreen();
+            }
+#endif
             ov21_021D7464(param1, param0);
             Sound_PlayEffect(SEQ_SE_DP_DECIDE_sseq);
             return 1;
