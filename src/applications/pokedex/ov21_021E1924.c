@@ -16,6 +16,7 @@
 #include "applications/pokedex/pokedex_sort_data.h"
 #include "applications/pokedex/pokedex_text.h"
 #include "applications/pokedex/pokedex_text_manager.h"
+#include "applications/pokedex/pokedex_wide.h"
 #include "applications/pokedex/struct_ov21_021D4660.h"
 #include "applications/pokedex/struct_ov21_021E68F4.h"
 
@@ -1050,7 +1051,16 @@ static void ov21_021E2864(UnkStruct_ov21_021E1E74 *param0, UnkStruct_ov21_021E1A
         }
 
         if (v0 == 1) {
+#ifdef SDK_PORT
+            // The widescreen info page follows the species itself, without a fade.
+            if (PokedexWide_IsEnabled() && param0->unk_10 == 0) {
+                param1->unk_08->playCry = 1;
+            } else {
+                ov21_021E275C(param0, param1, param0->unk_10);
+            }
+#else
             ov21_021E275C(param0, param1, param0->unk_10);
+#endif
             ov21_021E2968(param0, param1);
             Sound_PlayEffect(SEQ_SE_DP_DENSI06_sseq);
         }
@@ -1059,6 +1069,21 @@ static void ov21_021E2864(UnkStruct_ov21_021E1E74 *param0, UnkStruct_ov21_021E1A
 
 static void ov21_021E28A8(UnkStruct_ov21_021E1E74 *param0)
 {
+#ifdef SDK_PORT
+    // L/R step through species on every entry page, as on the widescreen ones.
+    if (PokedexWide_IsEnabled()) {
+        if (gSystem.pressedKeys & (PAD_KEY_UP | PAD_BUTTON_L)) {
+            param0->unk_34 = 1;
+            return;
+        }
+
+        if (gSystem.pressedKeys & (PAD_KEY_DOWN | PAD_BUTTON_R)) {
+            param0->unk_34 = 0;
+            return;
+        }
+    }
+#endif
+
     if (gSystem.pressedKeys & PAD_KEY_UP) {
         param0->unk_34 = 1;
         return;

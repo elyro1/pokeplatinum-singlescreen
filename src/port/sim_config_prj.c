@@ -19,6 +19,7 @@ static const char *sBattlePacingNames[BATTLE_PACING_COUNT] = { "Smooth", "Quick"
 static const char *sSpeedNames[PORT_SPEED_COUNT] = { "Fast", "Faster", "Instant", "Normal" };
 
 static const char *sNicknameModeNames[NICKNAME_MODE_COUNT] = { "Ask", "Always", "Never" };
+static const char *sPokedexUnitsNames[POKEDEX_UNITS_COUNT] = { "Metric", "Imperial" };
 
 static int IniHandler(void *user, const char *section, const char *name, const char *value);
 static const char * BoolToString(BOOL arg);
@@ -37,6 +38,17 @@ static int IniHandler(void* user, const char* section, const char* name,
     // General section
     if(MATCH("General", "60Fps")) {
         config->enable60fps = StringToBool(value);
+    }
+    if (MATCH("General", "NewPokedex")) {
+        config->newPokedex = StringToBool(value);
+    }
+    if (MATCH("General", "PokedexUnits")) {
+        for (int i = 0; i < POKEDEX_UNITS_COUNT; i++) {
+            if (strcmp(value, sPokedexUnitsNames[i]) == 0) {
+                config->pokedexUnits = (PokedexUnits)i;
+                break;
+            }
+        }
     }
     // Old Original pacing migrates to Smooth. Removed UI timing switches are ignored.
     if (MATCH("General", "BattlePacing")) {
@@ -161,6 +173,8 @@ void SIM_Config_prj_LoadDefaults(SIM_Config_prj_type * aConfig)
   aConfig->enable60fps = TRUE;
   aConfig->battlePacing = BATTLE_PACING_SMOOTH;
   aConfig->nicknameMode = NICKNAME_MODE_ASK;
+  aConfig->newPokedex = TRUE;
+  aConfig->pokedexUnits = POKEDEX_UNITS_METRIC;
   aConfig->textSpeed = PORT_SPEED_FAST;
   aConfig->battleBarSpeed = PORT_SPEED_FAST;
   aConfig->fastWildBattleIntro = TRUE;
@@ -217,6 +231,8 @@ void SIM_Config_prj_SaveConfigFile(SIM_Config_prj_type * aConfig)
     fprintf(configFile, "TextSpeed=%s\n", sSpeedNames[aConfig->textSpeed]);
     fprintf(configFile, "BattleBarSpeed=%s\n", sSpeedNames[aConfig->battleBarSpeed]);
     fprintf(configFile, "NicknameMode=%s\n", sNicknameModeNames[aConfig->nicknameMode]);
+    fprintf(configFile, "NewPokedex=%s\n", BoolToString(aConfig->newPokedex));
+    fprintf(configFile, "PokedexUnits=%s\n", sPokedexUnitsNames[aConfig->pokedexUnits]);
     fprintf(configFile, "FastWildBattleIntro=%s\n", BoolToString(aConfig->fastWildBattleIntro));
     fprintf(configFile, "BW2BattleVisuals=%s\n", BoolToString(aConfig->bw2BattleVisuals));
     fprintf(configFile, "OverworldEncounters=%s\n", BoolToString(aConfig->overworldEncounters));

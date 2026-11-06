@@ -13,10 +13,13 @@
 #include "applications/pokedex/pokedex_graphics.h"
 #include "applications/pokedex/pokedex_graphics_manager.h"
 #include "applications/pokedex/pokedex_main.h"
+#include "applications/pokedex/pokedex_pages.h"
 #include "applications/pokedex/pokedex_panel.h"
 #include "applications/pokedex/pokedex_sort.h"
 #include "applications/pokedex/pokedex_sort_data.h"
+#include "applications/pokedex/pokedex_tabs.h"
 #include "applications/pokedex/pokedex_text_manager.h"
+#include "applications/pokedex/pokedex_wide.h"
 #include "applications/pokedex/struct_ov21_021D4660.h"
 #include "applications/pokedex/struct_ov21_021D5B68.h"
 #include "applications/pokedex/struct_ov21_021E68F4.h"
@@ -58,12 +61,29 @@ typedef struct {
     BOOL unk_30;
 } UnkStruct_ov21_021E2BA8;
 
+#ifdef SDK_PORT
+#define NUM_TAB_LABELS POKEDEX_TAB_COUNT
+#else
+#define NUM_TAB_LABELS 5
+#endif
+
+// Platinum's five tabs: INFO, AREA, CRY, SIZE, FORMS.
+#define NUM_CLASSIC_TABS 5
+
+static int ActiveTabLabels(void)
+{
+    return PokedexWide_IsEnabled() ? NUM_TAB_LABELS : NUM_CLASSIC_TABS;
+}
+
 typedef struct {
     int unk_00;
 #ifndef SDK_BUILD_ARM
     int tabPaletteOffset;
+    // The labels' colors follow the entry shown (PokedexTabs_IsAvailable).
+    const PokedexSortData *sortData;
+    int labelSpecies;
 #endif
-    PokedexTextData *unk_04[5];
+    PokedexTextData *unk_04[NUM_TAB_LABELS];
     SpriteResource *unk_18[4];
 } UnkStruct_ov21_021E326C;
 
@@ -280,6 +300,11 @@ static UnkStruct_ov21_021D4660 *ov21_021E2B08(enum HeapID heapID, PokedexApp *pa
     ov21_021D49E4(heapID, &v0[5], param1, (0x1 << 6));
     ov21_021D4A3C(heapID, &v0[6], param1, (0x1 << 7));
     ov21_021D4B50(heapID, &v0[7], param1, (0x1 << 8));
+#ifdef SDK_PORT
+    PokedexWidePage_InitTabState(heapID, &v0[8], param1, (0x1 << 9), POKEDEX_WIDE_PAGE_STATS);
+    PokedexWidePage_InitTabState(heapID, &v0[9], param1, (0x1 << 10), POKEDEX_WIDE_PAGE_MOVES);
+    PokedexWidePage_InitTabState(heapID, &v0[10], param1, (0x1 << 11), POKEDEX_WIDE_PAGE_EVOS);
+#endif
 
     return v0;
 }
@@ -308,13 +333,22 @@ static void ov21_021E2BD0(UnkStruct_ov21_021D4660 *param0)
     ov21_021D4660(&param0[5]);
     ov21_021D4660(&param0[6]);
     ov21_021D4660(&param0[7]);
+#ifdef SDK_PORT
+    ov21_021D4660(&param0[8]);
+    ov21_021D4660(&param0[9]);
+    ov21_021D4660(&param0[10]);
+#endif
 
     Heap_Free(param0);
 }
 
 static int ov21_021E2C20(void)
 {
+#ifdef SDK_PORT
+    return 11;
+#else
     return 8;
+#endif
 }
 
 static int ov21_021E2C24(PokedexDataManager *dataMan, void *data)
@@ -399,8 +433,19 @@ static int ov21_021E2D10(void *graphics, PokedexGraphicsManager *graphicsMan, co
     if (v3->unk_00 != v0->unk_08) {
         ov21_021E331C(v3, v0->unk_08);
         ov21_021E3FC0(v3, v0->unk_08, v3->unk_00);
+#ifdef SDK_PORT
+        if (PokedexWide_IsEnabled()) {
+            PokedexTabs_Draw(*(PokedexGraphicData **)graphics, v0->unk_08, graphicsMan->heapID);
+        }
+#endif
         v3->unk_00 = v0->unk_08;
     }
+#ifndef SDK_BUILD_ARM
+    else if (PokedexWide_IsEnabled() && v3->labelSpecies != PokedexSort_CurrentSpecies(v0->unk_04)) {
+        // Up and down change the entry under the strip.
+        ov21_021E3FC0(v3, v0->unk_08, v0->unk_08);
+    }
+#endif
 
     return 0;
 }
@@ -455,12 +500,25 @@ static void ov21_021E2E00(UnkStruct_ov21_021E2BA8 *param0)
 static void ov21_021E2E10(UnkStruct_ov21_021E2BA8 *param0)
 {
     *param0->unk_00 |= (0x1 << 1);
+#ifdef SDK_PORT
+    if (PokedexWide_IsEnabled()) {
+        PokedexWide_CrossfadeScreen();
+    }
+#endif
     param0->unk_28 = 0;
     param0->unk_10->animationMode = 0;
 
     InfoMainForeign_SetAnimationMode(param0->unk_18, ANIM_POSITION_BLEND);
 
-    switch (param0->unk_08) {
+    int tab = param0->unk_08;
+#ifdef SDK_PORT
+    // The widescreen info page has no slide back to the list, like Platinum's forms page.
+    if (PokedexWide_IsEnabled() && tab == POKEDEX_TAB_INFO) {
+        tab = 4;
+    }
+#endif
+
+    switch (tab) {
     case 0:
         param0->unk_10->displayPositionX = 56;
         param0->unk_10->displayPositionY = 80;
@@ -487,6 +545,11 @@ static void ov21_021E2E10(UnkStruct_ov21_021E2BA8 *param0)
         param0->unk_2C = 0;
         break;
     case 4:
+#ifdef SDK_PORT
+    case POKEDEX_TAB_STATS:
+    case POKEDEX_TAB_MOVES:
+    case POKEDEX_TAB_EVOS:
+#endif
         param0->unk_0C->unk_14 = 0;
         param0->unk_2C = 0;
         break;
@@ -560,6 +623,14 @@ static BOOL ov21_021E2EC4(UnkStruct_ov21_021E2BA8 *param0, int param1, int param
             v2 = 0;
         }
         break;
+#ifdef SDK_PORT
+    case POKEDEX_TAB_STATS:
+    case POKEDEX_TAB_MOVES:
+    case POKEDEX_TAB_EVOS:
+        *param0->unk_00 |= (0x1 << (9 + param1 - POKEDEX_TAB_STATS));
+        param0->unk_08 = param1;
+        break;
+#endif
     default:
         GF_ASSERT(FALSE);
         break;
@@ -607,6 +678,12 @@ static BOOL ov21_021E2EC4(UnkStruct_ov21_021E2BA8 *param0, int param1, int param
         break;
     case 4:
         break;
+#ifdef SDK_PORT
+    case POKEDEX_TAB_STATS:
+    case POKEDEX_TAB_MOVES:
+    case POKEDEX_TAB_EVOS:
+        break;
+#endif
     default:
         GF_ASSERT(FALSE);
         break;
@@ -617,6 +694,9 @@ static BOOL ov21_021E2EC4(UnkStruct_ov21_021E2BA8 *param0, int param1, int param
 
 static void ov21_021E3080(PokedexGraphicData **param0, UnkStruct_ov21_021E326C *param1, const UnkStruct_ov21_021E2BA8 *param2, enum HeapID heapID)
 {
+#ifndef SDK_BUILD_ARM
+    param1->sortData = param2->unk_04;
+#endif
     ov21_021E30E4(param0, param2, heapID);
     ov21_021E3178(param0, param1, heapID);
     ov21_021E3268(param0, param1, heapID);
@@ -630,7 +710,15 @@ static void ov21_021E30BC(PokedexGraphicData **param0, UnkStruct_ov21_021E326C *
     ov21_021E3224(param0, param1);
     ov21_021E3304(param1);
 
+#ifdef SDK_PORT
+    if (PokedexWide_IsEnabled()) {
+        PokedexTabs_Teardown(*param0);
+    } else {
+        Bg_ClearTilemap((*param0)->bgConfig, 2);
+    }
+#else
     Bg_ClearTilemap((*param0)->bgConfig, 2);
+#endif
 }
 
 static void ov21_021E30E4(PokedexGraphicData **param0, const UnkStruct_ov21_021E2BA8 *param1, enum HeapID heapID)
@@ -643,6 +731,15 @@ static void ov21_021E30E4(PokedexGraphicData **param0, const UnkStruct_ov21_021E
     if (PokedexSort_IsNationalDex(param1->unk_04) == 1) {
         PokedexGraphics_LoadGraphicNarcPaletteData(*param0, banner_national_NCLR, 0, 0, 32, heapID);
     }
+
+#ifdef SDK_PORT
+    // The widescreen strip replaces the banner; its palette stays for the pages.
+    if (PokedexWide_IsEnabled()) {
+        PokedexTabs_Setup(*param0, heapID);
+        PokedexTabs_Draw(*param0, param1->unk_08, heapID);
+        return;
+    }
+#endif
 
     PokedexGraphics_LoadGraphicNarcCharacterData(*param0, entry_main_NCGR_lz, (*param0)->bgConfig, 2, 0, 0, TRUE, heapID);
 
@@ -673,19 +770,22 @@ static void ov21_021E3178(PokedexGraphicData **param0, UnkStruct_ov21_021E326C *
 #ifdef SDK_BUILD_ARM
     const int tabPaletteCount = 1;
 #else
-    const int tabPaletteCount = 2;
+    // Labels: normal, selected, and in the new Pokédex unavailable.
+    const int tabPaletteCount = PokedexWide_IsEnabled() ? 3 : 2;
 #endif
 
     param1->unk_18[1] = SpriteResourceCollection_AddPaletteFrom(v0->spriteResourceCollection[1], v1, banner_default_NCLR, FALSE, banner_default_NCLR + 2000, NNS_G2D_VRAM_TYPE_2DMAIN, tabPaletteCount, param2);
 
 #ifndef SDK_BUILD_ARM
-    const u16 tabPalettes[32] = {
+    const u16 tabPalettes[48] = {
         GX_RGB(0, 0, 0), 0, GX_RGB(8, 8, 14), GX_RGB(31, 31, 31),
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         GX_RGB(0, 0, 0), 0, GX_RGB(8, 8, 14), GX_RGB(31, 23, 5),
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        GX_RGB(0, 0, 0), 0, GX_RGB(11, 11, 8), GX_RGB(19, 19, 15),
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     };
-    memcpy(SpriteResource_GetPaletteFade(param1->unk_18[1])->pRawData, tabPalettes, sizeof(tabPalettes));
+    memcpy(SpriteResource_GetPaletteFade(param1->unk_18[1])->pRawData, tabPalettes, tabPaletteCount * 32);
 #endif
 
     SpriteTransfer_RequestPlttFreeSpace(param1->unk_18[1]);
@@ -742,20 +842,25 @@ static void ov21_021E3270(PokedexGraphicData **param0, UnkStruct_ov21_021E326C *
     param1->tabPaletteOffset = v3;
 #endif
 
-    for (v4 = 0; v4 < 5; v4++) {
+    for (v4 = 0; v4 < ActiveTabLabels(); v4++) {
         v0 = PokedexTextManager_NewWindow(v2->textMan, 8, 2);
 
 #ifdef SDK_BUILD_ARM
         PokedexTextManager_DisplayMessage(v2->textMan, v0, TEXT_BANK_POKEDEX, pl_msg_pokedex_info + v4, 0, 0);
 #else
         MessageLoader *labels = MessageLoader_Init(MSG_LOADER_PRELOAD_ENTIRE_BANK, NARC_INDEX_MSGDATA__PL_MSG, TEXT_BANK_POKEDEX, param2);
-        String *label = MessageLoader_GetNewString(labels, pl_msg_pokedex_info + v4);
+        String *label = MessageLoader_GetNewString(labels, PokedexTabs_LabelMessage(v4));
         u32 labelWidth = Font_CalcStringWidth(FONT_SYSTEM, label, 0);
         Text_AddPrinterWithParamsAndColor(v0, FONT_SYSTEM, label, 0, 0, TEXT_SPEED_NO_TRANSFER, TEXT_COLOR(3, 2, 0), NULL);
         String_Free(label);
         MessageLoader_Free(labels);
-        displayBox.x = 4 + v4 * 50 + (48 - (int)labelWidth) / 2;
-        displayBox.y = 1;
+        if (PokedexWide_IsEnabled()) {
+            displayBox.x = PokedexTabs_LabelX(v4, labelWidth);
+            displayBox.y = 0;
+        } else {
+            displayBox.x = 4 + v4 * 50 + (48 - (int)labelWidth) / 2;
+            displayBox.y = 1;
+        }
 #endif
 
         displayBox.window = v0;
@@ -772,7 +877,7 @@ static void ov21_021E3304(UnkStruct_ov21_021E326C *param0)
 {
     int v0;
 
-    for (v0 = 0; v0 < 5; v0++) {
+    for (v0 = 0; v0 < ActiveTabLabels(); v0++) {
         PokedexTextManager_FreeTextData(param0->unk_04[v0]);
     }
 }
@@ -1452,10 +1557,10 @@ static void ov21_021E3D48(UnkStruct_ov21_021E37B4 *param0, UnkStruct_ov21_021E34
     } else if (gSystem.pressedKeys & PAD_KEY_LEFT) {
         direction = -1;
     }
-    if (direction != 0) {
+    if (direction != 0 && !PokedexWide_IsEnabled()) {
         int target = v0->unk_08;
-        for (int step = 0; step < 4; step++) {
-            target = (target + direction + 5) % 5;
+        for (int step = 0; step < NUM_CLASSIC_TABS - 1; step++) {
+            target = (target + direction + NUM_CLASSIC_TABS) % NUM_CLASSIC_TABS;
             if (target == 3 && PokedexSort_CurrentCaughtStatus(v0->unk_04) != 2) {
                 continue;
             }
@@ -1465,6 +1570,24 @@ static void ov21_021E3D48(UnkStruct_ov21_021E37B4 *param0, UnkStruct_ov21_021E34
             if (ov21_021E3C18(param1, target, v0->unk_08)) {
                 PokedexPanel_Move(param0->unk_14, 4, target);
                 param1->unk_0C[target] = 2;
+                Sound_PlayEffect(SEQ_SE_DP_DENSI06_sseq);
+                break;
+            }
+        }
+    } else if (direction != 0) {
+        // Through the strip's order (pokedex_tabs.c), skipping pages this entry lacks.
+        int position = PokedexTabs_Position(v0->unk_08);
+        for (int step = 0; step < POKEDEX_TAB_SHOWN - 1; step++) {
+            position += direction;
+            const int target = PokedexTabs_TabAt(position);
+            if (!PokedexTabs_IsAvailable(v0->unk_04, target)) {
+                continue;
+            }
+            if (ov21_021E3C18(param1, target, v0->unk_08)) {
+                if (target <= POKEDEX_TAB_FORMS) {
+                    PokedexPanel_Move(param0->unk_14, 4, target);
+                    param1->unk_0C[target] = 2;
+                }
                 Sound_PlayEffect(SEQ_SE_DP_DENSI06_sseq);
                 break;
             }
@@ -1650,9 +1773,23 @@ static void ov21_021E3FC0(UnkStruct_ov21_021E326C *param0, int param1, int param
     sub_020129D0(param0->unk_04[param2]->fontOAM, 0);
     sub_020129D0(param0->unk_04[param1]->fontOAM, 1);
 #else
-    for (int tab = 0; tab < 5; tab++) {
-        sub_020129D0(param0->unk_04[tab]->fontOAM, TRUE);
-        sub_02012A60(param0->unk_04[tab]->fontOAM, param0->tabPaletteOffset + (tab == param1));
+    const BOOL wide = PokedexWide_IsEnabled();
+
+    for (int tab = 0; tab < ActiveTabLabels(); tab++) {
+        int palette = 0;
+
+        if (tab == param1) {
+            palette = 1;
+        } else if (wide && param0->sortData && !PokedexTabs_IsAvailable(param0->sortData, tab)) {
+            palette = 2;
+        }
+
+        sub_020129D0(param0->unk_04[tab]->fontOAM, !wide || PokedexTabs_Position(tab) >= 0);
+        sub_02012A60(param0->unk_04[tab]->fontOAM, param0->tabPaletteOffset + palette);
+    }
+
+    if (param0->sortData) {
+        param0->labelSpecies = PokedexSort_CurrentSpecies(param0->sortData);
     }
 #endif
 }

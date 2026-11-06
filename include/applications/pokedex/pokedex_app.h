@@ -10,6 +10,14 @@
 
 #include "pokedex_memory.h"
 
+// Platinum's ten main screens, and on PC the widescreen stats, moves and evolution pages.
+// (The widescreen info page takes over Platinum's info screen, 2.)
+#ifdef SDK_PORT
+#define POKEDEX_MAIN_SCREEN_COUNT 13
+#else
+#define POKEDEX_MAIN_SCREEN_COUNT 10
+#endif
+
 typedef struct PokedexApp {
     BOOL unk_00;
     enum HeapID heapID;
@@ -25,7 +33,7 @@ typedef struct PokedexApp {
     UnkStruct_ov21_021D423C *unk_1A78;
     UnkStruct_ov21_021D423C *unk_1A7C;
     UnkStruct_ov21_021D4660 unk_1A80;
-    PokedexScreenManager unk_1A94[10];
+    PokedexScreenManager unk_1A94[POKEDEX_MAIN_SCREEN_COUNT];
     PokedexScreenManager unk_1C24[8];
     PokedexUpdater *unk_1D64;
     PokedexUpdater *unk_1D68;

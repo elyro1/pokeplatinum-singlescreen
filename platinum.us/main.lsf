@@ -793,6 +793,11 @@ Overlay pokedex
 	Object main.nef.p/src_applications_pokedex_pokedex_text.c.o
 	Object main.nef.p/src_applications_pokedex_pokedex_enc_data.c.o
 	Object main.nef.p/src_applications_pokedex_ov21_021D5AEC.c.o
+	Object main.nef.p/src_applications_pokedex_pokedex_wide.c.o
+	Object main.nef.p/src_applications_pokedex_pokedex_grid.c.o
+	Object main.nef.p/src_applications_pokedex_pokedex_tabs.c.o
+	Object main.nef.p/src_applications_pokedex_pokedex_reference.c.o
+	Object main.nef.p/src_applications_pokedex_pokedex_pages.c.o
 	Object main.nef.p/src_applications_pokedex_ov21_021D76B0.c.o
 	Object main.nef.p/src_applications_pokedex_pokedex_search.c.o
 	Object main.nef.p/src_applications_pokedex_ov21_021D94BC.c.o

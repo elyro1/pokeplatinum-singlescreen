@@ -29,12 +29,20 @@ typedef enum {
     NICKNAME_MODE_COUNT,
 } NicknameMode;
 
+typedef enum {
+    POKEDEX_UNITS_METRIC,
+    POKEDEX_UNITS_IMPERIAL,
+    POKEDEX_UNITS_COUNT,
+} PokedexUnits;
+
 typedef struct {
     BOOL enable60fps; // Speed correction is automatic at 60 FPS.
     BattlePacing battlePacing;
     PortSpeed textSpeed; // Overrides the saved text setting, in and out of battle.
     PortSpeed battleBarSpeed; // HP/EXP progression, independent of effects and text.
     NicknameMode nicknameMode; // Automatic nickname offers; explicit renaming remains available.
+    BOOL newPokedex; // The widescreen Pokédex; off keeps the classic screens. Read when the Pokédex opens.
+    PokedexUnits pokedexUnits; // Heights and weights in the Pokédex.
     BOOL fastWildBattleIntro; // Shorten eligible BW2 wild battle intros.
     BOOL bw2BattleVisuals; // Show battles with Black 2 / White 2's view when its assets are extracted (docs/bwbattle.md)
     BOOL overworldEncounters;

@@ -5,6 +5,7 @@
 
 void Pokedex_SetupGiratina(u32 param0);
 enum NarcID Pokedex_Data_NARC_Index(void);
+BOOL Pokedex_UsesMetricUnits(void);
 u32 Weight_Message_Bank_Index(void);
 u32 Height_Message_Bank_Index(void);
 

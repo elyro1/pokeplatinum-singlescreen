@@ -14,6 +14,7 @@
 #include "pokedex_data_index.h"
 #include "pokedex_heightweight.h"
 #include "pokedex_memory.h"
+#include "pokemon.h"
 #include "string_gf.h"
 #include "system.h"
 #include "trainer_info.h"
@@ -724,6 +725,52 @@ static u16 *PokedexFromNARC(enum HeapID heapID, int pokedexSort, int *pokedexLen
     return pokedexFromFile;
 }
 
+static int TotalBaseStats(int species, int form, enum HeapID heapID)
+{
+    static const u8 stats[] = {
+        SPECIES_DATA_BASE_HP,
+        SPECIES_DATA_BASE_ATK,
+        SPECIES_DATA_BASE_DEF,
+        SPECIES_DATA_BASE_SP_ATK,
+        SPECIES_DATA_BASE_SP_DEF,
+        SPECIES_DATA_BASE_SPEED,
+    };
+    SpeciesData *speciesData = SpeciesData_FromMonForm(species, form, heapID);
+    int total = 0;
+
+    for (int i = 0; i < NELEMS(stats); i++) {
+        total += SpeciesData_GetValue(speciesData, stats[i]);
+    }
+
+    SpeciesData_Free(speciesData);
+    return total;
+}
+
+// Highest total first, in the form the entry shows; ties keep their dex order. Unlike
+// the size orders this keeps Pokémon that were only seen: the STATS tab shows them.
+static void SortByTotalStats(u16 *resultingPokedex, int *numResulting, const u16 *encounteredPokedex, int caughtStatusLength, enum HeapID heapID, const Pokedex *pokedex)
+{
+    int *totals = Heap_Alloc(heapID, sizeof(int) * caughtStatusLength);
+
+    for (int i = 0; i < caughtStatusLength; i++) {
+        const int species = encounteredPokedex[i];
+        const int total = TotalBaseStats(species, Pokedex_GetDisplayForm(pokedex, species, 0), heapID);
+        int slot = i;
+
+        while (slot > 0 && totals[slot - 1] < total) {
+            totals[slot] = totals[slot - 1];
+            resultingPokedex[slot] = resultingPokedex[slot - 1];
+            slot--;
+        }
+
+        totals[slot] = total;
+        resultingPokedex[slot] = species;
+    }
+
+    *numResulting = caughtStatusLength;
+    Heap_Free(totals);
+}
+
 static void DexSortOrder(int sortOrder, u16 *resultingPokedex, int *numResulting, const u16 *encounteredPokedex, int caughtStatusLength, enum HeapID heapID, const Pokedex *pokedex)
 {
     u16 *pokedexFromFile;
@@ -750,6 +797,9 @@ static void DexSortOrder(int sortOrder, u16 *resultingPokedex, int *numResulting
     case SO_SMALLEST:
         pokedexFromFile = PokedexFromNARC(heapID, PDSI_SMALLEST, &pokedexLength);
         break;
+    case SO_HIGHEST_STATS:
+        SortByTotalStats(resultingPokedex, numResulting, encounteredPokedex, caughtStatusLength, heapID, pokedex);
+        return;
     default:
         GF_ASSERT(FALSE);
         break;

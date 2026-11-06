@@ -193,6 +193,10 @@ enum {
     T_WEIGHTS_WITH_GIRA_ORIGIN,
     T_HEIGHTS_WITH_GIRA_ALTERED,
     T_HEIGHTS_WITH_GIRA_ORIGIN,
+    T_WEIGHTS_METRIC_WITH_GIRA_ALTERED,
+    T_WEIGHTS_METRIC_WITH_GIRA_ORIGIN,
+    T_HEIGHTS_METRIC_WITH_GIRA_ALTERED,
+    T_HEIGHTS_METRIC_WITH_GIRA_ORIGIN,
 };
 
 static textbank_template_t textbanks[] = {
@@ -221,6 +225,10 @@ static textbank_template_t textbanks[] = {
     [T_WEIGHTS_WITH_GIRA_ORIGIN]  = { .key = 25297, .out_filename = "species_weight.json"                     },
     [T_HEIGHTS_WITH_GIRA_ALTERED] = { .key = 28660, .out_filename = "species_height_gira.json"                },
     [T_HEIGHTS_WITH_GIRA_ORIGIN]  = { .key =  5013, .out_filename = "species_height.json"                     },
+    [T_WEIGHTS_METRIC_WITH_GIRA_ALTERED] = { .key = 41723, .out_filename = "species_weight_gira_metric.json"  },
+    [T_WEIGHTS_METRIC_WITH_GIRA_ORIGIN]  = { .key = 18359, .out_filename = "species_weight_metric.json"       },
+    [T_HEIGHTS_METRIC_WITH_GIRA_ALTERED] = { .key = 52607, .out_filename = "species_height_gira_metric.json"  },
+    [T_HEIGHTS_METRIC_WITH_GIRA_ORIGIN]  = { .key = 11291, .out_filename = "species_height_metric.json"       },
     { .key = 0, .out_filename = NULL },
 };
 
@@ -1095,6 +1103,47 @@ static void emit_heights(SpeciesDexIndex *index, enum Species species, const cha
     emit_height(T_HEIGHTS_WITH_GIRA_ORIGIN,  species_name, height_str, buf);
 }
 
+// The metric values as the data stores them, padded like the imperial ones so that
+// the numbers line up where they are printed from a fixed left edge.
+static void emit_metric(size_t bank_id, const char *id_fmt, const char *species, u32 tenths, size_t width, const char *unit, const char *unknown) {
+    char buf[BUFSIZE] = { 0 };
+    char number[16]   = { 0 };
+    char value[64]    = { 0 };
+
+    if (unknown != NULL) {
+        snprintf(value, sizeof(value), "%s %s", unknown, unit);
+    } else {
+        snprintf(number, sizeof(number), "%u.%u", tenths / 10, tenths % 10);
+
+        const size_t   len = strlen(number);
+        unsigned char *p   = (unsigned char *)value;
+        for (size_t j = len; j < width; j++) {
+            p[0] = 0xE2;
+            p[1] = 0x80;
+            p[2] = 0x89;
+            p   += 3;
+        }
+
+        snprintf((char *)p, sizeof(value) - (size_t)((char *)p - value), "%s %s", number, unit);
+    }
+
+    datanode_t entry = dp_arr_appobject(&textbanks[bank_id].root);
+    dp_obj_putstring(&entry, "id", strfmt(id_fmt, species));
+    dp_obj_putstring(&entry, "en_US", value);
+}
+
+static void emit_metrics(SpeciesDexIndex *index, enum Species species, const char *species_name) {
+    const bool unknown  = species == SPECIES_NONE;
+    const bool giratina = species == SPECIES_GIRATINA;
+    const u32  weight   = giratina ? dexdata_giratina_origin.index.weight : index->weight;
+    const u32  height   = giratina ? dexdata_giratina_origin.index.height : index->height;
+
+    emit_metric(T_WEIGHTS_METRIC_WITH_GIRA_ALTERED, "species_weight_gira_metric_%s", species_name, index->weight, 5, "kg", unknown ? "???.?" : NULL);
+    emit_metric(T_WEIGHTS_METRIC_WITH_GIRA_ORIGIN, "species_weight_metric_%s", species_name, weight, 5, "kg", unknown ? "???.?" : NULL);
+    emit_metric(T_HEIGHTS_METRIC_WITH_GIRA_ALTERED, "species_height_gira_metric_%s", species_name, index->height, 5, "m", unknown ? "???.?" : NULL);
+    emit_metric(T_HEIGHTS_METRIC_WITH_GIRA_ORIGIN, "species_height_metric_%s", species_name, height, 5, "m", unknown ? "???.?" : NULL);
+}
+
 static void emit_textbanks(datafile_t *df, size_t i, const char *species, SpeciesDexIndex *index) {
     if (i > SPECIES_BAD_EGG) return;
 
@@ -1198,6 +1247,7 @@ static void emit_textbanks(datafile_t *df, size_t i, const char *species, Specie
 
     emit_weights(index, (enum Species)i, species, buf);
     emit_heights(index, (enum Species)i, species, buf);
+    emit_metrics(index, (enum Species)i, species);
 }
 
 static void pack(Container *species, size_t i) {

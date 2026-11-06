@@ -734,9 +734,9 @@ static void ov21_021E7DA8(UnkStruct_ov21_021E747C *param0, const UnkStruct_ov21_
     Text_AddPrinterWithParamsAndColor(&param0->unk_00->window, FONT_SYSTEM, PokedexSort_TrainerName(param1->unk_00), 146, 152, TEXT_SPEED_INSTANT, TEXT_COLOR(2, 1, 0), NULL);
 
     if (PokedexSort_TrainerGender(param1->unk_00) == 0) {
-        MessageLoader_GetString(v1, pl_msg_pokedex_lucasweight, v0);
+        MessageLoader_GetString(v1, Pokedex_UsesMetricUnits() ? pl_msg_pokedex_wide_lucasweight_metric : pl_msg_pokedex_lucasweight, v0);
     } else {
-        MessageLoader_GetString(v1, pl_msg_pokedex_dawnweight, v0);
+        MessageLoader_GetString(v1, Pokedex_UsesMetricUnits() ? pl_msg_pokedex_wide_dawnweight_metric : pl_msg_pokedex_dawnweight, v0);
     }
 
     {

@@ -1,5 +1,7 @@
 #include "applications/pokedex/pokedex_graphics.h"
 
+#include "applications/pokedex/pokedex_wide.h"
+
 #include <string.h>
 
 #include "bg_window.h"
@@ -54,7 +56,13 @@ void PokedexGraphics_Init(PokedexGraphicData *pokedexGraphicData, enum HeapID he
     InitBackgrounds(pokedexGraphicData->bgConfig, heapID);
     InitWindow(pokedexGraphicData, heapID);
 
+#ifdef SDK_PORT
+    // The widescreen tab strip's extra labels and pages take sprites beyond what
+    // Platinum's screens left free (the cry screen alone uses about 120).
+    pokedexGraphicData->spriteList = SpriteList_InitRendering(192, &pokedexGraphicData->g2Renderer, heapID);
+#else
     pokedexGraphicData->spriteList = SpriteList_InitRendering(128, &pokedexGraphicData->g2Renderer, heapID);
+#endif
     pokedexGraphicData->spriteResourceCollection[SPRITE_RESOURCE_CHAR] = SpriteResourceCollection_New(32, SPRITE_RESOURCE_CHAR, heapID);
     pokedexGraphicData->spriteResourceCollection[SPRITE_RESOURCE_PLTT] = SpriteResourceCollection_New(32, SPRITE_RESOURCE_PLTT, heapID);
     pokedexGraphicData->spriteResourceCollection[SPRITE_RESOURCE_CELL] = SpriteResourceCollection_New(32, SPRITE_RESOURCE_CELL, heapID);
@@ -117,6 +125,9 @@ void PokemonGraphics_UpdateCharAndPltt(PokedexGraphicData *pokedexGraphicData)
 {
     Bg_RunScheduledUpdates(pokedexGraphicData->bgConfig);
     PokemonSpriteManager_UpdateCharAndPltt(pokedexGraphicData->spriteMan);
+#ifdef SDK_PORT
+    PokedexWide_ApplyHeldFade();
+#endif
 }
 
 void PokemonGraphics_SetCharCenterXY(PokedexGraphicData *pokedexGraphicData, int x, int y)
@@ -210,6 +221,15 @@ void PokedexGraphics_UpdateSpeciesLabel(PokedexSpeciesLabel *pokedexSpeciesLabel
 {
     if (species == pokedexSpeciesLabel->species && isNationalDex == pokedexSpeciesLabel->isNationalDex) {
         sub_020129D0(pokedexSpeciesLabel->textData->fontOAM, TRUE);
+#ifdef SDK_PORT
+        // The text keeps the position it had relative to the name tag when it was last
+        // synced. Leaving an entry slides the tag down to the list's row, and the grid
+        // never moves it back: reopening the same Pokémon put the name tag back in the
+        // entry's box while its text stayed down where the slide had left it.
+        if (PokedexWide_IsEnabled()) {
+            sub_02012938(pokedexSpeciesLabel->textData->fontOAM);
+        }
+#endif
         return;
     } else {
         pokedexSpeciesLabel->species = species;
@@ -264,6 +284,14 @@ void PokedexGraphics_SetPokedexSpeciesLabelDraw(const PokedexGraphicData *pokede
 
 void PokedexGraphics_InitBlendTransition(PokedexBlendTransition *blendTransition, u8 numSteps, int startBackgroundBrightness, int endBackgroundBrightness, int startSpriteBrightness, int endSpriteBrightness, GXBlendPlaneMask plane1, GXBlendPlaneMask plane2, BOOL isSubscreen)
 {
+#ifdef SDK_PORT
+    blendTransition->keepStrip = FALSE;
+
+    if (!isSubscreen && PokedexWide_IsActive()) {
+        blendTransition->keepStrip = PokedexWide_AdjustFade(&numSteps, &plane1, &plane2);
+    }
+#endif
+
     blendTransition->isSubscreen = isSubscreen;
     blendTransition->plane1 = plane1;
     blendTransition->plane2 = plane2 | GX_BLEND_PLANEMASK_BD;
@@ -278,11 +306,31 @@ void PokedexGraphics_InitBlendTransition(PokedexBlendTransition *blendTransition
 BOOL PokedexGraphics_TakeBlendTransitionStep(PokedexBlendTransition *blendTransition)
 {
     if (PokedexGraphics_BlendTransitionComplete(blendTransition) == FALSE) {
+#ifdef SDK_PORT
+        BOOL crossfadeDone = FALSE;
+
+        if (!blendTransition->isSubscreen && PokedexWide_IsActive()
+            && PokedexWide_CrossfadeStep(blendTransition->deltaBackgroundBrightness > 0, blendTransition->keepStrip, &crossfadeDone)) {
+            G2_SetBlendBrightnessExt(blendTransition->plane1, blendTransition->plane2, 16, 0, 0);
+
+            if (crossfadeDone) {
+                blendTransition->step = blendTransition->numSteps + 1;
+            }
+
+            return PokedexGraphics_BlendTransitionComplete(blendTransition);
+        }
+#endif
         int ev1 = PokedexGraphics_BlendSprites(blendTransition);
         int brightness = PokedexGraphics_BlendScreen(blendTransition);
 
         if (blendTransition->isSubscreen == FALSE) {
-            G2_SetBlendBrightnessExt(blendTransition->plane1, blendTransition->plane2, ev1, 0, brightness);
+#ifdef SDK_PORT
+            if (PokedexWide_IsActive() && PokedexWide_FadeStep(brightness, blendTransition->keepStrip)) {
+                // Master brightness does the fade: leave the layers and semi-transparent sprites unblended.
+                G2_SetBlendBrightnessExt(blendTransition->plane1, blendTransition->plane2, 16, 0, 0);
+            } else
+#endif
+                G2_SetBlendBrightnessExt(blendTransition->plane1, blendTransition->plane2, ev1, 0, brightness);
         } else {
             G2S_SetBlendBrightnessExt(blendTransition->plane1, blendTransition->plane2, ev1, 0, brightness);
         }
@@ -317,6 +365,12 @@ BOOL PokedexGraphics_BlendTransitionComplete(PokedexBlendTransition *blendTransi
 void PokedexGraphics_BlendPokemonChar(const PokedexGraphicData *pokedexGraphicData, PokedexBlendTransition *blendTransition)
 {
     int oppBackgroundBrightness = -PokedexGraphics_BlendScreen(blendTransition);
+#ifdef SDK_PORT
+    // The wide fades take the Pokémon's layer (BG0) along with the rest.
+    if (PokedexWide_IsActive()) {
+        oppBackgroundBrightness = 0;
+    }
+#endif
     PokemonSprite *pokemonSprite = PokemonGraphics_GetPokemonChar(pokedexGraphicData);
 
     PokemonSprite_StartFade(pokemonSprite, oppBackgroundBrightness, oppBackgroundBrightness, 0, 0);
@@ -325,6 +379,12 @@ void PokedexGraphics_BlendPokemonChar(const PokedexGraphicData *pokedexGraphicDa
 void PokedexGraphics_BlendPokemonSprite(const PokedexGraphicData *pokedexGraphicData, PokedexBlendTransition *blendTransition, int spriteIndex)
 {
     int oppBackgroundBrightness = -PokedexGraphics_BlendScreen(blendTransition);
+#ifdef SDK_PORT
+    // The wide fades take the Pokémon's layer (BG0) along with the rest.
+    if (PokedexWide_IsActive()) {
+        oppBackgroundBrightness = 0;
+    }
+#endif
     PokemonSprite *pokemonSprite = PokedexGraphics_GetPokemonSprite(pokedexGraphicData, spriteIndex);
 
     PokemonSprite_StartFade(pokemonSprite, oppBackgroundBrightness, oppBackgroundBrightness, 0, 0);

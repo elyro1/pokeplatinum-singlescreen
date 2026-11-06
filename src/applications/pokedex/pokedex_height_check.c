@@ -458,9 +458,9 @@ static void DisplayHeightValues(PokedexGraphicData **param0, const UnkStruct_ov2
     Text_AddPrinterWithParamsAndColor(&(*param0)->window, FONT_SYSTEM, PokedexSort_TrainerName(param1->unk_04), 146, 152, TEXT_SPEED_INSTANT, TEXT_COLOR(2, 1, 0), NULL);
 
     if (PokedexSort_TrainerGender(param1->unk_04) == GENDER_MALE) {
-        MessageLoader_GetString(messageBank, pl_msg_pokedex_lucasheight, string);
+        MessageLoader_GetString(messageBank, Pokedex_UsesMetricUnits() ? pl_msg_pokedex_wide_lucasheight_metric : pl_msg_pokedex_lucasheight, string);
     } else {
-        MessageLoader_GetString(messageBank, pl_msg_pokedex_dawnheight, string);
+        MessageLoader_GetString(messageBank, Pokedex_UsesMetricUnits() ? pl_msg_pokedex_wide_dawnheight_metric : pl_msg_pokedex_dawnheight, string);
     }
 
     {

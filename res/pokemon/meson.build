@@ -230,6 +230,10 @@ species_data = custom_target('species_data',
         'species_weight.json',
         'species_height_gira.json',
         'species_height.json',
+        'species_weight_gira_metric.json',
+        'species_weight_metric.json',
+        'species_height_gira_metric.json',
+        'species_height_metric.json',
     ],
 
     command: [
