@@ -40,8 +40,12 @@ enum {
 const void *BwBattle_IrisResource(const char *path, unsigned int member, unsigned int *size);
 // A member of an archive on disk, decompressed if it was compressed. NULL if it is missing or empty; free() the rest
 void *BwBattle_ReadMember(const char *path, unsigned int member, unsigned int *size);
+// The same without decompressing, for a file whose first bytes can look compressed
+void *BwBattle_ReadMemberRaw(const char *path, unsigned int member, unsigned int *size);
 // Draws Spinda's spots on a 96x96 sprite, 12 tiles wide, each tile's pixels in order
 void BwBattle_DrawSpindaSpots(unsigned char *tiles, unsigned int personality);
+// The same on an animated sprite's 256x128 image
+void BwBattle_DrawMcssSpindaSpots(unsigned char *pixels, unsigned int personality);
 // The BW sprites setting's icons, which take the place of members of pl_poke_icon.narc (port/bw_mon_sprites.c)
 const void *BwMonIcons_Resource(unsigned int member, unsigned int *size);
 bool BwBattle_PlayHydreigonCry(void *handle, unsigned int player);

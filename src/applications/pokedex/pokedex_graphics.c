@@ -777,7 +777,11 @@ static void NewPokemonSprite(PokedexGraphicData *pokedexGraphicData, enum HeapID
     }
 #endif
 
+#ifdef SDK_PORT
+    NNSGfdTexKey texKey = NNS_GfdAllocTexVram(pokedexGraphicData->spriteMan->charSize, 0, 0);
+#else
     NNSGfdTexKey texKey = NNS_GfdAllocTexVram(0x8000, 0, 0);
+#endif
     NNSGfdPlttKey plttKey = NNS_GfdAllocPlttVram(0x80, 0, NNS_GFD_ALLOC_FROM_LOW);
 
     PokemonSpriteManager_SetCharBaseAddrAndSize(pokedexGraphicData->spriteMan, NNS_GfdGetTexKeyAddr(texKey), NNS_GfdGetTexKeySize(texKey));
