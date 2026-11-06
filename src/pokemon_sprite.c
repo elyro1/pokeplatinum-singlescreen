@@ -12,6 +12,10 @@
 #include "palette.h"
 #include "pokemon_sprite.h"
 
+#ifdef SDK_PORT
+#include "port/bw_mon_sprites.h"
+#endif
+
 #include "res/pokemon/pl_otherpoke.naix"
 
 #define MAX_SPINDA_SPOTS       4
@@ -396,6 +400,9 @@ static void BufferPokemonSpritePlttData(PokemonSpriteManager *monSpriteMan);
 static void TickPokemonSpriteAnim(PokemonSprite *monSprite);
 static void PokemonSprite_TickAnim(PokemonSprite *monSprite);
 static u8 SwapNybbles(u8 value);
+#ifdef SDK_PORT
+static void LargeFrameOrigin(int slot, int *x, int *y);
+#endif
 static void TryDrawSpindaSpots(PokemonSprite *monSprite, u8 *rawCharData);
 
 void *PokemonSpriteManager_New(enum HeapID heapID)
@@ -403,6 +410,9 @@ void *PokemonSpriteManager_New(enum HeapID heapID)
     PokemonSpriteManager *monSpriteMan = Heap_Alloc(heapID, sizeof(PokemonSpriteManager));
 
     monSpriteMan->heapID = heapID;
+#ifdef SDK_PORT
+    monSpriteMan->largeFrames = FALSE;
+#endif
     monSpriteMan->dummy330 = 0;
     monSpriteMan->charBaseAddr = 0;
     monSpriteMan->charSize = MON_SPRITE_CHAR_BUF_SIZE;
@@ -617,6 +627,15 @@ void PokemonSpriteManager_DrawSprites(PokemonSpriteManager *monSpriteMan)
                 u1 = sMonSpriteTextureCoords[i][drawSprite->currSpriteFrame][2];
                 v0 = sMonSpriteTextureCoords[i][drawSprite->currSpriteFrame][1];
                 v1 = sMonSpriteTextureCoords[i][drawSprite->currSpriteFrame][3];
+#ifdef SDK_PORT
+                if (monSpriteMan->largeFrames) {
+                    width = (BW_MON_SPRITE_SIZE * drawSprite->transforms.scaleX) >> MON_AFFINE_SHIFT;
+                    height = (BW_MON_SPRITE_SIZE * drawSprite->transforms.scaleY) >> MON_AFFINE_SHIFT;
+                    LargeFrameOrigin(i, &u0, &v0);
+                    u1 = u0 + BW_MON_SPRITE_SIZE;
+                    v1 = v0 + BW_MON_SPRITE_SIZE;
+                }
+#endif
 
                 NNS_G2dDrawSpriteFast(
                     drawSprite->transforms.xCenter - width / 2 + drawSprite->transforms.xOffset,
@@ -629,6 +648,13 @@ void PokemonSpriteManager_DrawSprites(PokemonSpriteManager *monSpriteMan)
                     u1,
                     v1);
             }
+
+#ifdef SDK_PORT
+            // The shadows' tiles are where the last large frame goes
+            if (monSpriteMan->largeFrames) {
+                continue;
+            }
+#endif
 
             if (drawSprite->shadow.plttSlot
                 && drawSprite->shadow.size != SHADOW_SIZE_NONE
@@ -1444,6 +1470,75 @@ void PokemonSpriteManager_ClearHideShadows(PokemonSpriteManager *monSpriteMan, u
     monSpriteMan->hideShadows &= (value ^ -1);
 }
 
+#ifdef SDK_PORT
+void PokemonSpriteManager_SetLargeFrames(PokemonSpriteManager *monSpriteMan)
+{
+    monSpriteMan->largeFrames = TRUE;
+}
+
+BOOL PokemonSpriteManager_HasLargeFrames(const PokemonSpriteManager *monSpriteMan)
+{
+    return monSpriteMan->largeFrames;
+}
+
+static void LargeFrameOrigin(int slot, int *x, int *y)
+{
+    *x = (slot & 1) * BW_MON_SPRITE_SIZE;
+    *y = (slot >> 1) * BW_MON_SPRITE_SIZE;
+}
+
+// A Platinum sprite's first frame, in the middle of a large frame
+static void LoadPlatinumImageForLargeFrame(PokemonSprite *monSprite, enum HeapID heapID, u8 *image)
+{
+    NNSG2dCharacterData *charData;
+    void *ncgrFile = NARC_AllocAndReadWholeMemberByIndexPair(monSprite->template.narcID, monSprite->template.character, heapID);
+
+    NNS_G2dGetUnpackedCharacterData(ncgrFile, &charData);
+
+    u8 *rawCharData = charData->pRawData;
+
+    PokemonSprite_Decrypt(rawCharData, monSprite->template.narcID);
+    TryDrawSpindaSpots(monSprite, rawCharData);
+
+    const int margin = (BW_MON_SPRITE_SIZE - MON_SPRITE_FRAME_WIDTH) / 2;
+
+    for (int y = 0; y < MON_SPRITE_FRAME_HEIGHT; y++) {
+        memcpy(image + (y + margin) * (BW_MON_SPRITE_SIZE / 2) + margin / 2, rawCharData + y * NCGR_Y_OFFSET, MON_SPRITE_FRAME_WIDTH / 2);
+    }
+
+    Heap_Free(ncgrFile);
+}
+
+static void BufferLargeFrame(PokemonSpriteManager *monSpriteMan, int slot)
+{
+    PokemonSprite *monSprite = &monSpriteMan->sprites[slot];
+    u8 *image = Heap_AllocAtEnd(monSpriteMan->heapID, BW_MON_SPRITE_IMAGE_SIZE);
+    int originX, originY;
+
+    MI_CpuClear8(image, BW_MON_SPRITE_IMAGE_SIZE);
+
+    if (monSprite->template.narcID == MON_SPRITE_NARC_BW) {
+        BwMonSprites_LoadImage(&monSprite->template, image);
+    } else {
+        LoadPlatinumImageForLargeFrame(monSprite, monSpriteMan->heapID, image);
+    }
+
+    LargeFrameOrigin(slot, &originX, &originY);
+
+    for (int y = 0; y < BW_MON_SPRITE_SIZE; y++) {
+        const int sourceY = monSprite->transforms.flipV ? BW_MON_SPRITE_SIZE - 1 - y : y;
+        const u8 *source = image + sourceY * (BW_MON_SPRITE_SIZE / 2);
+        u8 *dest = monSpriteMan->charRawData + (originY + y) * MAN_Y_OFFSET + originX / 2;
+
+        for (int x = 0; x < BW_MON_SPRITE_SIZE / 2; x++) {
+            dest[x] = monSprite->transforms.flipH ? SwapNybbles(source[BW_MON_SPRITE_SIZE / 2 - 1 - x]) : source[x];
+        }
+    }
+
+    Heap_Free(image);
+}
+#endif
+
 static void BufferPokemonSpriteCharData(PokemonSpriteManager *monSpriteMan)
 {
     NNSG2dCharacterData *charData;
@@ -1457,6 +1552,12 @@ static void BufferPokemonSpriteCharData(PokemonSpriteManager *monSpriteMan)
             monSpriteMan->sprites[i].needReloadChar = FALSE;
 
             needLoadChar = TRUE;
+#ifdef SDK_PORT
+            if (monSpriteMan->largeFrames) {
+                BufferLargeFrame(monSpriteMan, i);
+                continue;
+            }
+#endif
             ncgrFile = NARC_AllocAndReadWholeMemberByIndexPair(monSpriteMan->sprites[i].template.narcID, monSpriteMan->sprites[i].template.character, monSpriteMan->heapID);
 
             NNS_G2dGetUnpackedCharacterData(ncgrFile, &charData);
@@ -1570,6 +1671,15 @@ static void BufferPokemonSpritePlttData(PokemonSpriteManager *monSpriteMan)
             monSpriteMan->sprites[i].needReloadPltt = FALSE;
 
             needReloadPltt = TRUE;
+#ifdef SDK_PORT
+            if (monSpriteMan->sprites[i].template.narcID == MON_SPRITE_NARC_BW) {
+                monSpriteMan->plttData.fmt = GX_TEXFMT_PLTT16;
+                MI_CpuClear16(&monSpriteMan->plttRawData[PALETTE_SIZE * i], PALETTE_SIZE_BYTES);
+                BwMonSprites_LoadPalette(&monSpriteMan->sprites[i].template, &monSpriteMan->plttRawData[PALETTE_SIZE * i]);
+                MI_CpuCopy16(&monSpriteMan->plttRawData[PALETTE_SIZE * i], &monSpriteMan->plttRawDataUnfaded[PALETTE_SIZE * i], PALETTE_SIZE_BYTES);
+                continue;
+            }
+#endif
             nclrFile = NARC_AllocAndReadWholeMemberByIndexPair(monSpriteMan->sprites[i].template.narcID, monSpriteMan->sprites[i].template.palette, monSpriteMan->heapID);
 
             NNS_G2dGetUnpackedPaletteData(nclrFile, &plttData);

@@ -474,9 +474,21 @@ bool BwBattle_IrisVsReady(void)
     return true;
 }
 
+void *BwBattle_ReadMember(const char *path, unsigned member, unsigned *size)
+{
+    Resource resource = Unpack(Member(path, member));
+    if (size) {
+        *size = resource.size;
+    }
+    return resource.data;
+}
+
 const void *BwBattle_IrisResource(const char *path, unsigned member, unsigned *size)
 {
     int index = -1;
+    if (!strcmp(path, "poketool/icongra/pl_poke_icon.narc")) {
+        return BwMonIcons_Resource(member, size);
+    }
     if (!strcmp(path, sVs) && member >= BWBATTLE_IRIS_VS_PALETTE && member <= BWBATTLE_IRIS_VS_ANIM) {
         if (!BwBattle_IrisVsReady()) {
             return NULL;

@@ -259,6 +259,14 @@ static void PokeGra_DrawSpindaSpots(NNSG2dCharacterData *chars, u32 personality)
     }
 }
 
+// bwbattle: for Platinum's screens, which have the characters without an NNSG2dCharacterData (port/bw_mon_sprites.c)
+void BwBattle_DrawSpindaSpots(u8 *tiles, u32 personality) {
+    NNSG2dCharacterData chars = { 0 };
+
+    chars.pRawData = tiles;
+    PokeGra_DrawSpindaSpots(&chars, personality);
+}
+
 // The first file of the species' sprite, or of the form's, and the offsets of the direction's and the sex's files,
 // which are the male's when the sex has none of its own. A form whose sprite is only a palette gives the palette's file
 static void GetPokemonDataIDBase(u32 arcId, int species, int form, u32 sex, BOOL rare, u32 dir, BOOL egg, u32 *base,

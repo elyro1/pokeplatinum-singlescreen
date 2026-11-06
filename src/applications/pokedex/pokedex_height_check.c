@@ -23,6 +23,9 @@
 #include "pokedex_data_index.h"
 #include "pokedex_heightweight.h"
 #include "pokemon_sprite.h"
+#ifdef SDK_PORT
+#include "port/bw_mon_sprites.h"
+#endif
 #include "sprite.h"
 #include "sprite_resource.h"
 #include "sprite_transfer.h"
@@ -487,6 +490,17 @@ static void DisplaySpeciesHeight(PokedexGraphicData **param0, const UnkStruct_ov
 
     SetSpeciesPosition(speciesSprite, pokemonPos);
     SetSpeciesScale(speciesSprite, pokemonScale);
+
+#ifdef SDK_PORT
+    // The chart's positions are made for where Platinum's art stands in its frame
+    const PokemonSpriteTemplate *template = PokemonSprite_GetTemplate(speciesSprite);
+
+    if (template->narcID == MON_SPRITE_NARC_BW) {
+        const int yOffset = BwMonSprites_FeetOffset(template, species, HEAP_ID_POKEDEX);
+
+        PokemonSprite_SetAttribute(speciesSprite, MON_SPRITE_Y_OFFSET, (yOffset * PokemonSprite_GetAttribute(speciesSprite, MON_SPRITE_SCALE_Y)) >> 8);
+    }
+#endif
 }
 
 static void ClearSpeciesSprite(PokedexGraphicData **param0)
