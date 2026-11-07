@@ -27,6 +27,7 @@
 #include "pokemon.h"
 #include "simple3d.h"
 #include "sys_task_manager.h"
+#include "unk_02054884.h"
 #ifdef SDK_PORT
 #include "port/follower_assets.h"
 #include "port/sim_config_prj.h"
@@ -93,18 +94,11 @@ static void SurfMountResources_Free(SurfMountResources *resources);
 
 static const OverworldAnimManagerFuncs sSurfMountRendererAnimFuncs;
 
-static BOOL SurfMountPokemon_KnowsSurf(Pokemon *mon)
+// Same eligibility as the HM menu and shoreline prompt, so unlearnedHMs
+// mounts compatible Pokemon too. Field HM use permits fainted Pokemon.
+static BOOL SurfMountPokemon_CanSurf(Pokemon *mon)
 {
-    if (Pokemon_GetValue(mon, MON_DATA_IS_EGG, NULL)) {
-        return FALSE;
-    }
-    // Field HM use permits fainted Pokemon and does not consume move PP.
-    for (int i = 0; i < LEARNED_MOVES_MAX; i++) {
-        if (Pokemon_GetValue(mon, MON_DATA_MOVE1 + i, NULL) == MOVE_SURF) {
-            return TRUE;
-        }
-    }
-    return FALSE;
+    return Pokemon_CanUseFieldMove(mon, MOVE_SURF);
 }
 
 void SurfMountRenderer_SelectPokemon(FieldSystem *fieldSystem, int partySlot)
@@ -115,7 +109,7 @@ void SurfMountRenderer_SelectPokemon(FieldSystem *fieldSystem, int partySlot)
         return;
     }
     Pokemon *mon = Party_GetPokemonBySlotIndex(party, partySlot);
-    if (SurfMountPokemon_KnowsSurf(mon)) {
+    if (SurfMountPokemon_CanSurf(mon)) {
         fieldSystem->surfMountPersonality = Pokemon_GetValue(mon, MON_DATA_PERSONALITY, NULL);
         fieldSystem->surfMountOTID = Pokemon_GetValue(mon, MON_DATA_OT_ID, NULL);
         fieldSystem->surfMountPokemonSelected = TRUE;
@@ -129,7 +123,7 @@ static void SurfMountPokemon_GetAppearance(FieldSystem *fieldSystem, OverworldPo
     memset(appearance, 0, sizeof(*appearance));
     for (int i = 0; i < Party_GetCurrentCount(party); i++) {
         Pokemon *mon = Party_GetPokemonBySlotIndex(party, i);
-        if (!SurfMountPokemon_KnowsSurf(mon)) {
+        if (!SurfMountPokemon_CanSurf(mon)) {
             continue;
         }
         if (selectedSlot == -1) {
