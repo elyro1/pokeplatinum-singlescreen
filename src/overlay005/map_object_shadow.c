@@ -56,6 +56,9 @@ typedef struct MapObjectShadow {
     int mapHeaderID;
     enum ShadowVisibility visibility;
     MapObjectShadowParams params;
+#ifdef SDK_PORT
+    u32 actorHandle;
+#endif
 } MapObjectShadow;
 
 static void StartTimeOfDayTask(MapObjectShadowRenderer *renderer);
@@ -245,6 +248,29 @@ static BOOL InitShadow(OverworldAnimManager *animManager, void *data)
         shadow->mapHeaderID = MapObject_GetMapHeaderID(shadow->params.mapObj);
     }
 
+#ifdef SDK_PORT
+    shadow->actorHandle = MapObject_GetPokemonActorHandle(shadow->params.mapObj);
+#endif
+
+    return TRUE;
+}
+
+// A Pokémon actor respawned within one frame reuses the object slot, graphics
+// and local ID, so only its handle tells this shadow its owner has been replaced.
+static BOOL ShadowOwnerExists(const MapObjectShadow *shadow)
+{
+    const MapObject *mapObj = shadow->params.mapObj;
+
+    if (sub_020627B4(mapObj, shadow->graphicsID, shadow->localID, shadow->mapHeaderID) == FALSE) {
+        return FALSE;
+    }
+
+#ifdef SDK_PORT
+    if (MapObject_GetPokemonActorHandle(mapObj) != shadow->actorHandle) {
+        return FALSE;
+    }
+#endif
+
     return TRUE;
 }
 
@@ -253,7 +279,7 @@ static void UpdateShadow(OverworldAnimManager *animManager, void *data)
     MapObjectShadow *shadow = data;
     MapObject *mapObj = shadow->params.mapObj;
 
-    if (sub_020627B4(mapObj, shadow->graphicsID, shadow->localID, shadow->mapHeaderID) == FALSE) {
+    if (!ShadowOwnerExists(shadow)) {
         FieldEffectManager_FinishAnimManager(animManager);
         return;
     }
@@ -351,7 +377,7 @@ static void UpdateFixedShadow(OverworldAnimManager *animManager, void *data)
     MapObjectShadow *shadow = data;
     MapObject *mapObj = shadow->params.mapObj;
 
-    if (sub_020627B4(mapObj, shadow->graphicsID, shadow->localID, shadow->mapHeaderID) == FALSE) {
+    if (!ShadowOwnerExists(shadow)) {
         FieldEffectManager_FinishAnimManager(animManager);
         return;
     }
