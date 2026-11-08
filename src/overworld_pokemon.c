@@ -252,6 +252,8 @@ OverworldPokemonHandle OverworldPokemon_Spawn(FieldSystem *fieldSystem, const Ov
     MapObject_RecalculateObjectHeight(object);
     if (spawn->role == OVERWORLD_POKEMON_PARTY_FOLLOWER) {
         manager->follower = handle;
+        // Like the player, stay drawn on tiles without terrain height data.
+        MapObject_SetStatusFlagOn(object, MAP_OBJ_STATUS_13);
         if (!manager->waitingForExitStep) {
             slot->effectTicks = slot->effectDuration = EffectDuration();
             FollowingPokemon_StartBallEffect(object, TRUE);

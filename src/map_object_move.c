@@ -111,6 +111,10 @@ static BOOL sub_02063478(const MapObject *mapObj)
         return TRUE;
     } else if (MapObject_GetMovementType(mapObj) == 0x32) {
         return TRUE;
+    } else if (MapObject_GetMovementType(mapObj) == MOVEMENT_TYPE_FOLLOW_PARTY_POKEMON) {
+        // It replays tiles the player already crossed, including thin gaps in
+        // the terrain height data at map seams that only the player can walk.
+        return TRUE;
     }
 
     u32 status = MapObject_GetStatus(mapObj);
