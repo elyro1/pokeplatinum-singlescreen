@@ -1,134 +1,192 @@
 # Pokémon Platinum PC Port — Single-Screen Mod
 
-This is a mod for the native PC port of Pokémon Platinum, built on top of **[pret's Pokémon Platinum decompilation](https://github.com/pret/pokeplatinum)** and **[cybervisi0n's Pokémon Platinum PC port](https://github.com/cybervisi0n/pokeplatinum)**.
+Pokémon Platinum on PC, widescreen, on one screen.
+This is a mod for the native PC port of Pokémon Platinum. The focus here is a widescreen, single-screen experience, with adapted interfaces, expanded overworld rendering, and quality-of-life improvements.
 
-The focus here is a widescreen, single-screen experience, with adapted interfaces, expanded overworld rendering, and quality-of-life improvements.
+You must provide your own dumped US Pokémon Platinum ROM (CPUE01). Game assets are extracted from that ROM on first launch. For the full experience, you also need a BW2 ROM.
 
-**You must provide your own dumped US Pokémon Platinum ROM (CPUE01).** Game assets are extracted from that ROM on first launch. For the full experience, you also need a BW2 ROM.
+## Start playing
 
-## Setup Guide
-To run the [pre-built binaries found in the releases tab](https://github.com/elyro1/pokeplatinum-singlescreen/releases/), **you MUST dump and provide your own US ROM of Pokémon Platinum (CPUE01).** 
+You need a **dumped US Pokémon Platinum ROM (CPUE01)**. It is not included.
 
-1. Open the project's GitHub Releases page and download the ZIP archive compatible with your operating system (Windows or Linux).
-2. Extract the downloaded ZIP archive into a new folder.
-3. Copy the US ROM of Pokémon Platinum into the same folder as the extracted files. Ensure it is placed directly alongside the main executable, not inside a subfolder.
-4. (Optional) Copy the US ROM of Pokémon B2/W2 into the same folder as the extracted files. 
-5. Launch the game by running main.exe
+1. Download the ZIP for Windows or Linux from [Releases](https://github.com/elyro1/pokeplatinum-singlescreen/releases/).
+2. Extract it into a new folder.
+3. Put your Platinum `.nds` file in that folder, right next to the executable.
+4. *Optional, recommended:* add a **US Black 2 or White 2** `.nds` too. This turns on BW2 battle visuals.
+5. Run `main.exe` (Windows) or `main` (Linux).
 
-If there is no ROM , you will be prompted to select your .nds ROM file as seen in the images below:
+Done. Assets extract by themselves on first launch. 
+Press **Tab** for settings.
 
-![ROM extraction dialog](images/RomExtraction.png)
-
-* Access in-game settings and debug tools by pressing TAB key
+- **ROM filename?** Doesn't matter.
+- **No ROM found?** A file picker opens. Choose your `.nds`.
+- **Running slow?** Lower the internal resolution under Graphics.
+- **Bug in this fork?** Use the [issue tracker](https://github.com/elyro1/pokeplatinum-singlescreen/issues).
 
 ## Features
 
-Configurable gameplay modifiers below are opt-in through `gameplay_config.ini`; built-in gameplay defaults follow original Platinum behavior.
+- **Single-screen:** every screen reworked to play on just the top screen
+- **Widescreen:** wider overworld view, adjusted world
+- **Black 2 / White 2 style battles**
+- **Three save slots:** pick one from the main menu
+- **Pokétch in the in-game menu:** once you have it, switch apps with L/R, leave with B or X
+- **Better graphics:** richer day/night lighting, improved model lighting, regional haze, smooth 3D edges, post-processing, soft character shadows
+- **[Gameplay config](docs/gameplay_config.md):** independent gameplay overrides, so you can play how you want
 
-- **Single-screen presentation:** all screens reworked to make the game playable with just the top screen
-- **Widescreen rendering:** broader overworld views, adjusted world
-- **Black 2 / White 2 like battle visuals**
-- **Three save slots:** select a slot from the main menu
-- **Pokétch in the in-game menu:** open it after acquiring it, switch apps with L/R, and return to the game with B or X.
-- Overworld graphics: richer day/night lighting, improved model lighting, additional post-processing effects, soft character shadows
-- [Gameplay config](docs/gameplay_config.md) for independent gameplay overrides. Play the game how you want to play it
+Visual upgrades are **on by default**. Toggle them under **Tab → Graphics** ([graphics notes](docs/visual_upgrades.md)).
 
-## Visual upgrades
+## Keys
 
-Richer day/night lighting, regional haze, and smooth 3D edges are enabled by default.
-Toggle them under Tab → Graphics.
-See [graphics notes](docs/visual_upgrades.md).
-
-## How to run
-
-Use a build from this fork's [Releases](https://github.com/elyro1/pokeplatinum/releases) or [GitHub Actions artifacts](https://github.com/elyro1/pokeplatinum/actions). Place your dumped US Platinum `.nds` ROM beside the executable and launch the game: missing assets are extracted automatically. Filenames do not matter; ROMs are identified by their internal game codes. If no compatible ROM is found, the game opens the usual file picker.
-
-Optionally place your dumped **US Black 2 or White 2** `.nds` ROM beside the executable too. On startup, the game extracts the required battle assets into `bw2/` and automatically enables **BW2 battle visuals**, saving the setting. Existing assets are reused. While a compatible BW2 ROM remains present, startup enables the setting again; move the ROM away if you want to keep BW2 visuals disabled. Platinum is still required.
-
-Discovery checks the executable's directory first, then the working directory. Extraction uses the working directory, alongside settings and saves; normally this is the game folder. You can also select a BW2 ROM manually under **Tab → General**.
-
-## Default keybindings
-
-These are the defaults for a fresh configuration. Existing settings retain your previous bindings. Open **Tab → Controls** to remap keyboard and controller buttons.
-
-| Key | DS button / action |
+| Key | Does |
 | --- | --- |
-| Arrow keys | D-pad: move / navigate |
-| Z | A: confirm / interact |
-| X | B: cancel / run where available |
-| C | X: open / close the in-game menu |
-| V | Y: use a registered item |
-| Q | L; previous Pokétch app while the Pokétch is open |
-| E | R; next Pokétch app while the Pokétch is open |
-| Enter | Start |
-| Right Shift | Select |
-| Tab | Toggle PC settings / debug tools |
-| Left Shift (hold) | Fast-forward (5× by default) |
-| F11 | Toggle fullscreen |
-| Left mouse button | Touch input where supported by the displayed interface |
+| **Arrow keys** | Move / navigate (D-pad) |
+| **Z** | Confirm / interact (A) |
+| **X** | Cancel / run where available (B) |
+| **C** | Open / close the in-game menu (X) |
+| **V** | Use a registered item (Y) |
+| **Q** / **E** | L / R, or previous / next Pokétch app |
+| **Enter** | Start |
+| **Right Shift** | Select |
+| **Tab** | Settings and debug tools |
+| **Left Shift** (hold) | Fast-forward (5× by default) |
+| **F11** | Fullscreen |
+| **Left mouse** | Touch, where the screen supports it |
 
-Inside the Pokétch, **X** or **C** on the keyboard closes it (DS B or X).
+**Remap:** Tab → Controls. These are fresh-install defaults; existing settings keep your old bindings.
 
-Battle Frontier scratch-off cards support buttons in the single-screen layout: use left/right to pick cards, then the D-pad to select a square and A to scratch it. B skips a card or finishes the last card after confirmation; X opens the prize list, and B or X returns. The on-screen hints use DS button names (A = Z, B = X, X = C with the default keyboard bindings).
+<details>
+<summary>Controller setup</summary>
 
-In **Tab → Controls → Controller**, each direction has Primary and Secondary bindings. The D-pad is Primary and the left stick is Secondary by default (axis 0 for left/right, axis 1 for up/down), so either control works for movement and menus. Click **Clear** to remove a secondary binding; press Escape to cancel controller binding capture. Saved mappings, including cleared secondary bindings, are preserved; configurations without secondary bindings inherit the left-stick defaults.
+- Found in **Tab → Controls → Controller**.
+- Each direction has a Primary and a Secondary binding.
+- Primary is the D-pad. Secondary is the left stick (axis 0 left/right, axis 1 up/down). Either one works for movement and menus.
+- **Clear** removes a secondary binding.
+- **Escape** cancels binding capture.
+- Saved mappings are preserved, including cleared secondary bindings.
+- Configurations without secondary bindings inherit the left-stick defaults.
 
-The **Axis deadzone** slider applies to all mapped controller axes and saves automatically. Its default is 25%; set it to 0% to disable filtering, or increase it to prevent stick drift. **Reset** restores the default. Movement remains digital, with the original game’s directional behavior and speed.
+</details>
 
-### Settings
+## Settings (press Tab)
 
-The default layout shows one screen, with 60 FPS, Smooth battle pacing, Fast text, and Fast HP/EXP bars. Speed correction is automatic at 60 FPS. Existing configuration files may override these defaults.
+Out of the box: one screen, 60 FPS, Smooth battle pacing, Fast text, Fast HP/EXP bars. Speed correction is automatic at 60 FPS. Existing config files may override these.
 
-Press **Tab** to open a centered settings panel. Categories replace the current page; tools stay inside the panel instead of opening overlapping windows. The menu remembers your category and page scroll positions during the session.
+| Page | What's there |
+| --- | --- |
+| **General** | Fullscreen, menu scale, master volume, ROM info, BW2 battle visuals |
+| **Graphics** | Internal resolution, VSync, frame cap, lighting, atmosphere, shadows, water, weather, bloom |
+| **Speed & text** | Fast-forward speed, fast wild intros (BW2), battle pacing, text speed, HP/EXP bar speed, low-HP beep toggle |
+| **Controls** | Keyboard and controller mappings, directions, deadzone, PC shortcuts |
+| **Gameplay** | All gameplay overrides |
+| **Cheats & tools** | Cheats, Pokétch unlocks, Pokémon/item creation, map jumping |
+| **Multiplayer** | Host/connect settings, player info |
+| **Developer** | 30/60 FPS, screen layout and swap, frame/GPU timings, lighting previews, assertions, build info, ImGui demo |
 
-- **General:** fullscreen, menu scale, master volume and ROM information and BW2 battle visuals.
-- **Graphics:** internal rendering resolution, VSync, frame cap, lighting, atmosphere, shadows, water, weather, and bloom.
-- **Speed & text:** fast-forward speed, fast wild battle intros for BW2 visuals, independent battle pacing, text speed and HP/EXP bar speed. Smooth pacing keeps original effect timing with sprite interpolation; Quick speeds up effects; Turbo runs effects at 3× speed with minimal presentation pauses and near-instant fades. Text offers Normal, Fast, Faster, and Instant; bars offer Normal, Fast, and Faster. Text speed overrides the in-game setting in and out of battle. These controls work with Platinum and BW2 visuals; see [battle speed settings](docs/battle_speed.md).
-- **Controls:** keyboard and controller mappings, primary/secondary directions, axis deadzone, and PC shortcuts. Select a binding and press the new input; Escape cancels. Binding capture keeps the window responsive.
-- **Gameplay:** all gameplay overrides, grouped into battle rules, moves/tutors, evolution/eggs, encounters/events, and progression/prices. Edit the values, choose **Save changes**, and restart the game. **Reload / discard** reloads the file; **Defaults** stages the built-in defaults until you save. See [gameplay configuration](docs/gameplay_config.md).
-- **Cheats & tools:** cheats, Pokétch unlocks, Pokémon/item creation, and map jumping. Creation and travel require normal overworld control.
-- **Multiplayer:** host/connect settings and player information.
-- **Developer:** frame rate (30/60 FPS), screen layout and screen swap, frame/GPU timings, lighting previews, assertions, build information, and the optional ImGui demo.
 
-**Pause while open** is disabled by default. Enable it to pause the game while settings are open. Closing with Tab, Escape, or Resume clears automatic menu pause. Developer → Manual pause is independent and remains active after closing the panel. Automatic pause is suspended while hosting or connected to multiplayer; menu input is still kept out of gameplay. Escape cancels a binding/dialog or returns from a tool before closing settings.
+<details>
+<summary>Speed & text options</summary>
 
-**General → Menu scale** offers Auto and 100–200% in 25% steps. Auto uses the display scale reported by SDL; use the manual override if your desktop's scale is not reported correctly. Fonts, spacing, controls, and dialogs scale together. Internal rendering resolution changes game sharpness independently. On smaller windows or at larger menu scales, categories collapse into a picker and page content scrolls.
+| Setting | Options |
+| --- | --- |
+| Battle pacing | **Smooth:** original effect timing with sprite interpolation. **Quick:** faster effects. **Turbo:** 3× effects, minimal pauses, near-instant fades. |
+| Text | Normal, Fast, Faster, Instant. Overrides the in-game setting, in and out of battle. |
+| HP/EXP bars | Normal, Fast, Faster |
 
-PC settings save automatically to **sim_config.ini** and **sim_config_prj.ini**. The new **[Interface]** section in sim_config.ini stores **MenuScalePercent** (0 for Auto) and **PauseWhileOpen**; existing files without these settings inherit Auto and no automatic pause. Gameplay overrides use the Gameplay page's **Save changes** button and load from **gameplay_config.ini** at startup. If performance is poor, lower the internal resolution under Graphics.
+Works with both Platinum and BW2 visuals. More in [battle speed settings](docs/battle_speed.md).
 
-## Saves
+</details>
 
-The three slots use `save1.bin`, `save2.bin`, and `save3.bin` in the game folder. Save through the normal in-game Save action before quitting.
+<details>
+<summary>Changing bindings, gameplay options and tools</summary>
 
-The native game also creates a separate autosave every two minutes of real time.
-**Tab → Developer → Saving → Autosave** enables or disables this immediately and
-saves the choice as `[Developer] Autosave` in `sim_config_prj.ini` (default: `true`).
-During dialogue, menus, battles, transitions, communication or special activities,
-it waits until normal overworld control resumes at a tile boundary. Each autosave
-stores the current progress in the game folder's `autosave/` directory, for
-example `autosave/save1.bin.2026-10-28_14-30-00-0000.bak`. Only the newest ten
-autosaves per slot are kept; older ones are deleted after a successful autosave.
-Autosaves never replace or create the normal `save1.bin`, `save2.bin` or
-`save3.bin` files. Loading a slot always uses the last manual save made through
-the in-game Save action. To load an autosave, close the game and manually copy
-or move it over the corresponding slot file, renaming it to `save1.bin`,
-`save2.bin` or `save3.bin`. Autosaves use a temporary file and atomic publication
-inside `autosave/`; a failed autosave leaves existing saves intact.
+**Bindings:** select one, press the new input. Escape cancels. The window stays responsive during capture.
 
-An older upstream `save.bin` is copied into slot 1 when `save1.bin` does not already exist. The original file is retained. Back up your save files before updating builds or deleting a slot.
+**Gameplay page** has battle rules, moves/tutors, evolution/eggs, encounters/events, and progression/prices.
 
-## Building from source
+- Edit values, choose **Save changes**, restart the game.
+- **Reload / discard** reloads the file.
+- **Defaults** stages the built-in defaults until you save.
+- More in [gameplay configuration](docs/gameplay_config.md).
 
-For a Windows executable built locally on Linux, see [the MinGW build guide](docs/build_mingw.md).
+**Cheats & tools:** creation and travel need normal overworld control.
 
-Refer to the [Building from source](BUILD.md).
+</details>
 
-## Credits and upstream projects
+<details>
+<summary>How the menu behaves</summary>
 
-- **[pret/pokeplatinum](https://github.com/pret/pokeplatinum):** Pokémon Platinum decompilation, documentation, and the original source tree.
-- **[cybervisi0n/pokeplatinum](https://github.com/cybervisi0n/pokeplatinum):** the native PC port on which this fork is built.
-- **[cybervisi0n/libntr](https://github.com/cybervisi0n/libntr):** the NitroSDK replacement libraries powering the port.
-- **[elyro1/libntr](https://github.com/elyro1/libntr/tree/lib_single_screen_mod):** the modified library branch used by this fork.
-- **[fuddlesworth/pokebw2](https://github.com/fuddlesworth/pokebw2/commits/main/):** BW2 battle engine.
+**Layout**
 
-Please report issues specific to this fork in [this repository's issue tracker](https://github.com/elyro1/pokeplatinum/issues). The original PC port's community is available on its [Discord](https://discord.gg/ZgtPszuBeN).
+- It is one centered panel. Categories replace the current page, and tools stay inside the panel.
+- It remembers your category and scroll positions during the session.
+- On small windows or large menu scales, categories collapse into a picker and pages scroll.
+
+**Pausing**
+
+- **Pause while open** is off by default.
+- Closing with Tab, Escape, or Resume clears the automatic pause.
+- **Developer → Manual pause** is separate and stays active after closing the panel.
+- Automatic pause is suspended while hosting or connected to multiplayer. Menu input still stays out of gameplay.
+- Escape cancels a binding or dialog, or returns from a tool, before it closes settings.
+
+**Menu scale** (General)
+
+- Auto, or 100–200% in 25% steps.
+- Auto uses the display scale SDL reports. Use a manual value if yours is reported wrong.
+- Fonts, spacing, controls, and dialogs scale together.
+- Internal resolution changes game sharpness separately.
+
+</details>
+
+<details>
+<summary>Where settings are stored</summary>
+
+- PC settings save automatically to `sim_config.ini` and `sim_config_prj.ini`.
+- The `[Interface]` section of `sim_config.ini` stores `MenuScalePercent` (0 = Auto) and `PauseWhileOpen`.
+- Files without those values get Auto and no automatic pause.
+- Gameplay overrides use **Save changes** and load from `gameplay_config.ini` at startup.
+
+</details>
+
+## 💾 Saves
+
+- **Save in-game before you quit.** Slots are `save1.bin`, `save2.bin`, and `save3.bin` in the game folder.
+- **Back up your saves** before updating builds or deleting a slot.
+- Loading a slot always uses your last **manual** save. Autosaves are separate.
+
+<details>
+<summary>Autosaves and restoring one</summary>
+
+**What happens**
+
+- A separate autosave is made every 2 minutes of real time.
+- It goes in `autosave/`, for example `autosave/save1.bin.2026-10-28_14-30-00-0000.bak`.
+- The newest 10 per slot are kept. Older ones are deleted after a successful autosave.
+- During dialogue, menus, battles, transitions, communication or special activities, it waits for normal overworld control at a tile boundary.
+- Autosaves never replace or create your normal slot files.
+- Autosaves use a temporary file and atomic publication, so a failed one leaves existing saves intact.
+
+**Restore one**
+
+1. Close the game.
+2. Copy or move the autosave over the slot file.
+3. Rename it to `save1.bin`, `save2.bin`, or `save3.bin`.
+
+**Turn it off:** **Tab → Developer → Saving → Autosave**. It applies immediately and is stored as `[Developer] Autosave` in `sim_config_prj.ini` (default: `true`).
+
+</details>
+
+
+## Build from source
+
+- [Building from source](BUILD.MD)
+- [Windows executable, built on Linux (MinGW)](docs/build_mingw.md)
+
+## Credits
+
+| Project | Role |
+| --- | --- |
+| [pret/pokeplatinum](https://github.com/pret/pokeplatinum) | Decompilation, documentation, original source tree |
+| [cybervisi0n/pokeplatinum](https://github.com/cybervisi0n/pokeplatinum) | The native PC port this fork is built on |
+| [cybervisi0n/libntr](https://github.com/cybervisi0n/libntr) | NitroSDK replacement libraries powering the port |
+| [fuddlesworth/pokebw2](https://github.com/fuddlesworth/pokebw2/commits/main/) | BW2 battle engine |

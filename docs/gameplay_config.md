@@ -63,7 +63,6 @@ All options in this table default to `false`. Set an option to `true` to enable 
 | --- | --- |
 | `prohibitBattleItems` | Blocks player Bag items in battle except Poké Balls. Held-item effects and opponents' items still work. |
 | `forceSetBattleStyle` | Always uses Set style, suppressing the Shift prompt regardless of the saved Options selection. |
-| `disableLowHPBeep` | Disables the low-HP warning beep in both Platinum and BW2 battle presentations. |
 | `unlimitedVitaminEVs` | Vitamins can raise a stat past 100 EVs, up to the normal 255 per-stat and 510 total EV limits. EV-reducing berries retain normal behavior. |
 | `forgettableHMs` | HM moves can be replaced when learning another move, including after leveling up in battle. |
 | `unlearnedHMs` | Compatible non-egg party members can use HMs without learning them or owning the HM item. Interact with obstacles or use **HMs** in the Pokémon's party menu. Badge and location restrictions still apply; non-HM field moves still need to be learned. |
@@ -93,6 +92,8 @@ Changes save automatically to `[General]` in `sim_config_prj.ini` as `NicknameMo
 ## Fast BW battle introductions
 
 **Tab → Speed & text → Fast wild battle intro** is enabled by default for shorter wild encounters. This setting saves automatically to `sim_config_prj.ini` and applies to the next battle when BW2 visuals and extracted assets are available. It has no effect on Platinum visuals. An explicitly saved `FastWildBattleIntro=false` remains disabled. Trainer battles use their full introductions. The former `fastTrainerBattleIntro` gameplay option has been removed; existing entries are ignored.
+
+**Tab → Speed & text → Disable low-HP beep** silences the low-HP warning in Platinum and BW2 battles. It applies immediately and saves to `sim_config_prj.ini`. The former `disableLowHPBeep` gameplay option has been removed; existing entries are ignored.
 
 Fast openings skip the encounter text and opening camera shots, show the player throwing their Poké Ball and releasing their Pokémon at twice the usual effect speed, and then proceed to battle. Opponent and health-box setup still runs. The option applies only when BW battle view is active. Link and recorded battles, the first battle, catching tutorial, Safari Zone, Pal Park, and Giratina's special entrance retain their existing presentation. Later switches and battle animations are unaffected. The exact speedup varies with text, encounter animations, and system performance.
 

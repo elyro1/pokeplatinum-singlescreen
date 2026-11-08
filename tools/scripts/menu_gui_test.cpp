@@ -174,6 +174,13 @@ static void CheckBarSpeedControl() {
     assert(projectConfig->battleBarSpeed == PORT_SPEED_NORMAL);
     assert(projectConfig->textSpeed == PORT_SPEED_FAST);
     assert(projectConfig->battlePacing == BATTLE_PACING_SMOOTH);
+    assert(!projectConfig->disableLowHPBeep);
+    projectConfig->disableLowHPBeep = TRUE;
+    SIM_Config_prj_SaveConfigFile(projectConfig);
+    SIM_Config_prj_LoadDefaults(projectConfig);
+    assert(SIM_Config_prj_LoadConfigFile(projectConfig) && projectConfig->disableLowHPBeep);
+    projectConfig->disableLowHPBeep = FALSE;
+    SIM_Config_prj_SaveConfigFile(projectConfig);
 }
 
 int main() {

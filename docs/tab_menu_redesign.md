@@ -27,7 +27,7 @@ Status: implemented with the clean dark style. TAB opens one centered panel with
 | --- | --- |
 | General | Fullscreen/windowed, menu scale, master volume, ROM information and BW2 battle visuals |
 | Graphics | Internal resolution, VSync, frame cap, day/night lighting, atmosphere, model lighting, character shadows, particles, water, weather and bloom |
-| Speed & text | Fast-forward multiplier, fast wild battle intros, battle pacing, independent text and HP/EXP speeds |
+| Speed & text | Fast-forward multiplier, fast wild battle intros, battle pacing, independent text and HP/EXP speeds, low-HP beep toggle |
 | Controls | Keyboard and controller subpages; DS button names with their actions; primary/secondary directions; deadzone; PC shortcuts |
 | Gameplay | All 24 gameplay config values, descriptions, explicit Save/Reload/Defaults, and restart status |
 | Cheats & tools | Existing cheats, Pokétch unlocks, Pokémon creation, item creation, map jumping as subpages within the panel |
