@@ -70,7 +70,7 @@ struct BwMonAnim {
     NNSG2dMultiCellAnimation animation;
     void *animationWork;
     Bin *bin;
-    u32 binSize;
+    unsigned binSize;
     PokemonSpriteTemplate template;
     int originX;
     int originY;
