@@ -15,6 +15,10 @@
 #include "unk_0209A74C.h"
 #include "unk_0209AA74.h"
 
+#ifdef SDK_PORT
+#include "port/ds_save_import.h"
+#endif
+
 static void SaveTable_Clear(SaveDataBody *body, const SavePageInfo *pageInfo);
 static void SavePageInfo_Init(SavePageInfo *pageInfo);
 static void SaveBlockInfo_Init(SaveBlockInfo *blockInfo, const SavePageInfo *pageInfo);
@@ -97,6 +101,7 @@ SaveData *SaveData_Init(void)
 {
 #ifdef SDK_PORT
     CARD_PortMigrateLegacySave();
+    PC_ImportDsSaves();
 #endif
     SaveData *saveData = Heap_Alloc(HEAP_ID_SAVE, sizeof(SaveData));
     SaveData_InitializeContents(saveData);
