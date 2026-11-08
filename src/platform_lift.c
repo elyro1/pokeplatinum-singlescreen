@@ -14,6 +14,7 @@
 #include "overlay005/map_prop.h"
 
 #include "field_system.h"
+#include "overworld_pokemon.h"
 #include "field_task.h"
 #include "heap.h"
 #include "persisted_map_features.h"
@@ -90,10 +91,16 @@ typedef struct PlatformLiftFieldTaskEnv {
     fx32 targetHeight;
     BOOL isIronIslandB2FLeftRoom;
     int kind;
+    int startTileX;
+    int startTileZ;
+    BOOL followerRiding;
+    BOOL followerSuppressed;
 } PlatformLiftFieldTaskEnv;
 
 static BOOL FieldTask_PlatformLiftGoUp(FieldTask *taskMan);
 static BOOL FieldTask_PlatformLiftGoDown(FieldTask *taskMan);
+static void PlatformLift_BoardFollower(FieldSystem *fieldSystem, PlatformLiftFieldTaskEnv *taskEnv);
+static void PlatformLift_ReleaseFollower(FieldSystem *fieldSystem, PlatformLiftFieldTaskEnv *taskEnv);
 static void PlatformLift_PlaySoundEffect(const int platformLiftKind);
 static void PlatformLift_StopSoundEffect(const int platformLiftKind);
 
@@ -338,6 +345,10 @@ void PlatformLift_Trigger(FieldSystem *fieldSystem)
     taskEnv->state = PLATFORM_LIFT_STATE_START_MOVING;
     taskEnv->isIronIslandB2FLeftRoom = sPerMapPlatformLiftConfiguration[data->id].isIronIslandB2FLeftRoom;
     taskEnv->kind = data->kind;
+    taskEnv->startTileX = sPerMapPlatformLiftConfiguration[data->id].startTileX;
+    taskEnv->startTileZ = sPerMapPlatformLiftConfiguration[data->id].startTileZ;
+    taskEnv->followerRiding = FALSE;
+    taskEnv->followerSuppressed = FALSE;
 
     if (data->floorID == PLATFORM_LIFT_BOTTOM_FLOOR) {
         taskEnv->targetHeight = sPerMapPlatformLiftConfiguration[data->id].floorHeights[PLATFORM_LIFT_TOP_FLOOR];
@@ -358,6 +369,7 @@ static BOOL FieldTask_PlatformLiftGoUp(FieldTask *taskMan)
     switch (taskEnv->state) {
     case PLATFORM_LIFT_STATE_START_MOVING:
         PlayerAvatar_SetHeightCalculationEnabled(fieldSystem->playerAvatar, FALSE);
+        PlatformLift_BoardFollower(fieldSystem, taskEnv);
         PlatformLift_PlaySoundEffect(taskEnv->kind);
 
         taskEnv->state++;
@@ -398,6 +410,9 @@ static BOOL FieldTask_PlatformLiftGoUp(FieldTask *taskMan)
         }
 
         Player_SetYPos(fieldSystem->playerAvatar, platformLiftPosition.y);
+        if (taskEnv->followerRiding) {
+            FollowingPokemon_SetLiftHeight(fieldSystem, platformLiftPosition.y);
+        }
         MapProp_SetPosition(platformLiftMapProp, &platformLiftPosition);
 
         break;
@@ -406,6 +421,7 @@ static BOOL FieldTask_PlatformLiftGoUp(FieldTask *taskMan)
     case PLATFORM_LIFT_STATE_FINISH_MOVING:
         DynamicTerrainHeightManager_SetHeight(PLATFORM_LIFT_DYNAMIC_HEIGHT_PLATE_ID, taskEnv->targetHeight, fieldSystem->dynamicTerrainHeightMan);
         PlayerAvatar_SetHeightCalculationEnabledAndUpdate(fieldSystem->playerAvatar, TRUE);
+        PlatformLift_ReleaseFollower(fieldSystem, taskEnv);
         Sound_PlayEffect(SEQ_SE_DP_KI_GASYAN_sseq);
 
         taskEnv->state++;
@@ -427,6 +443,7 @@ static BOOL FieldTask_PlatformLiftGoDown(FieldTask *taskMan)
     switch (taskEnv->state) {
     case PLATFORM_LIFT_STATE_START_MOVING:
         PlayerAvatar_SetHeightCalculationEnabled(fieldSystem->playerAvatar, FALSE);
+        PlatformLift_BoardFollower(fieldSystem, taskEnv);
         PlatformLift_PlaySoundEffect(taskEnv->kind);
 
         taskEnv->state++;
@@ -460,6 +477,9 @@ static BOOL FieldTask_PlatformLiftGoDown(FieldTask *taskMan)
         }
 
         Player_SetYPos(fieldSystem->playerAvatar, platformLiftPosition.y);
+        if (taskEnv->followerRiding) {
+            FollowingPokemon_SetLiftHeight(fieldSystem, platformLiftPosition.y);
+        }
         MapProp_SetPosition(platformLiftMapProp, &platformLiftPosition);
 
         break;
@@ -468,6 +488,7 @@ static BOOL FieldTask_PlatformLiftGoDown(FieldTask *taskMan)
     case PLATFORM_LIFT_STATE_FINISH_MOVING:
         DynamicTerrainHeightManager_SetHeight(PLATFORM_LIFT_DYNAMIC_HEIGHT_PLATE_ID, taskEnv->targetHeight, fieldSystem->dynamicTerrainHeightMan);
         PlayerAvatar_SetHeightCalculationEnabledAndUpdate(fieldSystem->playerAvatar, TRUE);
+        PlatformLift_ReleaseFollower(fieldSystem, taskEnv);
         Sound_PlayEffect(SEQ_SE_DP_KI_GASYAN_sseq);
 
         taskEnv->state++;
@@ -479,6 +500,28 @@ static BOOL FieldTask_PlatformLiftGoDown(FieldTask *taskMan)
     }
 
     return FALSE;
+}
+
+// The follower rides along when it is on the platform. Anywhere else it would
+// be left on the other floor, so it is recalled and reappears at the destination.
+static void PlatformLift_BoardFollower(FieldSystem *fieldSystem, PlatformLiftFieldTaskEnv *taskEnv)
+{
+    taskEnv->followerRiding = FollowingPokemon_BoardLift(fieldSystem, taskEnv->startTileX, taskEnv->startTileZ, PLATFORM_LIFT_SIZE_X, PLATFORM_LIFT_SIZE_Y);
+
+    if (!taskEnv->followerRiding) {
+        taskEnv->followerSuppressed = FollowingPokemon_Suppress(fieldSystem, FOLLOWING_POKEMON_SUPPRESS_SCRIPT);
+    }
+}
+
+static void PlatformLift_ReleaseFollower(FieldSystem *fieldSystem, PlatformLiftFieldTaskEnv *taskEnv)
+{
+    if (taskEnv->followerRiding) {
+        FollowingPokemon_LeaveLift(fieldSystem);
+    }
+
+    if (taskEnv->followerSuppressed) {
+        FollowingPokemon_Resume(fieldSystem, FOLLOWING_POKEMON_SUPPRESS_SCRIPT);
+    }
 }
 
 static void PlatformLift_PlaySoundEffect(const int platformLiftKind)

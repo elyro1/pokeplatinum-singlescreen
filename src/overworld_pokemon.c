@@ -354,6 +354,48 @@ void FollowingPokemon_Resume(FieldSystem *fieldSystem, enum FollowingPokemonSupp
     }
 }
 
+static MapObject *GetFollowerObject(FieldSystem *fieldSystem)
+{
+    if (fieldSystem->overworldPokemon == NULL) {
+        return NULL;
+    }
+    return OverworldPokemon_GetObject(fieldSystem, fieldSystem->overworldPokemon->follower);
+}
+
+BOOL FollowingPokemon_BoardLift(FieldSystem *fieldSystem, int tileX, int tileZ, int sizeX, int sizeZ)
+{
+    MapObject *object = GetFollowerObject(fieldSystem);
+    if (object == NULL) {
+        return FALSE;
+    }
+    int x = MapObject_GetX(object), z = MapObject_GetZ(object);
+    if (x < tileX || x >= tileX + sizeX || z < tileZ || z >= tileZ + sizeZ) {
+        return FALSE;
+    }
+    MapObject_SetHeightCalculationDisabled(object, TRUE);
+    return TRUE;
+}
+
+void FollowingPokemon_SetLiftHeight(FieldSystem *fieldSystem, fx32 y)
+{
+    MapObject *object = GetFollowerObject(fieldSystem);
+    if (object != NULL) {
+        VecFx32 pos;
+        MapObject_GetPosPtr(object, &pos);
+        pos.y = y;
+        MapObject_SetPos(object, &pos);
+    }
+}
+
+void FollowingPokemon_LeaveLift(FieldSystem *fieldSystem)
+{
+    MapObject *object = GetFollowerObject(fieldSystem);
+    if (object != NULL) {
+        MapObject_SetHeightCalculationDisabled(object, FALSE);
+        MapObject_RecalculateObjectHeight(object);
+    }
+}
+
 static BOOL FollowerAllowed(FieldSystem *fieldSystem)
 {
 #ifdef SDK_PORT
