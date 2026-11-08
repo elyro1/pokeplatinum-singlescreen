@@ -274,6 +274,16 @@ static BOOL ShadowOwnerExists(const MapObjectShadow *shadow)
     return TRUE;
 }
 
+#ifdef SDK_PORT
+// An object over terrain with no height data is frozen and its sprite hidden
+// (see ov5_021EC6C0); its shadow must not stay behind on its own.
+static BOOL ShadowOwnerSpriteHidden(const MapObject *mapObj)
+{
+    return MapObject_CheckStatusFlag(mapObj, MAP_OBJ_STATUS_12)
+        && !MapObject_CheckStatusFlag(mapObj, MAP_OBJ_STATUS_13);
+}
+#endif
+
 static void UpdateShadow(OverworldAnimManager *animManager, void *data)
 {
     MapObjectShadow *shadow = data;
@@ -290,6 +300,13 @@ static void UpdateShadow(OverworldAnimManager *animManager, void *data)
     }
 
     shadow->visibility = SHADOW_VISIBLE;
+
+#ifdef SDK_PORT
+    if (ShadowOwnerSpriteHidden(mapObj)) {
+        shadow->visibility = SHADOW_HIDDEN;
+        return;
+    }
+#endif
 
     if (MapObject_CheckStatusFlag(mapObj, MAP_OBJ_STATUS_HIDE | MAP_OBJ_STATUS_HIDE_SHADOW) == TRUE) {
         shadow->visibility = SHADOW_HIDDEN;
