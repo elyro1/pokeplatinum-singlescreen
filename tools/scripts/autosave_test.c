@@ -33,6 +33,7 @@ static int TestSync(int fd)
 #define time TestTime
 #define rename TestRename
 #define fsync TestSync
+#include "../../src/port/file_commit.c"
 #include "../../src/port/autosave.c"
 #undef clock_gettime
 #undef time

@@ -1,4 +1,5 @@
 #include "port/autosave.h"
+#include "port/file_commit.h"
 #include "port/sim_config_prj.h"
 
 #include "constants/field/map_load.h"
@@ -24,8 +25,6 @@
 #include <direct.h>
 #include <fcntl.h>
 #include <io.h>
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #endif
 
 #define AUTOSAVE_LIMIT 10
@@ -58,24 +57,6 @@ static BOOL Autosave_IsSafe(FieldSystem *fieldSystem)
     int state = PlayerAvatar_GetPlayerMoveState(fieldSystem->playerAvatar);
     return (state == PLAYER_MOVE_STATE_NONE || state == PLAYER_MOVE_STATE_END)
         && !PlayerAvatar_CheckForcedMovement(fieldSystem->playerAvatar);
-}
-
-static BOOL Autosave_Sync(FILE *file)
-{
-#ifdef _WIN32
-    return _commit(_fileno(file)) == 0;
-#else
-    return fsync(fileno(file)) == 0;
-#endif
-}
-
-static BOOL Autosave_Replace(const char *from, const char *to)
-{
-#ifdef _WIN32
-    return MoveFileExA(from, to, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
-#else
-    return rename(from, to) == 0;
-#endif
 }
 
 static BOOL Autosave_Copy(FILE *source, FILE *target)
@@ -148,7 +129,7 @@ static BOOL Autosave_Archive(const char *temporary, const char *directory, const
         reserved = TRUE;
         // Publish the completed snapshot atomically, replacing only our own
         // reserved archive name, never the normal slot file.
-        if (fclose(target) == 0) ok = Autosave_Replace(temporary, backup);
+        if (fclose(target) == 0) ok = PC_FileReplace(temporary, backup);
         break;
     }
 cleanup:
@@ -262,7 +243,7 @@ static BOOL Autosave_Write(FieldSystem *fieldSystem)
         target = fopen(temporary, "rb+");
         ok = target != NULL;
         if (target) {
-            if (!Autosave_Sync(target)) ok = FALSE;
+            if (!PC_FileSync(target)) ok = FALSE;
             if (fclose(target) != 0) ok = FALSE;
         }
     }
