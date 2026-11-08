@@ -50,6 +50,11 @@ void FollowingPokemon_OnSurfBegin(FieldSystem *fieldSystem);
 void FollowingPokemon_OnDoorExit(FieldSystem *fieldSystem);
 BOOL FollowingPokemon_Suppress(FieldSystem *fieldSystem, enum FollowingPokemonSuppression reason);
 void FollowingPokemon_Resume(FieldSystem *fieldSystem, enum FollowingPokemonSuppression reason);
+// Carries the follower on a platform lift covering the given tiles. Returns
+// FALSE, leaving it alone, when there is no follower standing on those tiles.
+BOOL FollowingPokemon_BoardLift(FieldSystem *fieldSystem, int tileX, int tileZ, int sizeX, int sizeZ);
+void FollowingPokemon_SetLiftHeight(FieldSystem *fieldSystem, fx32 y);
+void FollowingPokemon_LeaveLift(FieldSystem *fieldSystem);
 
 // Field/map-object engine integration. These never set the story partner flag.
 void OverworldPokemon_Init(FieldSystem *fieldSystem);
