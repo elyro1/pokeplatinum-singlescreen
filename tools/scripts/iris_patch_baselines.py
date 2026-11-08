@@ -16,6 +16,15 @@ APPENDED_TEXT_BANKS = (
     'species_height_metric',
     'species_height_gira_metric',
 )
+# Tracked text banks that only append messages, with their retail message counts.
+APPENDED_MESSAGE_BANKS = {
+    'iron_island': 6,
+    'scratch_off_cards_app': 13,
+    'trainer_class_names': 105,
+    'trainer_class_names_with_articles': 105,
+}
+# Only adds lines to the source; the retail member is rebuilt from the compiled script.
+IRIS_SCRIPT = 'scripts_iron_island'
 
 
 def build_tool(build, name):
@@ -52,10 +61,8 @@ def resources(build, members):
             raise ValueError('Unexpected appended text bank order')
         text = text[:-appended]
         for name, source, count in [
-            ('iron_island', ROOT / 'res/text/iron_island.json', 6),
-            ('scratch_off_cards_app', ROOT / 'res/text/scratch_off_cards_app.json', 13),
-            ('trainer_class_names', ROOT / 'res/text/trainer_class_names.json', 105),
-            ('trainer_class_names_with_articles', ROOT / 'res/text/trainer_class_names_with_articles.json', 105),
+            *((bank, ROOT / 'res/text' / (bank + '.json'), messages)
+              for bank, messages in APPENDED_MESSAGE_BANKS.items()),
             ('npc_trainer_names', build / 'res/trainers/npc_trainer_names.json', 928),
         ]:
             data = json.loads(source.read_text())
@@ -71,7 +78,7 @@ def resources(build, members):
         archive = build / 'res/field/scripts/scr_seq.narc'
         scripts = members(archive.read_bytes())
         order = (ROOT / 'res/field/scripts/scripts.order').read_text().splitlines()
-        index = order.index('scripts_iron_island')
+        index = order.index(IRIS_SCRIPT)
         data = scripts[index]
         iris_start = 16 + struct.unpack_from('<I', data, 12)[0]
         scripts[index] = remove_script_entry(data, 3, 4, iris_start)

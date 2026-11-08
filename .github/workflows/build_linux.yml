@@ -30,6 +30,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Audit release resources
+        run: python3 tools/scripts/audit_release_resources.py --tree-only
+
       - name: Install Metroskrew
         run: ./drun.sh make skrew
 

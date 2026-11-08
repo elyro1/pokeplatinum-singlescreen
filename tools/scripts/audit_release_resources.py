@@ -1,13 +1,24 @@
 #!/usr/bin/env python3
 """Check mod history for added game resources and missing patch baselines."""
 import argparse
+import json
 from pathlib import Path
 import subprocess
 
+from iris_patch_baselines import APPENDED_MESSAGE_BANKS, IRIS_SCRIPT
 from make_map_patches import ROOT
 from restore_patch_baseline import restore
 
 UPSTREAM = 'c08911193bb3f56a85ac72d30cdc985c212cff10'
+# Reviewed additions that are allowed despite looking like game resources.
+ALLOWED_ADDITIONS = {
+    'res/bwbattle/trainers/back_sprites.bin': 'Contains no game assets',
+    'res/graphics/following_pokemon/bw2_sprites.json': 'BW2 sprite keys and HG/SS shiny palettes',
+    'res/graphics/following_pokemon/manifest.json': 'Sprite index with offsets and hashes',
+    'res/graphics/following_pokemon/reactions_manifest.json': 'Source hashes for the reaction import',
+    'res/text/following_pokemon.json': 'HG/SS follower dialogue',
+    'res/trainers/data/champion_iris.json': 'Trainer definition for the Iris fight',
+}
 
 
 def git(*args):
@@ -23,11 +34,29 @@ def game_resource(path):
                                '.spa', '.nsbta', '.nsbca', '.nsbtp', '.dat', '.sbin'}))
 
 
+def unexpected_addition(path):
+    return path not in ALLOWED_ADDITIONS and game_resource(path)
+
+
+def append_error(kind, name, path, original, source):
+    """Return the problem with a change that has no baseline patch, if any."""
+    if kind == 'text' and name in APPENDED_MESSAGE_BANKS:
+        before, after = json.loads(original), json.loads(source)
+        count = APPENDED_MESSAGE_BANKS[name]
+        kept = len(before['messages']) == count and before == dict(after, messages=after['messages'][:count])
+    elif kind == 'scripts' and name == IRIS_SCRIPT:
+        lines = iter(source.splitlines())
+        kept = all(line in lines for line in original.splitlines())
+    else:
+        return 'Missing binary patch baseline: ' + path
+    return None if kept else 'Retail content changed in append-only resource: ' + path
+
+
 def audit(base, history=True, head='HEAD'):
     errors = []
     upstream = set(git('ls-tree', '-r', '--name-only', base).decode().splitlines())
     current = set(git('ls-files').decode().splitlines())
-    added = {p for p in current - upstream if (ROOT / p).exists() and game_resource(p)}
+    added = {p for p in current - upstream if (ROOT / p).exists() and unexpected_addition(p)}
     errors += ['Added game resource in working tree: ' + p for p in sorted(added)]
     if history:
         commits = git('rev-list', base + '..' + head).decode().splitlines()
@@ -35,7 +64,7 @@ def audit(base, history=True, head='HEAD'):
             paths = git('diff-tree', '--root', '--no-commit-id', '--diff-filter=A',
                         '--name-only', '-r', commit).decode().splitlines()
             for path in paths:
-                if path not in upstream and game_resource(path):
+                if path not in upstream and unexpected_addition(path):
                     errors.append('Added game resource in history: %s %s' % (commit[:10], path))
         print('Audited %d mod commits against %s' % (len(commits), base))
     for kind, directory, extension in (('scripts', 'res/field/scripts', '.s'),
@@ -53,7 +82,9 @@ def audit(base, history=True, head='HEAD'):
             name = Path(path).stem
             changed.add(name)
             if name not in covered:
-                errors.append('Missing binary patch baseline: ' + path)
+                error = append_error(kind, name, path, original, source)
+                if error:
+                    errors.append(error)
                 continue
             patch = ROOT / 'res/port_patch_baselines' / kind / (name + '.patch')
             try:
