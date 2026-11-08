@@ -7,6 +7,7 @@
 
 #include "applications/pokemon_summary_screen/main.h"
 #include "applications/pokemon_summary_screen/sprites.h"
+#include "applications/pokemon_summary_screen/wide.h"
 
 #include "camera.h"
 #include "gx_layers.h"
@@ -140,6 +141,7 @@ void PokemonSummaryScreen_Setup3DGfx(PokemonSummaryScreen *summaryScreen)
 void PokemonSummaryScreen_Update3DGfx(PokemonSummaryScreen *summaryScreen)
 {
     if (summaryScreen->page == SUMMARY_PAGE_CONDITION) {
+        SummaryWide_Set3DForContent();
         G3_ResetG3X();
         Camera_ComputeViewMatrix();
 
@@ -154,6 +156,7 @@ void PokemonSummaryScreen_Update3DGfx(PokemonSummaryScreen *summaryScreen)
         UpdateConditionRectsOrFlash(summaryScreen);
     }
 
+    SummaryWide_Set3DForMon();
     NNS_G2dSetupSoftwareSpriteCamera();
     PokemonSpriteManager_DrawSprites(summaryScreen->monSprite.spriteManager);
 
