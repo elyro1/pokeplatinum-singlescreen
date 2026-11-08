@@ -64,6 +64,8 @@ EmissiveBloom=true
   anchor matches the default shadow. Neighboring tiles alternate polygon IDs,
   so shadows of objects side by side blend instead of cutting each other off. Jumping broadens and fades it;
   nighttime reduces its strength. Special shadow variants retain their models.
+  It also applies inside buildings, at a fixed strength because interior
+  lighting does not follow the clock.
   On steps, which are steep ramps across one tile, both character shadows
   sit on the collision slope sampled around them and tilt with it, instead
   of sinking into the ramp. In tall grass, where the game hides its shadow

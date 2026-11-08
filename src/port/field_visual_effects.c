@@ -56,7 +56,7 @@ static struct {
     u8 lightWidth[64]; // Downlights: half width of the pool's quad.
     short lightDeck[64]; // Downlights: height of the painted patch's plane at the head.
     int lightCount;
-    BOOL allowed, wasWet, modelScopeActive;
+    BOOL allowed, building, wasWet, modelScopeActive;
     BOOL dayEmission; // Something glows by day here; see FieldVisuals_HasDayEmission.
     float wetness; // Rain on world surfaces, fading in and out.
     float lavaPulse;
@@ -240,7 +240,10 @@ void FieldVisualEffects_SetScene(FieldSystem *field, BOOL allowed, enum FieldAtm
     sEffects.lastFrame = field->npcSceneRenderFrame;
     sEffects.currentProp = -1;
     sEffects.allowed = allowed && (MapHeader_IsOutdoors(map) || MapHeader_IsCave(map));
-    sEffects.modelScopeActive = sEffects.allowed;
+    // Buildings only get the soft contact shadow; every other effect here
+    // checks allowed, so interiors keep their original look.
+    sEffects.building = allowed && MapHeader_IsBuilding(map);
+    sEffects.modelScopeActive = sEffects.allowed || sEffects.building;
     sEffects.exterior = MapHeader_IsOutdoors(map) || region == FIELD_ATMOSPHERE_FOREST || region == FIELD_ATMOSPHERE_COAST || region == FIELD_ATMOSPHERE_SNOW;
     FieldVisuals_NightLighting(FieldVisuals_GetTime(GetSecondsSinceMidnight()), &sEffects.night);
     sEffects.lightCount = 0;
@@ -335,10 +338,12 @@ void FieldVisualEffects_SetScene(FieldSystem *field, BOOL allowed, enum FieldAtm
     }
 }
 
+#define INDOOR_CONTACT_SHADOW 0.5f
+
 BOOL FieldVisualEffects_DrawContactShadow(FieldSystem *field, MapObject *object, const VecFx32 *position, const VecFx32 *scale, const NNSG3dResMdlInfo *modelInfo)
 {
     SIM_Config_prj_type *config = SIM_Config_prj_GetConfig();
-    if (sEffects.owner != field || !sEffects.modelScopeActive || !sEffects.allowed
+    if (sEffects.owner != field || !sEffects.modelScopeActive
         || (!config->softContactShadows && !config->castShadows && !config->nightGlows)) {
         return FALSE;
     }
@@ -373,7 +378,7 @@ BOOL FieldVisualEffects_DrawContactShadow(FieldSystem *field, MapObject *object,
     // footing; see DrawCastShadows and BeginCharacter.
     Billboard *billboard = ov5_021EB1A0(object);
     CastShadow *cast = NULL;
-    if (billboard && sEffects.castCount < CAST_LIMIT) {
+    if (billboard && sEffects.allowed && sEffects.exterior && sEffects.castCount < CAST_LIMIT) {
         cast = &sEffects.casts[sEffects.castCount++];
         cast->billboard = billboard;
         // On the terrain itself, not the contact shadow's lowered anchor.
@@ -388,11 +393,15 @@ BOOL FieldVisualEffects_DrawContactShadow(FieldSystem *field, MapObject *object,
     if (!config->softContactShadows) {
         return FALSE;
     }
-    int seconds = FieldVisuals_GetTime(GetSecondsSinceMidnight());
-    float brightness = FieldVisuals_TimeBrightness(seconds);
-    float strength = SIM_Config_prj_GetConfig()->nightLighting && sEffects.exterior
-        ? sEffects.night.contactShadowStrength
-        : (0.38f + brightness * 0.20f);
+    // Interior lighting does not follow the clock, so neither do its shadows.
+    float strength = INDOOR_CONTACT_SHADOW;
+    if (!sEffects.building) {
+        int seconds = FieldVisuals_GetTime(GetSecondsSinceMidnight());
+        float brightness = FieldVisuals_TimeBrightness(seconds);
+        strength = SIM_Config_prj_GetConfig()->nightLighting && sEffects.exterior
+            ? sEffects.night.contactShadowStrength
+            : (0.38f + brightness * 0.20f);
+    }
     strength /= 1 + elevation * 0.08f;
     float size = 1 + elevation * 0.015f;
     // Overlapping shadows that share a polygon ID cut each other off where
