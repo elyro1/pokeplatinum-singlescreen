@@ -94,6 +94,7 @@ static int IniHandler(void* user, const char* section, const char* name,
             config->fastWildBattleIntro = StringToBool(value);
         }
     }
+    if (MATCH("General", "DisableLowHPBeep")) config->disableLowHPBeep = StringToBool(value);
     if (MATCH("General", "BW2BattleVisuals")) {
         config->bw2BattleVisuals = StringToBool(value);
     }
@@ -181,6 +182,7 @@ void SIM_Config_prj_LoadDefaults(SIM_Config_prj_type * aConfig)
   aConfig->textSpeed = PORT_SPEED_FAST;
   aConfig->battleBarSpeed = PORT_SPEED_FAST;
   aConfig->fastWildBattleIntro = TRUE;
+  aConfig->disableLowHPBeep = FALSE;
   aConfig->bw2BattleVisuals = FALSE;
   aConfig->bwMonSprites = TRUE;
   aConfig->overworldEncounters = TRUE;
@@ -238,6 +240,7 @@ void SIM_Config_prj_SaveConfigFile(SIM_Config_prj_type * aConfig)
     fprintf(configFile, "NewPokedex=%s\n", BoolToString(aConfig->newPokedex));
     fprintf(configFile, "PokedexUnits=%s\n", sPokedexUnitsNames[aConfig->pokedexUnits]);
     fprintf(configFile, "FastWildBattleIntro=%s\n", BoolToString(aConfig->fastWildBattleIntro));
+    fprintf(configFile, "DisableLowHPBeep=%s\n", BoolToString(aConfig->disableLowHPBeep));
     fprintf(configFile, "BW2BattleVisuals=%s\n", BoolToString(aConfig->bw2BattleVisuals));
     fprintf(configFile, "BWMonSprites=%s\n", BoolToString(aConfig->bwMonSprites));
     fprintf(configFile, "OverworldEncounters=%s\n", BoolToString(aConfig->overworldEncounters));

@@ -80,6 +80,9 @@ void BattleSpeedContents() {
         ImGui::SetTooltip("Normal: half the speed of Fast. Faster: shorter changes.\n"
             "Independent of battle pacing and text.");
     }
+    ConfigCheckBox("Disable low-HP beep", &myConfig->disableLowHPBeep, configChanged);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Silences the low-HP warning in Platinum and BW2 battles. Applies immediately.");
     SettingsRow("Ask for a nickname", "Automatic naming offers for caught, hatched and received Pokemon.");
     const NicknameMode nicknameModes[] = { NICKNAME_MODE_ALWAYS, NICKNAME_MODE_NEVER, NICKNAME_MODE_ASK };
     int nicknameMode = myConfig->nicknameMode == NICKNAME_MODE_ASK ? 2 : static_cast<int>(myConfig->nicknameMode) - 1;
