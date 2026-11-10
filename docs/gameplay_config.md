@@ -95,6 +95,8 @@ Changes save automatically to `[General]` in `sim_config_prj.ini` as `NicknameMo
 
 **Tab → Speed & text → Disable low-HP beep** silences the low-HP warning in Platinum and BW2 battles. It applies immediately and saves to `sim_config_prj.ini`. The former `disableLowHPBeep` gameplay option has been removed; existing entries are ignored.
 
+**Tab → Speed & text → Single-screen bag** is enabled by default. With the single-screen (`top_only`) layout the bag shows each pocket as a grid of item icons, with the selected item's name and count below it; X or Y switches to a list of icons with names. Left and Right past the edge of the items change pockets, as L and R do. Turning it off keeps the classic bag. It applies the next time the bag opens and saves to `sim_config_prj.ini` as `GridBag`.
+
 Fast openings skip the encounter text and opening camera shots, show the player throwing their Poké Ball and releasing their Pokémon at twice the usual effect speed, and then proceed to battle. Opponent and health-box setup still runs. The option applies only when BW battle view is active. Link and recorded battles, the first battle, catching tutorial, Safari Zone, Pal Park, and Giratina's special entrance retain their existing presentation. Later switches and battle animations are unaffected. The exact speedup varies with text, encounter animations, and system performance.
 
 With BW2 battle visuals, a successful capture of a new species fades from the capture camera directly into its Pokédex entry. The camera return and the brief “data was added” message are hidden during this transition. Previously registered species and special capture modes keep their existing flow.

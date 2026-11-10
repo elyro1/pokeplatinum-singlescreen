@@ -42,6 +42,7 @@ typedef struct {
     PortSpeed battleBarSpeed; // HP/EXP progression, independent of effects and text.
     NicknameMode nicknameMode; // Automatic nickname offers; explicit renaming remains available.
     BOOL newPokedex; // The widescreen Pokédex and summary screen; off keeps the classic screens. Read when one opens.
+    BOOL gridBag; // The bag's grid of item icons with the single-screen layout; off keeps the classic bag. Read when it opens.
     PokedexUnits pokedexUnits; // Heights and weights in the Pokédex.
     BOOL fastWildBattleIntro; // Shorten eligible BW2 wild battle intros.
     BOOL disableLowHPBeep; // Silences the low-HP warning in both battle presentations.

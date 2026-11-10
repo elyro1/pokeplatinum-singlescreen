@@ -99,6 +99,11 @@ void BattleSpeedContents() {
         ImGui::SetTooltip("On: the widescreen Pok\xC3\xA9" "dex and Pok\xC3\xA9" "mon summary screens.\n"
             "Off: the classic screens. Applies the next time one of them opens.");
     }
+    ConfigCheckBox("Single-screen bag", &myConfig->gridBag, configChanged);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("On: with the single-screen layout, the bag shows its items as a grid of icons\n"
+            "or a list with names (X/Y). Off: the classic bag. Applies the next time the bag opens.");
+    }
     SettingsRow("Pok\xC3\xA9" "dex units", "Heights and weights in the Pok\xC3\xA9" "dex.");
     int pokedexUnits = myConfig->pokedexUnits;
     if (ImGui::Combo("##PokedexUnits", &pokedexUnits, "Metric\0Imperial\0")) {

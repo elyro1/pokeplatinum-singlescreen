@@ -268,7 +268,7 @@ void BagGrid_Begin(void)
     memset(&sGrid, 0, sizeof(sGrid));
 
 #ifdef SDK_PORT
-    if (SIM_Config_prj_GetConfig()->newPokedex == FALSE
+    if (SIM_Config_prj_GetConfig()->gridBag == FALSE
         || SIM_GetConfigPtr()->screenLayout != SIM_CONFIG_SCREEN_LAYOUT_TOP_ONLY) {
         return;
     }
