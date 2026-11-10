@@ -10,14 +10,14 @@
 #include "bg_window.h"
 #include "narc.h"
 
-// Widescreen layout for the PC summary screen: the left panel keeps its size against the
-// left edge of the view, and the right panel takes the rest with its native content
-// centered. Nothing here changes the screen unless the view is wider than 256 dots.
+// Widescreen layout for the PC summary screen: both panels widen, the left one keeping its
+// native share of the width, and each panel's native content is centered in it. The page
+// tabs spread out over the right panel. Nothing here changes the screen unless the view
+// is wider than 256 dots.
 //
-// Native dot x maps to view dot x + left, so the right panel's center stays put at any
-// width. Only the left side moves (by -left). BG layers 1 and 3 are 512 dots wide and
-// laid out in view coordinates, where the right panel's content moves by a whole number
-// of tiles and so lands within 4 dots of exact.
+// BG layers 1 and 3 are 512 dots wide and laid out in view coordinates, with tile column 0
+// at the view's left edge. Content moves by whole tiles, so it lands within 4 dots of
+// centered.
 
 enum SummaryWidePanel {
     SUMMARY_WIDE_PANEL_NONE = 0,
@@ -35,6 +35,10 @@ BOOL SummaryWide_IsActive(void);
 int SummaryWide_Left(void);
 // How many tiles the right panel's content moves.
 int SummaryWide_ContentShiftTiles(void);
+// How many tiles the left panel's content (and the move details over it) moves.
+int SummaryWide_LeftShiftTiles(void);
+// The first tile column of the right panel's content, after its border.
+int SummaryWide_RightPanelColumn(void);
 // A width that reaches the view's right edge from anywhere on a layer.
 int SummaryWide_FullRowTiles(void);
 
@@ -42,6 +46,8 @@ void SummaryWide_WidenTemplate(BgTemplate *template, GXBGScrBase screenBase);
 void SummaryWide_PlaceWindow(WindowTemplate *template);
 // After the BG tiles: adds the tiles that SummaryWide_LoadPageTilemap needs.
 void SummaryWide_LoadConditionTiles(BgConfig *bgConfig, NARC *narc, u32 narcMemberIdx, enum HeapID heapID);
+// Reads the tab sprites' art, which the wide tabs are made from.
+void SummaryWide_LoadTabTiles(NARC *narc, u32 narcMemberIdx, enum HeapID heapID);
 void SummaryWide_LoadPageTilemap(BgConfig *bgConfig, const u16 *nativeTilemap, BOOL isConditionPage);
 
 // The slide-over panels. A wide view shows nearly all of the 512-dot layer, so it
