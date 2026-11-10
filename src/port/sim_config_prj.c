@@ -94,6 +94,7 @@ static int IniHandler(void* user, const char* section, const char* name,
             config->fastWildBattleIntro = StringToBool(value);
         }
     }
+    if (MATCH("General", "GridBag")) config->gridBag = StringToBool(value);
     if (MATCH("General", "DisableLowHPBeep")) config->disableLowHPBeep = StringToBool(value);
     if (MATCH("General", "BW2BattleVisuals")) {
         config->bw2BattleVisuals = StringToBool(value);
@@ -178,6 +179,7 @@ void SIM_Config_prj_LoadDefaults(SIM_Config_prj_type * aConfig)
   aConfig->battlePacing = BATTLE_PACING_SMOOTH;
   aConfig->nicknameMode = NICKNAME_MODE_ASK;
   aConfig->newPokedex = TRUE;
+  aConfig->gridBag = TRUE;
   aConfig->pokedexUnits = POKEDEX_UNITS_METRIC;
   aConfig->textSpeed = PORT_SPEED_FAST;
   aConfig->battleBarSpeed = PORT_SPEED_FAST;
@@ -238,6 +240,7 @@ void SIM_Config_prj_SaveConfigFile(SIM_Config_prj_type * aConfig)
     fprintf(configFile, "BattleBarSpeed=%s\n", sSpeedNames[aConfig->battleBarSpeed]);
     fprintf(configFile, "NicknameMode=%s\n", sNicknameModeNames[aConfig->nicknameMode]);
     fprintf(configFile, "NewPokedex=%s\n", BoolToString(aConfig->newPokedex));
+    fprintf(configFile, "GridBag=%s\n", BoolToString(aConfig->gridBag));
     fprintf(configFile, "PokedexUnits=%s\n", sPokedexUnitsNames[aConfig->pokedexUnits]);
     fprintf(configFile, "FastWildBattleIntro=%s\n", BoolToString(aConfig->fastWildBattleIntro));
     fprintf(configFile, "DisableLowHPBeep=%s\n", BoolToString(aConfig->disableLowHPBeep));

@@ -75,7 +75,7 @@ Out of the box: one screen, 60 FPS, Smooth battle pacing, Fast text, Fast HP/EXP
 | --- | --- |
 | **General** | Fullscreen, menu scale, master volume, ROM info, BW2 battle visuals |
 | **Graphics** | Internal resolution, VSync, frame cap, lighting, atmosphere, shadows, water, weather, bloom |
-| **Speed & text** | Fast-forward speed, fast wild intros (BW2), battle pacing, text speed, HP/EXP bar speed, low-HP beep toggle |
+| **Speed & text** | Fast-forward speed, fast wild intros (BW2), battle pacing, text speed, HP/EXP bar speed, low-HP beep toggle, single-screen bag |
 | **Controls** | Keyboard and controller mappings, directions, deadzone, PC shortcuts |
 | **Gameplay** | All gameplay overrides |
 | **Cheats & tools** | Cheats, Pokétch unlocks, Pokémon/item creation, map jumping |
