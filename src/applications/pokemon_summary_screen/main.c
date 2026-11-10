@@ -520,6 +520,7 @@ static void LoadBgGraphics(PokemonSummaryScreen *summaryScreen, NARC *narc)
 {
     Graphics_LoadTilesToBgLayerFromOpenNARC(narc, tiles_main_NCGR, summaryScreen->bgConfig, BG_LAYER_MAIN_3, 0, 0, FALSE, HEAP_ID_POKEMON_SUMMARY_SCREEN);
     SummaryWide_LoadConditionTiles(summaryScreen->bgConfig, narc, tiles_main_NCGR, HEAP_ID_POKEMON_SUMMARY_SCREEN);
+    SummaryWide_LoadTabTiles(narc, tabs_NCGR, HEAP_ID_POKEMON_SUMMARY_SCREEN);
     Graphics_LoadTilemapToBgLayerFromOpenNARC(narc, page_info_NSCR, summaryScreen->bgConfig, BG_LAYER_MAIN_3, 0, 0, FALSE, HEAP_ID_POKEMON_SUMMARY_SCREEN);
     Graphics_LoadPaletteFromOpenNARC(narc, tiles_main_NCLR, PAL_LOAD_MAIN_BG, 0, 0, HEAP_ID_POKEMON_SUMMARY_SCREEN);
 
@@ -1329,7 +1330,7 @@ static void SetupPageFromSubscreenButton(PokemonSummaryScreen *summaryScreen, u8
     PokemonSummaryScreen_AddExtraWindows(summaryScreen);
     PokemonSummaryScreen_UpdateConditionFlashSprites(summaryScreen, FALSE);
 
-    Bg_FillTilemapRect(summaryScreen->bgConfig, BG_LAYER_MAIN_1, 0, 14, 4, SummaryWide_FullRowTiles() - 13, 20, 0);
+    Bg_FillTilemapRect(summaryScreen->bgConfig, BG_LAYER_MAIN_1, 0, SummaryWide_RightPanelColumn(), 4, SummaryWide_FullRowTiles() - SummaryWide_RightPanelColumn() + 1, 20, 0);
     Bg_CopyTilemapBufferToVRAM(summaryScreen->bgConfig, BG_LAYER_MAIN_1);
     PokemonSummaryScreen_DrawExtraWindows(summaryScreen);
     LoadCurrentPageTilemap(summaryScreen);
@@ -1953,10 +1954,10 @@ static u8 HideContestMoveInfo(PokemonSummaryScreen *summaryScreen)
 
 static void DrawAppealHeart(PokemonSummaryScreen *summaryScreen, u16 baseTile, u8 heartIndex)
 {
-    Bg_FillTilemapRect(summaryScreen->bgConfig, BG_LAYER_MAIN_2, baseTile, 2 + heartIndex * 2, APPEAL_HEARTS_Y, 1, 1, 16);
-    Bg_FillTilemapRect(summaryScreen->bgConfig, BG_LAYER_MAIN_2, baseTile + 1, 2 + heartIndex * 2 + 1, APPEAL_HEARTS_Y, 1, 1, 16);
-    Bg_FillTilemapRect(summaryScreen->bgConfig, BG_LAYER_MAIN_2, baseTile + 32, 2 + heartIndex * 2, APPEAL_HEARTS_Y + 1, 1, 1, 16);
-    Bg_FillTilemapRect(summaryScreen->bgConfig, BG_LAYER_MAIN_2, baseTile + 33, 2 + heartIndex * 2 + 1, APPEAL_HEARTS_Y + 1, 1, 1, 16);
+    Bg_FillTilemapRect(summaryScreen->bgConfig, BG_LAYER_MAIN_2, baseTile, SummaryWide_LeftShiftTiles() + 2 + heartIndex * 2, APPEAL_HEARTS_Y, 1, 1, 16);
+    Bg_FillTilemapRect(summaryScreen->bgConfig, BG_LAYER_MAIN_2, baseTile + 1, SummaryWide_LeftShiftTiles() + 2 + heartIndex * 2 + 1, APPEAL_HEARTS_Y, 1, 1, 16);
+    Bg_FillTilemapRect(summaryScreen->bgConfig, BG_LAYER_MAIN_2, baseTile + 32, SummaryWide_LeftShiftTiles() + 2 + heartIndex * 2, APPEAL_HEARTS_Y + 1, 1, 1, 16);
+    Bg_FillTilemapRect(summaryScreen->bgConfig, BG_LAYER_MAIN_2, baseTile + 33, SummaryWide_LeftShiftTiles() + 2 + heartIndex * 2 + 1, APPEAL_HEARTS_Y + 1, 1, 1, 16);
 }
 
 static void DrawEmptyHearts(PokemonSummaryScreen *summaryScreen)

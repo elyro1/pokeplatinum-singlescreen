@@ -1003,7 +1003,10 @@ static void PrintStaticWindows(PokemonSummaryScreen *summaryScreen)
 void PokemonSummaryScreen_DrawExtraWindows(PokemonSummaryScreen *summaryScreen)
 {
     Bg_FillTilemapRect(summaryScreen->bgConfig, BG_LAYER_MAIN_1, 0, 0, 0, SummaryWide_FullRowTiles(), 2, 16);
-    Bg_FillTilemapRect(summaryScreen->bgConfig, BG_LAYER_MAIN_1, 0, 14, 2, SummaryWide_FullRowTiles() - 14, 22, 16);
+    // The wide tabs are on rows 2 and 3, with nothing else on the right.
+    const int firstRow = SummaryWide_IsActive() ? 4 : 2;
+
+    Bg_FillTilemapRect(summaryScreen->bgConfig, BG_LAYER_MAIN_1, 0, SummaryWide_RightPanelColumn(), firstRow, SummaryWide_FullRowTiles() - SummaryWide_RightPanelColumn(), 24 - firstRow, 16);
 
     switch (summaryScreen->page) {
     case SUMMARY_PAGE_INFO:
