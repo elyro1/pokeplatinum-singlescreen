@@ -6,6 +6,7 @@
 #include "constants/narc.h"
 #include "generated/pokemon_types.h"
 
+#include "applications/bag/grid.h"
 #include "applications/bag/main.h"
 
 #include "bag_context.h"
@@ -322,6 +323,7 @@ void BagUI_SetHighlightSpritesPalette(BagController *controller, u8 palette)
 {
     ManagedSprite_SetExplicitPalette(controller->sprites[BAG_SPRITE_ITEM_HIGHLIGHT], palette);
     ManagedSprite_SetExplicitPalette(controller->sprites[BAG_SPRITE_POCKET_HIGHLIGHT], palette);
+    BagGrid_SetCursorActive(controller, palette == 1);
 }
 
 u8 BagUI_IsPocketHighlightDoneMoving(BagController *controller)

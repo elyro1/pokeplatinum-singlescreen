@@ -10,6 +10,7 @@
 #include "struct_defs/special_encounter.h"
 
 #include "applications/bag/application.h"
+#include "applications/bag/grid.h"
 #include "applications/bag/sprites.h"
 #include "applications/bag/windows.h"
 
@@ -125,6 +126,14 @@ static void ItemListMenuCursorCB(ListMenu *menu, u64 index, u8 onInit);
 static void ItemListMenuPrintCB(ListMenu *menu, u64 index, u8 yOffset);
 #endif
 static void FreeItemListMenu(BagController *controller);
+static void UpdateItemInfo(BagController *controller, menu_selection_t index, BOOL onInit);
+static void PrintItemEntryExtras(BagController *controller, menu_selection_t index, u8 yOffset);
+static void RefreshGrid(BagController *controller, BOOL onInit);
+static void DrawGridEntry(BagController *controller);
+static u8 ProcessGridInput(BagController *controller);
+static u8 ProcessGridInput_MovingItem(BagController *controller);
+static void CheckGridPocketChange(BagController *controller);
+static void RedrawItemList(BagController *controller);
 static void CountAccessiblePockets(BagController *controller);
 static void CalcPocketSelectorIconsPos(BagController *controller);
 static int CheckPlayerPressedPocketButton(BagController *controller);
@@ -452,6 +461,7 @@ int BagApplication_Init(ApplicationManager *appMan, int *state)
     controller->bagCtx = ApplicationManager_Args(appMan);
 
     RetrieveSaveData(controller);
+    BagGrid_Begin();
 
     controller->bgConfig = BgConfig_New(HEAP_ID_BAG);
     controller->trainerGender = TrainerInfo_Gender(controller->trainerInfo);
@@ -484,8 +494,14 @@ int BagApplication_Init(ApplicationManager *appMan, int *state)
 
     // Can't use a temporary variable since it wouldn't match
 #define pocket controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx]
-    LimitItemListScroll(&pocket.cursorScroll, &pocket.cursorPos, pocket.listEntryCount);
-    RestrictItemListCursor(&pocket.cursorScroll, &pocket.cursorPos, pocket.listEntryCount, BAG_UI_NUM_VISIBLE_ITEMS);
+    if (BagGrid_IsActive()) {
+        BagGrid_Init(controller);
+        BagGrid_SetPocket(controller);
+    } else {
+        LimitItemListScroll(&pocket.cursorScroll, &pocket.cursorPos, pocket.listEntryCount);
+        RestrictItemListCursor(&pocket.cursorScroll, &pocket.cursorPos, pocket.listEntryCount, BAG_UI_NUM_VISIBLE_ITEMS);
+    }
+
     BagUI_InitSprites(controller);
     CreateItemListMenu(controller, pocket.cursorScroll, pocket.cursorPos);
 #undef pocket
@@ -609,7 +625,13 @@ int BagApplication_Main(ApplicationManager *appMan, int *state)
     StepDialButtonPressedAnim(controller);
     BagUI_TickBtnShockwaveAnim(controller);
     BagUI_TickSpriteAnimations(controller);
-    SpriteSystem_DrawSprites(controller->spriteMan);
+
+    if (BagGrid_IsActive()) {
+        // The grid changes pockets at once; only the selector's highlight takes its time.
+        BagUI_StepPocketHighlightMovement(controller);
+    }
+
+    BagGrid_DrawSprites(controller);
 
     return FALSE;
 }
@@ -622,7 +644,9 @@ int BagApplication_Exit(ApplicationManager *appMan, int *state)
     FreeItemListMenu(controller);
     SaveCursorPosition(controller);
     BagUI_DeleteWindows(controller->windows);
+    BagGrid_Free();
     FreeBGLayers(controller->bgConfig);
+    BagGrid_End();
 
     DisableTouchPad();
     VramTransfer_Free();
@@ -684,7 +708,7 @@ static void SetVRAMBanks(void)
 {
     GXBanks banks = {
         GX_VRAM_BG_128_A,
-        GX_VRAM_BGEXTPLTT_NONE,
+        BagGrid_ExtPaletteBank(),
         GX_VRAM_SUB_BG_128_C,
         GX_VRAM_SUB_BGEXTPLTT_NONE,
         GX_VRAM_OBJ_128_B,
@@ -698,16 +722,8 @@ static void SetVRAMBanks(void)
     GXLayers_SetBanks(&banks);
 }
 
-static void SetupBGLayers(BgConfig *bgConfig)
+static void SetupMainBGLayers(BgConfig *bgConfig)
 {
-    GraphicsModes graphicsModes = {
-        GX_DISPMODE_GRAPHICS,
-        GX_BGMODE_0,
-        GX_BGMODE_1,
-        GX_BG0_AS_2D,
-    };
-    SetAllGraphicsModes(&graphicsModes);
-
     BgTemplate layerMain0 = {
         .x = 0,
         .y = 0,
@@ -774,6 +790,25 @@ static void SetupBGLayers(BgConfig *bgConfig)
     };
     Bg_InitFromTemplate(bgConfig, BG_LAYER_MAIN_3, &layerMain3, BG_TYPE_STATIC);
 
+    Bg_ClearTilesRange(BG_LAYER_MAIN_0, 32, 0, HEAP_ID_BAG);
+}
+
+static void SetupBGLayers(BgConfig *bgConfig)
+{
+    GraphicsModes graphicsModes = {
+        GX_DISPMODE_GRAPHICS,
+        GX_BGMODE_0,
+        GX_BGMODE_1,
+        GX_BG0_AS_2D,
+    };
+    SetAllGraphicsModes(&graphicsModes);
+
+    if (BagGrid_IsActive()) {
+        BagGrid_SetupLayers(bgConfig);
+    } else {
+        SetupMainBGLayers(bgConfig);
+    }
+
     BgTemplate layerSub0 = {
         .x = 0,
         .y = 0,
@@ -826,7 +861,6 @@ static void SetupBGLayers(BgConfig *bgConfig)
     Bg_ScheduleAffineRotationCenter(bgConfig, BG_LAYER_SUB_3, BG_AFFINE_UPDATE_SET_X_CENTER, DIAL_CENTER_X);
     Bg_ScheduleAffineRotationCenter(bgConfig, BG_LAYER_SUB_3, BG_AFFINE_UPDATE_SET_Y_CENTER, DIAL_CENTER_Y);
 
-    Bg_ClearTilesRange(BG_LAYER_MAIN_0, 32, 0, HEAP_ID_BAG);
     Bg_ClearTilesRange(BG_LAYER_SUB_0, 32, 0, HEAP_ID_BAG);
 }
 
@@ -850,12 +884,16 @@ static void LoadGraphics(BagController *controller)
 
     Graphics_LoadTilesToBgLayerFromOpenNARC(controller->bagGraphicsNARC, bag_ui_main_tileset_NCGR, controller->bgConfig, BG_LAYER_MAIN_1, 0, 0, FALSE, HEAP_ID_BAG);
     Graphics_LoadTilemapToBgLayerFromOpenNARC(controller->bagGraphicsNARC, bag_ui_main_NSCR, controller->bgConfig, BG_LAYER_MAIN_1, 0, 0, FALSE, HEAP_ID_BAG);
-    Graphics_LoadTilemapToBgLayerFromOpenNARC(controller->bagGraphicsNARC, item_list_border_NSCR, controller->bgConfig, BG_LAYER_MAIN_3, 0, 0, FALSE, HEAP_ID_BAG);
+
+    if (BagGrid_IsActive() == FALSE) {
+        Graphics_LoadTilemapToBgLayerFromOpenNARC(controller->bagGraphicsNARC, item_list_border_NSCR, controller->bgConfig, BG_LAYER_MAIN_3, 0, 0, FALSE, HEAP_ID_BAG);
+    }
+
     Graphics_LoadPaletteFromOpenNARC(controller->bagGraphicsNARC, bag_ui_main_NCLR, PAL_LOAD_MAIN_BG, PLTT_OFFSET(0), 0, HEAP_ID_BAG);
     Graphics_LoadPaletteFromOpenNARC(controller->bagGraphicsNARC, pocket_selector_icons_NCLR, PAL_LOAD_MAIN_BG, PLTT_OFFSET(13), PALETTE_SIZE_BYTES, HEAP_ID_BAG);
     Font_LoadScreenIndicatorsPalette(PAL_LOAD_MAIN_BG, PLTT_OFFSET(11), HEAP_ID_BAG);
-    LoadStandardWindowGraphics(controller->bgConfig, BG_LAYER_MAIN_0, BASE_TILE_BAG_WINDOW_FRAME, 14, STANDARD_WINDOW_SYSTEM, HEAP_ID_BAG);
-    LoadMessageBoxGraphics(controller->bgConfig, BG_LAYER_MAIN_0, BASE_TILE_MSG_BOX_FRAME, 12, Options_Frame(controller->options), HEAP_ID_BAG);
+    LoadStandardWindowGraphics(controller->bgConfig, BagGrid_PopupLayer(), BASE_TILE_BAG_WINDOW_FRAME, 14, STANDARD_WINDOW_SYSTEM, HEAP_ID_BAG);
+    LoadMessageBoxGraphics(controller->bgConfig, BagGrid_PopupLayer(), BASE_TILE_MSG_BOX_FRAME, 12, Options_Frame(controller->options), HEAP_ID_BAG);
     Graphics_LoadTilesToBgLayerFromOpenNARC(controller->bagGraphicsNARC, pokeball_borders_tileset_NCGR, controller->bgConfig, BG_LAYER_SUB_1, 0, 0, FALSE, HEAP_ID_BAG);
     Graphics_LoadPaletteFromOpenNARC(controller->bagGraphicsNARC, pokeball_borders_NCLR, PAL_LOAD_SUB_BG, PLTT_OFFSET(0), 0, HEAP_ID_BAG);
     Graphics_LoadTilemapToBgLayerFromOpenNARC(controller->bagGraphicsNARC, pokeball_borders_NSCR, controller->bgConfig, BG_LAYER_SUB_1, 0, 0, FALSE, HEAP_ID_BAG);
@@ -863,6 +901,10 @@ static void LoadGraphics(BagController *controller)
     Graphics_LoadTilemapToBgLayerFromOpenNARC(controller->bagGraphicsNARC, pokeball_inside_NSCR, controller->bgConfig, BG_LAYER_SUB_3, 0, 0, FALSE, HEAP_ID_BAG);
     Graphics_LoadTilesToBgLayerFromOpenNARC(controller->bagGraphicsNARC, buttons_NCGR, controller->bgConfig, BG_LAYER_SUB_0, 0, 0, FALSE, HEAP_ID_BAG);
     Graphics_LoadPaletteFromOpenNARC(controller->bagGraphicsNARC, buttons_NCLR, PAL_LOAD_SUB_BG, PLTT_OFFSET(2), PALETTE_SIZE_BYTES * 2, HEAP_ID_BAG);
+
+    if (BagGrid_IsActive()) {
+        BagGrid_LoadGraphics(controller->bgConfig);
+    }
 }
 
 static void SetupTextLoaders(BagController *controller)
@@ -884,6 +926,11 @@ static void CountAccessiblePockets(BagController *controller)
             controller->numPockets++;
         }
     }
+}
+
+u8 BagApplication_PocketSize(u8 pocketType)
+{
+    return sPocketSizes[pocketType];
 }
 
 u16 BagInterface_GetItemSlotParam(BagController *controller, u16 slotIndex, u16 itemParam)
@@ -967,6 +1014,18 @@ static void SaveCursorPosition(BagController *controller)
     for (u32 i = 0; i < POCKET_MAX; i++) {
         if (pocket[i].items == NULL) {
             break;
+        }
+
+        if (BagGrid_IsActive()) {
+            // The grid keeps a slot in the list's cursor; the list reads these back.
+            const int selected = pocket[i].cursorScroll + pocket[i].cursorPos - 1;
+            int numItems = 0;
+
+            while (numItems < sPocketSizes[pocket[i].pocketType] && pocket[i].items[numItems].item != ITEM_NONE && pocket[i].items[numItems].quantity != 0) {
+                numItems++;
+            }
+
+            BagGrid_ToListCursor(selected, numItems, &pocket[i].cursorScroll, &pocket[i].cursorPos);
         }
 
         BagCursor_SetFieldPocketPosition(controller->bagCtx->bagCursor, pocket[i].pocketType, pocket[i].cursorPos, pocket[i].cursorScroll);
@@ -1088,6 +1147,11 @@ static void RestrictItemListCursor(u16 *cursorScroll, u16 *cursorPos, u8 numEntr
 
 static void CreateItemListMenu(BagController *controller, u16 initialScroll, u16 initialPos)
 {
+    if (BagGrid_IsActive()) {
+        RefreshGrid(controller, TRUE);
+        return;
+    }
+
     ListMenuTemplate template = sItemListMenuTemplate;
     template.choices = controller->itemListEntries;
     template.window = &controller->windows[BAG_UI_WINDOW_ITEM_LIST];
@@ -1113,6 +1177,12 @@ static void ItemListMenuCursorCB(ListMenu *menu, u64 index, u8 onInit)
 {
     BagController *controller = (BagController *)ListMenu_GetAttribute(menu, LIST_MENU_PARENT);
 
+    UpdateItemInfo(controller, index, onInit);
+}
+
+// What follows the cursor: its sound, the bag's rustle, the description and the item's sprite.
+static void UpdateItemInfo(BagController *controller, menu_selection_t index, BOOL onInit)
+{
     if (onInit != TRUE) {
         switch (controller->cursorSoundIdx) {
         case 0:
@@ -1140,7 +1210,22 @@ static void ItemListMenuCursorCB(ListMenu *menu, u64 index, u8 onInit)
 
     Window_FillTilemap(&controller->windows[BAG_UI_WINDOW_ITEM_DESCRIPTION], 0);
 
-    if (index != MENU_CANCEL) {
+    if (BagGrid_IsActive()) {
+        // The grid's cursor has nothing under it in an empty pocket.
+        const BOOL empty = index == ITEM_LIST_EMPTY_ENTRY;
+        BagApplicationPocket *pocket = &controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx];
+
+        ManagedSprite_SetDrawFlag(controller->sprites[BAG_SPRITE_ITEM], !empty);
+
+        if (!empty) {
+            BagUI_PrintItemDescription(controller, pocket->items[index].item);
+            BagUI_UpdateItemSprite(controller, pocket->items[index].item);
+        }
+
+        if (BagGrid_HasMoveInfo()) {
+            BagUI_PrintMoveInfo(controller, !empty && pocket->pocketType == POCKET_TMHMS ? pocket->items[index].item : ITEM_NONE);
+        }
+    } else if (index != MENU_CANCEL) {
         BagApplicationPocket *pocket;
 
         pocket = &controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx];
@@ -1170,6 +1255,14 @@ static void ItemListMenuPrintCB(ListMenu *menu, u64 index, u8 yOffset)
     } else {
         ListMenu_SetAltTextColors(menu, 1, 0, 2);
     }
+
+    PrintItemEntryExtras(controller, index, yOffset);
+}
+
+// The rest of an item's list entry: its count, number or registered mark.
+static void PrintItemEntryExtras(BagController *controller, menu_selection_t index, u8 yOffset)
+{
+    BagApplicationPocket *pocket = &controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx];
 
     if (pocket->pocketType == POCKET_KEY_ITEMS) {
         if (index != ITEM_LIST_EMPTY_ENTRY && index != MENU_CANCEL) {
@@ -1202,6 +1295,11 @@ static void ItemListMenuPrintCB(ListMenu *menu, u64 index, u8 yOffset)
 
 static void FreeItemListMenu(BagController *controller)
 {
+    if (BagGrid_IsActive()) {
+        StringList_Free(controller->itemListEntries);
+        return;
+    }
+
     ListMenu_Free(controller->itemList, &controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx].cursorScroll, &controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx].cursorPos);
     StringList_Free(controller->itemListEntries);
     controller->itemList = NULL;
@@ -1231,7 +1329,7 @@ static int ProcessItemListInput_Normal(BagController *controller)
         Window_ClearAndCopyToVRAM(&controller->windows[BAG_UI_WINDOW_ITEM_DESCRIPTION]);
         MakeItemActionsMenu(controller);
 
-        if (controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx].pocketType == POCKET_TMHMS) {
+        if (BagUI_ShowsMoveStatsOnSelect(controller)) {
             ToggleHideItemSprite(controller, TRUE);
         }
 
@@ -1248,6 +1346,10 @@ static int ProcessItemListInput_Normal(BagController *controller)
 
 static u8 ProcessItemListMenuInput(BagController *interface)
 {
+    if (BagGrid_IsActive()) {
+        return ProcessGridInput(interface);
+    }
+
     BagApplicationPocket *pocket = &interface->bagCtx->accessiblePockets[interface->bagCtx->currPocketIdx];
 
     ListMenu_GetListAndCursorPos(interface->itemList, &pocket->cursorScroll, &pocket->cursorPos);
@@ -1316,6 +1418,12 @@ static void CalcPocketSelectorIconsPos(BagController *controller)
 
 static u8 CheckPocketChange_DPad(BagController *controller)
 {
+    if (BagGrid_IsActive()) {
+        // The D-pad moves through the grid, and the pocket changes without a state of its own.
+        CheckGridPocketChange(controller);
+        return FALSE;
+    }
+
     if (JOY_REPEAT(PAD_KEY_LEFT)) {
         if (controller->numPockets == 1) {
             return FALSE;
@@ -1584,6 +1692,10 @@ static u8 StepPocketSelectorAnim(BagController *controller)
 
 static u8 CheckPocketChange_Touch(BagController *controller)
 {
+    if (BagGrid_IsActive()) {
+        return FALSE;
+    }
+
     int pocketIndex = CheckPlayerPressedPocketButton(controller);
 
     if (pocketIndex == TOUCHSCREEN_INPUT_NONE) {
@@ -1815,7 +1927,11 @@ static u8 CanMoveSelectedEntry(BagController *controller)
 {
     BagApplicationPocket *pocket = &controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx];
 
-    if (ListMenu_GetIndexOfChoice(controller->itemList, pocket->cursorScroll + pocket->cursorPos) == MENU_CANCEL) {
+    if (BagGrid_IsActive()) {
+        if (BagGrid_NumItems() == 0) {
+            return FALSE;
+        }
+    } else if (ListMenu_GetIndexOfChoice(controller->itemList, pocket->cursorScroll + pocket->cursorPos) == MENU_CANCEL) {
         return FALSE;
     }
 
@@ -1836,6 +1952,15 @@ static void StartMovingItem(BagController *controller)
 
     controller->isMovingItem = TRUE;
     controller->movedItemPos = pocket->cursorScroll + pocket->cursorPos;
+
+    if (BagGrid_IsActive()) {
+        controller->movedItemID = BagGrid_Selected(controller);
+        BagUI_PrintMovingItemMsg(controller);
+        RefreshGrid(controller, TRUE);
+        SwitchSpritesForSorting(controller);
+        return;
+    }
+
     controller->movedItemID = ListMenu_GetIndexOfChoice(controller->itemList, controller->movedItemPos);
 
     BagUI_PrintMovingItemMsg(controller);
@@ -1845,6 +1970,9 @@ static void StartMovingItem(BagController *controller)
 
 static u8 ProcessItemListInput_MovingItem(BagController *controller)
 {
+    if (BagGrid_IsActive()) {
+        return ProcessGridInput_MovingItem(controller);
+    }
 
     if (CheckItemListDialScroll_Sorting(controller) == TRUE) {
         return FALSE;
@@ -1916,6 +2044,22 @@ static void MoveItemToCurrentPosition(BagController *controller)
     BagApplicationPocket *pocket = &controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx];
     u16 currentPos = pocket->cursorScroll + pocket->cursorPos;
 
+    if (BagGrid_IsActive()) {
+        // The item goes to the cursor's slot, and the ones between move over.
+        const u16 source = controller->movedItemPos - 1;
+        const u16 target = BagGrid_Selected(controller);
+
+        if (source != target) {
+            Item_MoveInPocket(pocket->items, source, target > source ? target + 1 : target);
+            StringList_Free(controller->itemListEntries);
+            LoadCurrentPocketItemNames(controller);
+            BagGrid_SetPocket(controller);
+        }
+
+        StopMovingItem(controller);
+        return;
+    }
+
     if (!(controller->movedItemPos == currentPos || controller->movedItemPos == (currentPos - 1))) {
         Item_MoveInPocket(pocket->items, controller->movedItemPos - 1, currentPos - 1);
         StringList_Free(controller->itemListEntries);
@@ -1929,11 +2073,13 @@ static void StopMovingItem(BagController *controller)
 {
     BagApplicationPocket *pocket = &controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx];
 
-    ListMenu_Free(controller->itemList, &pocket->cursorScroll, &pocket->cursorPos);
-    controller->itemList = NULL;
+    if (BagGrid_IsActive() == FALSE) {
+        ListMenu_Free(controller->itemList, &pocket->cursorScroll, &pocket->cursorPos);
+        controller->itemList = NULL;
 
-    if (controller->movedItemPos < (pocket->cursorScroll + pocket->cursorPos)) {
-        pocket->cursorPos -= 1;
+        if (controller->movedItemPos < (pocket->cursorScroll + pocket->cursorPos)) {
+            pocket->cursorPos -= 1;
+        }
     }
 
     controller->isMovingItem = FALSE;
@@ -2320,6 +2466,15 @@ static String *TryUseRepel(BagController *controller, u16 item)
 static void TrashSelectedItem(BagController *controller)
 {
     Pocket_TryRemoveItem(controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx].items, controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx].listEntryCount - 3, controller->bagCtx->selectedItem, controller->selectedItemCount, HEAP_ID_BAG);
+
+    if (BagGrid_IsActive()) {
+        StringList_Free(controller->itemListEntries);
+        LoadCurrentPocketItemNames(controller);
+        BagGrid_SetPocket(controller);
+        RefreshGrid(controller, TRUE);
+        return;
+    }
+
     ListMenu_Free(controller->itemList, &controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx].cursorScroll, &controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx].cursorPos);
     StringList_Free(controller->itemListEntries);
 
@@ -2536,10 +2691,22 @@ static int CheckPlayerDismissedTrashedMsg(BagController *controller)
     return BAG_APP_STATE_SHOWING_TRASHED_MSG;
 }
 
+// After something an entry shows has changed, like which item is registered.
+static void RedrawItemList(BagController *controller)
+{
+    if (BagGrid_IsActive()) {
+        BagGrid_InvalidateIcons();
+        DrawGridEntry(controller);
+        BagGrid_Draw(controller);
+    } else {
+        ListMenu_Draw(controller->itemList);
+    }
+}
+
 static int ItemActionFunc_Register(BagController *controller)
 {
     Bag_RegisterItem(controller->bag, controller->bagCtx->selectedItem);
-    ListMenu_Draw(controller->itemList);
+    RedrawItemList(controller);
     BagUI_CloseItemActionsMenu(controller);
     Window_ScheduleCopyToVRAM(&controller->windows[BAG_UI_WINDOW_ITEM_DESCRIPTION]);
     BagUI_SetHighlightSpritesPalette(controller, 1);
@@ -2550,7 +2717,7 @@ static int ItemActionFunc_Register(BagController *controller)
 static int ItemActionFunc_Deselect(BagController *controller)
 {
     Bag_RegisterItem(controller->bag, ITEM_NONE);
-    ListMenu_Draw(controller->itemList);
+    RedrawItemList(controller);
     BagUI_CloseItemActionsMenu(controller);
     Window_ScheduleCopyToVRAM(&controller->windows[BAG_UI_WINDOW_ITEM_DESCRIPTION]);
     BagUI_SetHighlightSpritesPalette(controller, 1);
@@ -3025,6 +3192,10 @@ static BOOL CalcDialScroll(BagController *controller, u16 stepAngle)
 
 static BOOL CheckItemListDialScroll_Normal(BagController *controller)
 {
+    if (BagGrid_IsActive()) {
+        return FALSE;
+    }
+
     BOOL scrolling = CalcDialScroll(controller, 36);
 
     if (controller->queuedScroll > 0) {
@@ -3187,4 +3358,160 @@ static BOOL CheckDialItemAmountChange(BagController *controller, s16 *amount, u1
     }
 
     return isUsingDial;
+}
+
+// Prints the selected item's list entry for the grid, which puts it under its cells.
+static void DrawGridEntry(BagController *controller)
+{
+    Window *window = &controller->windows[BAG_UI_WINDOW_ITEM_LIST];
+    BagApplicationPocket *pocket = &controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx];
+
+    Window_FillTilemap(window, 0);
+
+    if (BagGrid_NumItems() > 0) {
+        const u32 index = BagGrid_Selected(controller);
+        const BOOL moved = controller->isMovingItem == TRUE && controller->movedItemID == index;
+        // As in the list: the TM's or Berry's number comes before its name.
+        const u32 nameX = pocket->pocketType == POCKET_TMHMS || pocket->pocketType == POCKET_BERRIES ? 35 : 0;
+
+        Text_AddPrinterWithParamsAndColor(window, FONT_SYSTEM, controller->itemNames[index], nameX, 0, TEXT_SPEED_NO_TRANSFER, moved ? TEXT_COLOR(8, 9, 0) : TEXT_COLOR(1, 2, 0), NULL);
+        PrintItemEntryExtras(controller, index, 0);
+    }
+}
+
+// Draws the grid and what goes with its cursor. onInit: without the cursor's sound, as
+// when a pocket is first shown.
+static void RefreshGrid(BagController *controller, BOOL onInit)
+{
+    UpdateItemInfo(controller, BagGrid_NumItems() > 0 ? BagGrid_Selected(controller) : (menu_selection_t)ITEM_LIST_EMPTY_ENTRY, onInit);
+    DrawGridEntry(controller);
+    BagGrid_Draw(controller);
+}
+
+static void SwitchGridPocket(BagController *controller, u8 pocketIdx)
+{
+    Sound_PlayEffect(SEQ_SE_DP_BAG_030_sseq);
+    FreeItemListMenu(controller);
+
+    controller->bagCtx->currPocketIdx = pocketIdx;
+    controller->pocketSelector.nextPocket = pocketIdx;
+    controller->pocketSelector.animFrame = 0;
+    controller->nextPocket = pocketIdx;
+
+    BagUI_StartMovingPocketHighlight(controller);
+    ManagedSprite_SetAnim(controller->sprites[BAG_SPRITE_BAG], controller->bagCtx->accessiblePockets[pocketIdx].pocketType);
+    BagUI_DrawPocketSelectorIcons(controller);
+    BagUI_PrintPocketNames(controller);
+
+    LoadCurrentPocketItemNames(controller);
+    BagGrid_SetPocket(controller);
+    RefreshGrid(controller, TRUE);
+}
+
+static void SwitchToAdjacentGridPocket(BagController *controller, BOOL next)
+{
+    if (controller->numPockets == 1) {
+        return;
+    }
+
+    if (next) {
+        SwitchGridPocket(controller, controller->bagCtx->currPocketIdx + 1 < controller->numPockets ? controller->bagCtx->currPocketIdx + 1 : 0);
+    } else {
+        SwitchGridPocket(controller, controller->bagCtx->currPocketIdx != 0 ? controller->bagCtx->currPocketIdx - 1 : controller->numPockets - 1);
+    }
+}
+
+static void CheckGridPocketChange(BagController *controller)
+{
+    if (JOY_REPEAT(PAD_BUTTON_L)) {
+        SwitchToAdjacentGridPocket(controller, FALSE);
+    } else if (JOY_REPEAT(PAD_BUTTON_R)) {
+        SwitchToAdjacentGridPocket(controller, TRUE);
+    }
+}
+
+static u8 ProcessGridInput(BagController *controller)
+{
+    BagApplicationPocket *pocket = &controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx];
+
+    if (JOY_NEW(PAD_BUTTON_SELECT)) {
+        if (CanMoveSelectedEntry(controller) == TRUE) {
+            Sound_PlayEffect(SE_CONFIRM_sseq_3);
+            return ITEM_LIST_INPUT_MOVE_ITEM;
+        }
+    }
+
+    if (JOY_NEW(PAD_BUTTON_A)) {
+        if (BagGrid_NumItems() == 0) {
+            return ITEM_LIST_INPUT_NONE;
+        }
+
+        const int selected = BagGrid_Selected(controller);
+
+        Sound_PlayEffect(SE_CONFIRM_sseq_3);
+        controller->bagCtx->selectedItem = pocket->items[selected].item;
+        controller->selectedItemCountLimit = pocket->items[selected].quantity;
+        return ITEM_LIST_INPUT_SELECT_ITEM;
+    }
+
+    if (JOY_NEW(PAD_BUTTON_B)) {
+        if (controller->bagCtx->mode == BAG_MODE_POFFIN_MULTIPLAYER) {
+            return ITEM_LIST_INPUT_NONE;
+        }
+
+        Sound_PlayEffect(SE_CONFIRM_sseq_3);
+        controller->bagCtx->selectedItem = ITEM_NONE;
+        controller->bagCtx->exitCode = BAG_EXIT_CODE_DONE;
+        App_StartScreenFade(TRUE, HEAP_ID_BAG);
+        return ITEM_LIST_INPUT_EXIT_BAG;
+    }
+
+    if (JOY_NEW(PAD_BUTTON_X | PAD_BUTTON_Y)) {
+        Sound_PlayEffect(SE_CONFIRM_sseq_3);
+        BagGrid_ToggleView(controller);
+        RefreshGrid(controller, TRUE);
+        return ITEM_LIST_INPUT_NONE;
+    }
+
+    switch (BagGrid_HandleMovement(controller)) {
+    case BAG_GRID_MOVE_CURSOR:
+        RefreshGrid(controller, FALSE);
+        break;
+    case BAG_GRID_MOVE_PREVIOUS_POCKET:
+        SwitchToAdjacentGridPocket(controller, FALSE);
+        break;
+    case BAG_GRID_MOVE_NEXT_POCKET:
+        SwitchToAdjacentGridPocket(controller, TRUE);
+        break;
+    default:
+        break;
+    }
+
+    return ITEM_LIST_INPUT_NONE;
+}
+
+static u8 ProcessGridInput_MovingItem(BagController *controller)
+{
+    if (JOY_NEW(PAD_BUTTON_SELECT | PAD_BUTTON_A)) {
+        Sound_PlayEffect(SE_CONFIRM_sseq_3);
+        MoveItemToCurrentPosition(controller);
+        return TRUE;
+    }
+
+    if (JOY_NEW(PAD_BUTTON_B)) {
+        Sound_PlayEffect(SE_CONFIRM_sseq_3);
+        // Back to where the item is.
+        controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx].cursorScroll = controller->movedItemPos - 1;
+        controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx].cursorPos = 1;
+        BagGrid_SetPocket(controller);
+        StopMovingItem(controller);
+        return TRUE;
+    }
+
+    // An item stays in its pocket: the cells' edges lead nowhere while one is moved.
+    if (BagGrid_HandleMovement(controller) == BAG_GRID_MOVE_CURSOR) {
+        RefreshGrid(controller, FALSE);
+    }
+
+    return FALSE;
 }

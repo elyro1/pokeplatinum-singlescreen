@@ -3,6 +3,7 @@
 #include <nitro.h>
 #include <string.h>
 
+#include "applications/bag/grid.h"
 #include "applications/bag/main.h"
 #include "applications/bag/sprites.h"
 
@@ -88,17 +89,26 @@ static const WindowTemplate sYesNoMenuTemplate = {
 
 void BagUI_CreateWindows(BagController *controller)
 {
-    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_ITEM_LIST], BG_LAYER_MAIN_2, 14, 0, ITEM_LIST_WINDOW_WIDTH, ITEM_LIST_WINDOW_HEIGHT, 3, BASE_TILE_ITEM_LIST);
-    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_ITEM_DESCRIPTION], BG_LAYER_MAIN_0, 0, 18, ITEM_DESCRIPTION_WINDOW_WIDTH, ITEM_DESCRIPTION_WINDOW_HEIGHT, 3, BASE_TILE_ITEM_DESCRIPTION);
-    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_POCKET_NAMES], BG_LAYER_MAIN_2, 0, 13, POCKET_NAMES_WINDOW_WIDTH, POCKET_NAMES_WINDOW_HEIGHT, 3, BASE_TILE_POCKET_NAMES);
-    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_MSG_BOX], BG_LAYER_MAIN_0, 6, 19, MSG_BOX_WINDOW_WIDTH, MSG_BOX_WINDOW_HEIGHT, 11, BASE_TILE_MSG_BOX);
-    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_MSG_BOX_NARROW], BG_LAYER_MAIN_0, 6, 19, MSG_BOX_NARROW_WINDOW_WIDTH, MSG_BOX_WINDOW_HEIGHT, 11, BASE_TILE_MSG_BOX_NARROW);
-    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_POCKET_INDICATOR], BG_LAYER_MAIN_0, 0, 11, POCKET_SELECTOR_WINDOW_WIDTH, POCKET_SELECTOR_WINDOW_HEIGHT, 13, BASE_TILE_POCKET_SELECTOR);
-    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_MSG_BOX_WIDE], BG_LAYER_MAIN_0, 2, 19, MSG_BOX_WIDE_WINDOW_WIDTH, MSG_BOX_WINDOW_HEIGHT, 11, BASE_TILE_MSG_BOX_WIDE);
-    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_SELL_COUNT_VALUE], BG_LAYER_MAIN_0, 19, 13, SELL_WINDOW_WIDTH, SELL_WINDOW_HEIGHT, 3, BASE_TILE_SELL_COUNT_VALUE);
-    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_MONEY], BG_LAYER_MAIN_0, 1, 1, MONEY_WINDOW_WIDTH, TEXT_LINES_TILES(2), 3, BASE_TILE_MONEY);
-    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_THROW_AWAY_COUNT], BG_LAYER_MAIN_0, 24, 19, 7, 4, 3, BASE_TILE_THROW_AWAY_COUNT);
-    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_POFFIN_COUNT], BG_LAYER_MAIN_0, 1, 12, POFFIN_COUNT_WINDOW_WIDTH, TEXT_LINES_TILES(2), 3, BASE_TILE_POFFIN_COUNT);
+    const u8 popupLayer = BagGrid_PopupLayer();
+
+    if (BagGrid_IsActive()) {
+        // One entry of the list, which the grid prints its text to. It is never shown:
+        // the grid copies it to its own layer.
+        Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_ITEM_LIST], BagGrid_TextLayer(), 0, 0, ITEM_LIST_WINDOW_WIDTH, TEXT_LINES_TILES(1), 3, BASE_TILE_ITEM_LIST);
+    } else {
+        Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_ITEM_LIST], BG_LAYER_MAIN_2, 14, 0, ITEM_LIST_WINDOW_WIDTH, ITEM_LIST_WINDOW_HEIGHT, 3, BASE_TILE_ITEM_LIST);
+    }
+
+    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_ITEM_DESCRIPTION], popupLayer, 0, 18, ITEM_DESCRIPTION_WINDOW_WIDTH, ITEM_DESCRIPTION_WINDOW_HEIGHT, 3, BASE_TILE_ITEM_DESCRIPTION);
+    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_POCKET_NAMES], BagGrid_TextLayer(), 0, 13, POCKET_NAMES_WINDOW_WIDTH, POCKET_NAMES_WINDOW_HEIGHT, 3, BASE_TILE_POCKET_NAMES);
+    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_MSG_BOX], popupLayer, 6, 19, MSG_BOX_WINDOW_WIDTH, MSG_BOX_WINDOW_HEIGHT, 11, BASE_TILE_MSG_BOX);
+    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_MSG_BOX_NARROW], popupLayer, 6, 19, MSG_BOX_NARROW_WINDOW_WIDTH, MSG_BOX_WINDOW_HEIGHT, 11, BASE_TILE_MSG_BOX_NARROW);
+    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_POCKET_INDICATOR], popupLayer, 0, 11, POCKET_SELECTOR_WINDOW_WIDTH, POCKET_SELECTOR_WINDOW_HEIGHT, 13, BASE_TILE_POCKET_SELECTOR);
+    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_MSG_BOX_WIDE], popupLayer, 2, 19, MSG_BOX_WIDE_WINDOW_WIDTH, MSG_BOX_WINDOW_HEIGHT, 11, BASE_TILE_MSG_BOX_WIDE);
+    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_SELL_COUNT_VALUE], popupLayer, 19, 13, SELL_WINDOW_WIDTH, SELL_WINDOW_HEIGHT, 3, BASE_TILE_SELL_COUNT_VALUE);
+    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_MONEY], popupLayer, 1, 1, MONEY_WINDOW_WIDTH, TEXT_LINES_TILES(2), 3, BASE_TILE_MONEY);
+    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_THROW_AWAY_COUNT], popupLayer, 24, 19, 7, 4, 3, BASE_TILE_THROW_AWAY_COUNT);
+    Window_Add(controller->bgConfig, &controller->windows[BAG_UI_WINDOW_POFFIN_COUNT], popupLayer, 1, 12, POFFIN_COUNT_WINDOW_WIDTH, TEXT_LINES_TILES(2), 3, BASE_TILE_POFFIN_COUNT);
 }
 
 void BagUI_DeleteWindows(Window windows[NUM_BAG_UI_WINDOWS])
@@ -129,8 +139,8 @@ void BagUI_FreePocketNames(BagController *controller)
 void BagUI_ClearPocketNameBox(BagController *controller)
 {
     for (u16 i = 0; i < 12; i++) {
-        Bg_FillTilemapRect(controller->bgConfig, BG_LAYER_MAIN_2, BASE_TILE_POCKET_NAMES + 12 + i, i, 13, 1, 1, 3);
-        Bg_FillTilemapRect(controller->bgConfig, BG_LAYER_MAIN_2, BASE_TILE_POCKET_NAMES + POCKET_NAMES_WINDOW_WIDTH + 12 + i, i, 13 + 1, 1, 1, 3);
+        Bg_FillTilemapRect(controller->bgConfig, BagGrid_TextLayer(), BASE_TILE_POCKET_NAMES + 12 + i, i, 13, 1, 1, 3);
+        Bg_FillTilemapRect(controller->bgConfig, BagGrid_TextLayer(), BASE_TILE_POCKET_NAMES + POCKET_NAMES_WINDOW_WIDTH + 12 + i, i, 13 + 1, 1, 1, 3);
     }
 }
 
@@ -291,6 +301,68 @@ void BagUI_PrintTMHMMoveStats(BagController *controller, u16 item)
     Text_AddPrinterWithParamsAndColor(window, FONT_SYSTEM, controller->stringBuffer, 96 + 64, 32, TEXT_SPEED_NO_TRANSFER, TEXT_COLOR(15, 14, 0), NULL);
 }
 
+BOOL BagUI_ShowsMoveStatsOnSelect(BagController *controller)
+{
+    return controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx].pocketType == POCKET_TMHMS && BagGrid_HasMoveInfo() == FALSE;
+}
+
+static void PrintMoveInfoStat(BagController *controller, Window *window, u32 labelID, u32 valueID, u16 value, u32 y)
+{
+    const u32 windowWidth = Window_GetWidth(window) * TILE_WIDTH_PIXELS;
+    String *label = MessageLoader_GetNewString(controller->bagStringsLoader, labelID);
+    String *template = MessageLoader_GetNewString(controller->bagStringsLoader, valueID);
+
+    StringTemplate_SetNumber(controller->strTemplate, 0, value, 3, PADDING_MODE_NONE, CHARSET_MODE_EN);
+    StringTemplate_Format(controller->strTemplate, controller->stringBuffer, template);
+
+    // The value lines up 96 dots in, or as far right as the window goes.
+    const u32 labelWidth = Font_CalcStringWidth(FONT_SYSTEM, label, 0);
+    const u32 valueWidth = Font_CalcStringWidth(FONT_SYSTEM, controller->stringBuffer, 0);
+    u32 valueX = (windowWidth < 96 ? windowWidth : 96) - valueWidth;
+
+    if (valueX < labelWidth + 4) {
+        valueX = labelWidth + 4;
+    }
+
+    Text_AddPrinterWithParamsAndColor(window, FONT_SYSTEM, label, 0, y, TEXT_SPEED_NO_TRANSFER, TEXT_COLOR(15, 14, 0), NULL);
+    Text_AddPrinterWithParamsAndColor(window, FONT_SYSTEM, controller->stringBuffer, valueX, y, TEXT_SPEED_NO_TRANSFER, TEXT_COLOR(15, 14, 0), NULL);
+    String_Free(template);
+    String_Free(label);
+}
+
+void BagUI_PrintMoveInfo(BagController *controller, u16 item)
+{
+    Window *window = BagGrid_MoveInfoWindow();
+
+    Window_FillTilemap(window, 0);
+    BagGrid_ShowMoveIcons(controller, item);
+
+    if (item != ITEM_NONE) {
+        const u16 move = Item_MoveForTMHM(item);
+        const u16 power = MoveTable_LoadParam(move, MOVEATTRIBUTE_POWER);
+        const u16 accuracy = MoveTable_LoadParam(move, MOVEATTRIBUTE_ACCURACY);
+
+        // The icons take the first line, and the PP what is left of it.
+        if (BagGrid_MoveInfoHasPP()) {
+            String *label = MessageLoader_GetNewString(controller->bagStringsLoader, Bag_Text_PP);
+            String *template = MessageLoader_GetNewString(controller->bagStringsLoader, Bag_Text_MaxPPNum);
+
+            StringTemplate_SetNumber(controller->strTemplate, 0, MoveTable_CalcMaxPP(move, 0), 2, PADDING_MODE_SPACES, CHARSET_MODE_EN);
+            StringTemplate_Format(controller->strTemplate, controller->stringBuffer, template);
+            Text_AddPrinterWithParamsAndColor(window, FONT_SYSTEM, label, 72, 0, TEXT_SPEED_NO_TRANSFER, TEXT_COLOR(15, 14, 0), NULL);
+            Text_AddPrinterWithParamsAndColor(window, FONT_SYSTEM, controller->stringBuffer, 72 + Font_CalcStringWidth(FONT_SYSTEM, label, 0) + 6, 0, TEXT_SPEED_NO_TRANSFER, TEXT_COLOR(15, 14, 0), NULL);
+            String_Free(template);
+            String_Free(label);
+        }
+
+        PrintMoveInfoStat(controller, window, Bag_Text_Power, power <= 1 ? Bag_Text_Not_Applicable : Bag_Text_PowerAccuracyNum, power, TEXT_LINES(1));
+        PrintMoveInfoStat(controller, window, Bag_Text_Accuracy, accuracy == 0 ? Bag_Text_Not_Applicable : Bag_Text_PowerAccuracyNum, accuracy, TEXT_LINES(2));
+    }
+
+    // In VBlank, with the icons.
+    Window_ScheduleCopyToVRAM(window);
+}
+
 void BagUI_LoadItemCountStrings(BagController *controller)
 {
     controller->itemCountX = MessageLoader_GetNewString(controller->bagStringsLoader, Bag_Text_ItemCountX);
@@ -404,10 +476,10 @@ void BagUI_ShowItemActionsMenu(BagController *controller, u8 *actions, u8 numAct
 {
     u16 msgBoxWindowIdx;
     if (controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx].pocketType == POCKET_BERRIES) {
-        Window_Add(controller->bgConfig, &controller->itemActionsWindow, BG_LAYER_MAIN_0, 23, 23 - TEXT_LINES_TILES(numActions), 8, TEXT_LINES_TILES(numActions), 3, BASE_TILE_ITEM_ACTIONS_MENU);
+        Window_Add(controller->bgConfig, &controller->itemActionsWindow, BagGrid_PopupLayer(), 23, 23 - TEXT_LINES_TILES(numActions), 8, TEXT_LINES_TILES(numActions), 3, BASE_TILE_ITEM_ACTIONS_MENU);
         msgBoxWindowIdx = BAG_UI_WINDOW_MSG_BOX_NARROW;
     } else {
-        Window_Add(controller->bgConfig, &controller->itemActionsWindow, BG_LAYER_MAIN_0, 23 + 1, 23 - TEXT_LINES_TILES(numActions), 8 - 1, TEXT_LINES_TILES(numActions), 3, BASE_TILE_ITEM_ACTIONS_MENU);
+        Window_Add(controller->bgConfig, &controller->itemActionsWindow, BagGrid_PopupLayer(), 23 + 1, 23 - TEXT_LINES_TILES(numActions), 8 - 1, TEXT_LINES_TILES(numActions), 3, BASE_TILE_ITEM_ACTIONS_MENU);
         msgBoxWindowIdx = BAG_UI_WINDOW_MSG_BOX;
     }
 
@@ -434,7 +506,7 @@ void BagUI_ShowItemActionsMenu(BagController *controller, u8 *actions, u8 numAct
 
     controller->menu = Menu_New(&menuTemplate, 8, 0, 0, HEAP_ID_BAG, PAD_BUTTON_B);
 
-    if (controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx].pocketType == POCKET_TMHMS) {
+    if (BagUI_ShowsMoveStatsOnSelect(controller)) {
         Window_FillTilemap(&controller->windows[BAG_UI_WINDOW_ITEM_DESCRIPTION], 0);
         BagUI_PrintTMHMMoveStats(controller, controller->bagCtx->selectedItem);
         Window_ScheduleCopyToVRAM(&controller->windows[BAG_UI_WINDOW_ITEM_DESCRIPTION]);
@@ -468,7 +540,7 @@ void BagUI_CloseItemActionsMenu(BagController *controller)
         msgBoxWindowIdx = BAG_UI_WINDOW_MSG_BOX;
     }
 
-    if (controller->bagCtx->accessiblePockets[controller->bagCtx->currPocketIdx].pocketType != POCKET_TMHMS) {
+    if (BagUI_ShowsMoveStatsOnSelect(controller) == FALSE) {
         Window_EraseMessageBox(&controller->windows[msgBoxWindowIdx], TRUE);
         Window_ClearAndScheduleCopyToVRAM(&controller->windows[msgBoxWindowIdx]);
     }
@@ -481,7 +553,11 @@ void BagUI_CloseItemActionsMenu(BagController *controller)
     Window_FillTilemap(&controller->windows[BAG_UI_WINDOW_ITEM_DESCRIPTION], 0);
     BagUI_PrintItemDescription(controller, controller->bagCtx->selectedItem);
     Window_ScheduleCopyToVRAM(&controller->windows[BAG_UI_WINDOW_ITEM_DESCRIPTION]);
-    BagUI_UpdateTypeAndCategoryIcons(controller, ITEM_NONE, FALSE);
+
+    // The grid's move info keeps its icons up.
+    if (BagGrid_HasMoveInfo() == FALSE) {
+        BagUI_UpdateTypeAndCategoryIcons(controller, ITEM_NONE, FALSE);
+    }
 }
 
 void BagUI_PrintMovingItemMsg(BagController *controller)
@@ -592,7 +668,10 @@ static BOOL BagUITextPrinterCallback(TextPrinterTemplate *template, u16 param1)
 
 void BagUI_ShowYesNoMenu(BagController *controller)
 {
-    controller->menu = Menu_MakeYesNoChoice(controller->bgConfig, &sYesNoMenuTemplate, BASE_TILE_BAG_WINDOW_FRAME, 14, HEAP_ID_BAG);
+    WindowTemplate template = sYesNoMenuTemplate;
+
+    template.bgLayer = BagGrid_PopupLayer();
+    controller->menu = Menu_MakeYesNoChoice(controller->bgConfig, &template, BASE_TILE_BAG_WINDOW_FRAME, 14, HEAP_ID_BAG);
 }
 
 void BagUI_PrintSellCountAndValue(BagController *controller, u8 skipFrame)

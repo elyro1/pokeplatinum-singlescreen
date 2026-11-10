@@ -841,6 +841,7 @@ pokeplatinum_c = files(
     'overlay083/ov83_0223D6A8.c',
     'overlay083/ov83_0223F7F4.c',
     'applications/bag/main.c',
+    'applications/bag/grid.c',
     'applications/bag/windows.c',
     'applications/bag/sprites.c',
     'applications/berry_tag.c',
