@@ -94,10 +94,13 @@ void BattleSpeedContents() {
         ImGui::SetTooltip("Always: open the naming screen directly. Never: keep the species name.\n"
             "Ask: show the original Yes/No prompt. Applies to the next naming offer.");
     }
-    ConfigCheckBox("Widescreen menus", &myConfig->newPokedex, configChanged);
+    ConfigCheckBox("Widescreen Pok\xC3\xA9" "dex", &myConfig->widescreenPokedex, configChanged);
     if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("On: the widescreen Pok\xC3\xA9" "dex and Pok\xC3\xA9" "mon summary screens.\n"
-            "Off: the classic screens. Applies the next time one of them opens.");
+        ImGui::SetTooltip("Turn off to use the classic Pok\xC3\xA9" "dex. Applies the next time it opens.");
+    }
+    ConfigCheckBox("Widescreen summary", &myConfig->widescreenSummary, configChanged);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Turn off to use the classic Pok\xC3\xA9" "mon summary. Applies the next time it opens.");
     }
     ConfigCheckBox("Single-screen bag", &myConfig->gridBag, configChanged);
     if (ImGui::IsItemHovered()) {
