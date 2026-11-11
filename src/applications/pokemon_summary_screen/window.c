@@ -10,6 +10,7 @@
 
 #include "applications/pokemon_summary_screen/main.h"
 #include "applications/pokemon_summary_screen/sprites.h"
+#include "applications/pokemon_summary_screen/wide.h"
 
 #include "bg_window.h"
 #include "dexmode_checker.h"
@@ -729,7 +730,10 @@ static const WindowTemplate sExtraWindowTemplates_Condition[] = {
 void PokemonSummaryScreen_DrawStaticWindows(PokemonSummaryScreen *summaryScreen)
 {
     for (u16 window = 0; window < SUMMARY_STATIC_WINDOW_MAX; window++) {
-        Window_AddFromTemplate(summaryScreen->bgConfig, &summaryScreen->staticWindows[window], &sStaticWindowTemplates[window]);
+        WindowTemplate template = sStaticWindowTemplates[window];
+
+        SummaryWide_PlaceWindow(&template);
+        Window_AddFromTemplate(summaryScreen->bgConfig, &summaryScreen->staticWindows[window], &template);
         Window_FillTilemap(&summaryScreen->staticWindows[window], 0);
     }
 
@@ -785,7 +789,10 @@ void PokemonSummaryScreen_AddExtraWindows(PokemonSummaryScreen *summaryScreen)
     summaryScreen->extraWindows = Window_New(HEAP_ID_POKEMON_SUMMARY_SCREEN, summaryScreen->numExtraWindows);
 
     for (u32 i = 0; i < summaryScreen->numExtraWindows; i++) {
-        Window_AddFromTemplate(summaryScreen->bgConfig, &summaryScreen->extraWindows[i], &extraWindows[i]);
+        WindowTemplate template = extraWindows[i];
+
+        SummaryWide_PlaceWindow(&template);
+        Window_AddFromTemplate(summaryScreen->bgConfig, &summaryScreen->extraWindows[i], &template);
     }
 }
 
@@ -995,8 +1002,11 @@ static void PrintStaticWindows(PokemonSummaryScreen *summaryScreen)
 
 void PokemonSummaryScreen_DrawExtraWindows(PokemonSummaryScreen *summaryScreen)
 {
-    Bg_FillTilemapRect(summaryScreen->bgConfig, BG_LAYER_MAIN_1, 0, 0, 0, 32, 2, 16);
-    Bg_FillTilemapRect(summaryScreen->bgConfig, BG_LAYER_MAIN_1, 0, 14, 2, 18, 22, 16);
+    Bg_FillTilemapRect(summaryScreen->bgConfig, BG_LAYER_MAIN_1, 0, 0, 0, SummaryWide_FullRowTiles(), 2, 16);
+    // The wide tabs are on rows 2 and 3, with nothing else on the right.
+    const int firstRow = SummaryWide_IsActive() ? 4 : 2;
+
+    Bg_FillTilemapRect(summaryScreen->bgConfig, BG_LAYER_MAIN_1, 0, SummaryWide_RightPanelColumn(), firstRow, SummaryWide_FullRowTiles() - SummaryWide_RightPanelColumn(), 24 - firstRow, 16);
 
     switch (summaryScreen->page) {
     case SUMMARY_PAGE_INFO:

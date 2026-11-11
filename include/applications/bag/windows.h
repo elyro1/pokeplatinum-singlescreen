@@ -16,6 +16,10 @@ void BagUI_DrawPocketSelectorIcon(BagController *controller, u8 pocketIndex, u8 
 void BagUI_DrawPocketSelectorIcons(BagController *controller);
 void BagUI_PrintItemDescription(BagController *controller, u16 item);
 void BagUI_PrintTMHMMoveStats(BagController *controller, u16 item);
+// Whether selecting the item puts its move's stats where the description is.
+BOOL BagUI_ShowsMoveStatsOnSelect(BagController *controller);
+// The grid's move info for a TM or HM. ITEM_NONE clears it.
+void BagUI_PrintMoveInfo(BagController *controller, u16 item);
 void BagUI_LoadItemCountStrings(BagController *controller);
 void BagUI_FreeItemCountStrings(BagController *controller);
 void BagUI_PrintItemCount(BagController *controller, u16 count, u16 yOffset, u32 color);

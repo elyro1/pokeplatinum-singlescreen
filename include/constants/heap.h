@@ -148,7 +148,12 @@ enum HeapSize {
     HEAP_SIZE_BATTLE_FACTORY_APP = 0x20000,
     HEAP_SIZE_BATTLE_ARCADE_APP = 0x20000,
     HEAP_SIZE_FRONTIER_RECORDS_APP = 0x20000,
+    #ifdef SDK_PORT
+    // The single-screen bag draws its grid on canvases.
+    HEAP_SIZE_BAG = 0x60000,
+    #else
     HEAP_SIZE_BAG = 0x30000,
+    #endif
 
     HEAP_SIZE_PRE_POKETCH_SUBSCREEN = 0x18000,
     #ifdef SDK_PORT

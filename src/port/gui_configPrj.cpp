@@ -94,10 +94,15 @@ void BattleSpeedContents() {
         ImGui::SetTooltip("Always: open the naming screen directly. Never: keep the species name.\n"
             "Ask: show the original Yes/No prompt. Applies to the next naming offer.");
     }
-    ConfigCheckBox("New Pok\xC3\xA9" "dex", &myConfig->newPokedex, configChanged);
+    ConfigCheckBox("Widescreen menus", &myConfig->newPokedex, configChanged);
     if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("On: the widescreen grid with stats, moves and evolution pages.\n"
-            "Off: the classic Pok\xC3\xA9" "dex screens. Applies the next time the Pok\xC3\xA9" "dex opens.");
+        ImGui::SetTooltip("On: the widescreen Pok\xC3\xA9" "dex and Pok\xC3\xA9" "mon summary screens.\n"
+            "Off: the classic screens. Applies the next time one of them opens.");
+    }
+    ConfigCheckBox("Single-screen bag", &myConfig->gridBag, configChanged);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("On: with the single-screen layout, the bag shows its items as a grid of icons\n"
+            "or a list with names (X/Y). Off: the classic bag. Applies the next time the bag opens.");
     }
     SettingsRow("Pok\xC3\xA9" "dex units", "Heights and weights in the Pok\xC3\xA9" "dex.");
     int pokedexUnits = myConfig->pokedexUnits;

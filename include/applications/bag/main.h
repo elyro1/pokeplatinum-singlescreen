@@ -3,6 +3,8 @@
 
 #include "applications/bag/defs.h"
 
+// How many slots a pocket has.
+u8 BagApplication_PocketSize(u8 pocketType);
 u16 BagInterface_GetItemSlotParam(BagController *controller, u16 slotIndex, u16 itemParam);
 #ifdef SDK_BUILD_ARM
 const u32 BagApplication_GetItemActionFunc(enum ItemAction action);
