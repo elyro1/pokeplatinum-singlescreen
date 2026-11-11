@@ -35,7 +35,7 @@ static void SetLitStrip(BOOL keepStrip);
 void PokedexWide_LatchEnabled(void)
 {
 #ifdef SDK_PORT
-    sEnabled = SIM_Config_prj_GetConfig()->newPokedex;
+    sEnabled = SIM_Config_prj_GetConfig()->widescreenPokedex;
 #endif
 }
 

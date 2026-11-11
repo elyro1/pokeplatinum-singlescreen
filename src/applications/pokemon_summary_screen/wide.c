@@ -122,7 +122,7 @@ void SummaryWide_Begin(void)
 #ifdef SDK_PORT
     sActive = FALSE;
 
-    if (SIM_Config_prj_GetConfig()->newPokedex == FALSE) {
+    if (SIM_Config_prj_GetConfig()->widescreenSummary == FALSE) {
         return;
     }
 
