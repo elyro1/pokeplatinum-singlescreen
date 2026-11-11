@@ -2,6 +2,10 @@
 
 #include <nitro.h>
 
+#ifdef SDK_PORT
+#include <simulator/sim.h>
+#endif
+
 #include "constants/trainer_card_levels.h"
 #include "constants/versions.h"
 #include "generated/genders.h"
@@ -226,6 +230,10 @@ BOOL TrainerCaseApp_Init(ApplicationManager *appMan, int *state)
     TrainerCase_SetVRAMBanks();
     TrainerCaseApp_InitBackgrounds(trainerCaseApp->bgConfig);
     TrainerCase_DrawTrainerCard(trainerCaseApp, narc);
+#ifdef SDK_PORT
+    // Fill the margins with the case's gray corner while keeping the card recess aligned.
+    SIM_SetMenuBackground(TRUE, GX_PLANEMASK_BG1, SIM_MENU_BACKGROUND_EXTEND_TOP_RIGHT);
+#endif
 
     EnableTouchPad();
     InitializeTouchPad(4);
@@ -424,6 +432,10 @@ BOOL TrainerCaseApp_Main(ApplicationManager *appMan, int *state)
 BOOL TrainerCaseApp_Exit(ApplicationManager *appMan, int *state)
 {
     TrainerCaseApp *trainerCaseApp = ApplicationManager_Data(appMan);
+
+#ifdef SDK_PORT
+    SIM_SetMenuBackground(TRUE, 0, SIM_MENU_BACKGROUND_EXTEND_EDGES);
+#endif
 
     TrainerCase_ResetAffineTransforms();
     TrainerCase_FreeStrings(trainerCaseApp);

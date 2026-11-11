@@ -1,6 +1,10 @@
 #include <nitro.h>
 #include <string.h>
 
+#ifdef SDK_PORT
+#include <simulator/sim.h>
+#endif
+
 #include "constants/communication/comm_available_connections.h"
 #include "constants/graphics.h"
 #include "constants/narc.h"
@@ -1242,6 +1246,9 @@ static BOOL MainMenu_Main(ApplicationManager *appMan, int *state)
         }
         break;
     case MAIN_MENU_STATE_LOAD_GRAPHICS:
+#ifdef SDK_PORT
+        SIM_SetMenuBackground(FALSE, SIM_MENU_BACKGROUND_BACKDROP, SIM_MENU_BACKGROUND_EXTEND_EDGES);
+#endif
         LoadScrollArrowsSprites(appData);
         LoadWirelessIconsGraphics(appData);
 
@@ -1400,6 +1407,10 @@ static void EnqueueNextApplication(MainMenuAppData *appData)
 static BOOL MainMenu_Exit(ApplicationManager *appMan, int *unused)
 {
     MainMenuAppData *appData = ApplicationManager_Data(appMan);
+
+#ifdef SDK_PORT
+    SIM_SetMenuBackground(FALSE, 0, SIM_MENU_BACKGROUND_EXTEND_EDGES);
+#endif
 
     EnqueueNextApplication(appData);
 

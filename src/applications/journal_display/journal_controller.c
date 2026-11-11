@@ -3,6 +3,10 @@
 #include <nitro.h>
 #include <string.h>
 
+#ifdef SDK_PORT
+#include <simulator/sim.h>
+#endif
+
 #include "constants/heap.h"
 #include "generated/genders.h"
 
@@ -93,6 +97,10 @@ int JournalController_Init(ApplicationManager *appMan, int *state)
     JournalController_SetVRAMBanks();
     JournalController_SetupBgs(journalManager->bgConfig);
     JournalController_LoadGraphics(journalManager);
+#ifdef SDK_PORT
+    // Either paper layer can be in front during a page turn.
+    SIM_SetMenuBackground(FALSE, GX_PLANEMASK_BG2 | GX_PLANEMASK_BG3, SIM_MENU_BACKGROUND_PAD_BORDERS);
+#endif
     JournalController_InitStringUtil(journalManager);
     JournalPrinter_AddWindows(journalManager);
     JournalPrinter_PrintEntry(journalManager, 0);
@@ -136,6 +144,10 @@ int JournalController_Main(ApplicationManager *appMan, int *state)
 int JournalController_Exit(ApplicationManager *appMan, int *state)
 {
     JournalManager *journalManager = ApplicationManager_Data(appMan);
+
+#ifdef SDK_PORT
+    SIM_SetMenuBackground(FALSE, 0, SIM_MENU_BACKGROUND_EXTEND_EDGES);
+#endif
 
     SetVBlankCallback(NULL, NULL);
 
