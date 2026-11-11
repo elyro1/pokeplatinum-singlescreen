@@ -3,6 +3,10 @@
 #include <nitro.h>
 #include <string.h>
 
+#ifdef SDK_PORT
+#include <simulator/sim.h>
+#endif
+
 #include "constants/graphics.h"
 #include "constants/heap.h"
 #include "constants/items.h"
@@ -298,6 +302,9 @@ static BOOL PartyMenu_Init(ApplicationManager *appMan, int *state)
     SetVRAMBanks();
     InitBgs(application->bgConfig);
     LoadGraphics(application, narc);
+#ifdef SDK_PORT
+    SIM_SetMenuBackground(FALSE, GX_PLANEMASK_BG3, SIM_MENU_BACKGROUND_EXTEND_LEFT_EDGE);
+#endif
     EnableTouchPad();
     InitializeTouchPad(4);
     Sound_SetSceneAndPlayBGM(SOUND_SCENE_SUB_57, SEQ_NONE, 0);
@@ -684,6 +691,9 @@ static BOOL PartyMenu_Exit(ApplicationManager *appMan, int *state)
 
     SetVBlankCallback(NULL, NULL);
     PartyMenu_CleanupSprites(v0);
+#ifdef SDK_PORT
+    SIM_SetMenuBackground(FALSE, 0, SIM_MENU_BACKGROUND_EXTEND_EDGES);
+#endif
     PartyMenu_RemoveWindows(v0);
     sub_0207EA24(v0->bgConfig);
     DisableTouchPad();

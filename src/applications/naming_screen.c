@@ -3,6 +3,10 @@
 #include <nitro.h>
 #include <string.h>
 
+#ifdef SDK_PORT
+#include <simulator/sim.h>
+#endif
+
 #include "constants/charcode.h"
 #include "constants/graphics.h"
 #include "constants/heap.h"
@@ -1122,6 +1126,9 @@ static BOOL NamingScreen_Init(ApplicationManager *appMan, int *state)
             namingScreen->pixelBuf,
             namingScreen->unkJapaneseString);
         Sound_SetSceneAndPlayBGM(SOUND_SCENE_SUB_52, SEQ_NONE, 0);
+#ifdef SDK_PORT
+        SIM_SetMenuBackground(FALSE, GX_PLANEMASK_BG2, SIM_MENU_BACKGROUND_EXTEND_EDGES);
+#endif
         StartScreenFade(
             FADE_BOTH_SCREENS,
             FADE_TYPE_BRIGHTNESS_IN,
@@ -1138,6 +1145,12 @@ static BOOL NamingScreen_Init(ApplicationManager *appMan, int *state)
                                      || namingScreen->type == NAMING_SCREEN_TYPE_POKEMON)
             ? DS_SCREEN_MAIN
             : DS_SCREEN_SUB;
+#ifdef SDK_PORT
+        // Show the keyboard for every naming type when only one screen is visible.
+        if (SIM_GetConfigPtr()->screenLayout == SIM_CONFIG_SCREEN_LAYOUT_TOP_ONLY) {
+            gSystem.whichScreenIs3D = DS_SCREEN_MAIN;
+        }
+#endif
         GXLayers_SwapDisplay();
 
         NARC_dtor(narc);
@@ -1403,6 +1416,10 @@ static BOOL NamingScreen_Exit(ApplicationManager *appMan, int *unusedState)
     NamingScreen *namingScreen = ApplicationManager_Data(appMan);
     NamingScreenArgs *namingScreenArgs = (NamingScreenArgs *)ApplicationManager_Args(appMan);
     int i;
+
+#ifdef SDK_PORT
+    SIM_SetMenuBackground(FALSE, 0, SIM_MENU_BACKGROUND_EXTEND_EDGES);
+#endif
 
     namingScreen->entryBuf[namingScreen->textCursorPos] = CHAR_EOS;
 

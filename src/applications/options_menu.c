@@ -3,6 +3,10 @@
 #include <nitro.h>
 #include <string.h>
 
+#ifdef SDK_PORT
+#include <simulator/sim.h>
+#endif
+
 #include "constants/heap.h"
 #include "constants/narc.h"
 
@@ -177,6 +181,10 @@ BOOL OptionsMenu_Init(ApplicationManager *appMan, int *state)
 BOOL OptionsMenu_Exit(ApplicationManager *appMan, int *state)
 {
     OptionsMenuData *menuData = ApplicationManager_Data(appMan);
+
+#ifdef SDK_PORT
+    SIM_SetMenuBackground(FALSE, 0, SIM_MENU_BACKGROUND_EXTEND_EDGES);
+#endif
 
     if (menuData->saveSelections == 1) {
         menuData->options.textSpeed = menuData->entries.textSpeed.selected;
@@ -572,6 +580,11 @@ static void LoadBgTiles(OptionsMenuData *menuData)
     NNS_G2dGetUnpackedScreenData(menuData->nscrBuffer, &(menuData->tilemapData));
 
     NARC_dtor(narc);
+
+#ifdef SDK_PORT
+    // BG2 is the solid backdrop under the options and message windows.
+    SIM_SetMenuBackground(FALSE, GX_PLANEMASK_BG2, SIM_MENU_BACKGROUND_EXTEND_EDGES);
+#endif
 
     Bg_FillTilemapRect(menuData->bgConfig,
         BG_LAYER_MAIN_2,
