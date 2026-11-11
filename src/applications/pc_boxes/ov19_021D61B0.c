@@ -3,6 +3,10 @@
 #include <nitro.h>
 #include <string.h>
 
+#ifdef SDK_PORT
+#include <simulator/sim.h>
+#endif
+
 #include "applications/pc_boxes/box_app_manager.h"
 #include "applications/pc_boxes/box_application.h"
 #include "applications/pc_boxes/funcptr_ov19_021D79B8.h"
@@ -288,6 +292,10 @@ static void ov19_021D6474(SysTask *param0, void *param1)
 
 void BoxGraphics_Free(UnkStruct_ov19_021D61B0 *param0)
 {
+#ifdef SDK_PORT
+    SIM_SetMenuBackground(FALSE, 0, SIM_MENU_BACKGROUND_EXTEND_EDGES);
+#endif
+
     SetVBlankCallback(NULL, NULL);
     SysTask_Done(param0->unk_00);
     SysTask_Done(param0->unk_04);
@@ -1745,6 +1753,11 @@ static void ov19_021D75CC(UnkStruct_ov19_021D61B0 *param0, const BoxApplication 
     if (BoxApp_GetCursorLocation(param1) == CURSOR_IN_PARTY) {
         ov19_021DC6A0(&(param0->unk_B290));
     }
+
+#ifdef SDK_PORT
+    // The stripe below the wallpaper is visible throughout the box scroll.
+    SIM_SetMenuBackground(FALSE, GX_PLANEMASK_BG3, SIM_MENU_BACKGROUND_REPEAT_BOTTOM_RIGHT_STRIP);
+#endif
 
     GXLayers_EngineAToggleLayers(GX_PLANEMASK_OBJ, 1);
     GXLayers_EngineBToggleLayers(GX_PLANEMASK_OBJ, 1);
