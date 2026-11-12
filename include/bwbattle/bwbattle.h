@@ -26,6 +26,7 @@ typedef enum {
 
 // Whether every archive bwbattle needs has been extracted
 bool BwBattle_AssetsReady(void);
+bool BwBattle_NicknameBackdropReady(void);
 // Iris's extra overworld archive and sound, plus the native-view conversions.
 bool BwBattle_IrisAssetsReady(void);
 bool BwBattle_IrisVsReady(void);

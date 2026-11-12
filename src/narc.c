@@ -209,6 +209,9 @@ static const char *sNarcPaths[] = {
     [NARC_INDEX_GRAPHIC__UNIONOBJ2D_ONLYFRONT] = "graphic/unionobj2d_onlyfront.narc",
     [NARC_INDEX_GRAPHIC__LIBRARY_TV] = "graphic/library_tv.narc",
     [NARC_INDEX_APPLICATION__ZUKANLIST__ZKN_DATA__ZUKAN_DATA_GIRA] = "application/zukanlist/zkn_data/zukan_data_gira.narc",
+#ifdef SDK_PORT
+    [NARC_INDEX_BW2_ZUKAN_GRA] = "bw2/a/1/5/7",
+#endif
 };
 
 static s32 NARC_ReadDisk(FSFile *file, void *dest, s32 size)

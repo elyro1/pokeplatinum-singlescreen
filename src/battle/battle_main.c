@@ -423,7 +423,72 @@ void BattleSystem_HideBattleScreen(BattleSystem *battleSys)
 }
 
 #ifdef SDK_PORT
-static void BattleMain_MirrorNicknameBackdrop(BattleSystem *battleSys)
+static BOOL BattleMain_LoadBw2NicknameBackdrop(BattleSystem *battleSys)
+{
+    // BW2's Pokédex registration cover (ZukanToroku_LoadCover).
+    enum {
+        COVER_PALETTE = 7,
+        COVER_TILES = 17,
+        COVER_TILEMAP = 40,
+        COVER_TILES_SIZE = 0x800,
+        COVER_TILEMAP_SIZE = 0x600,
+    };
+
+    if (!BwBattle_NicknameBackdropReady()) {
+        return FALSE;
+    }
+
+    NARC *narc = NARC_ctor(NARC_INDEX_BW2_ZUKAN_GRA, HEAP_ID_BATTLE);
+    if (!narc) {
+        return FALSE;
+    }
+    if (NARC_GetFileCount(narc) <= COVER_TILEMAP) {
+        NARC_dtor(narc);
+        return FALSE;
+    }
+
+    // NitroSystem registers the decoded tile descriptor against its heap owner.
+    NNSG2dCharacterData **tiles = Heap_Alloc(HEAP_ID_BATTLE, sizeof(*tiles));
+    if (!tiles) {
+        NARC_dtor(narc);
+        return FALSE;
+    }
+
+    NNSG2dPaletteData *palette;
+    NNSG2dScreenData *screen;
+    void *paletteFile = Graphics_GetPlttDataFromOpenNARC(narc, COVER_PALETTE, &palette, HEAP_ID_BATTLE);
+    void *tilesFile = Graphics_GetCharDataFromOpenNARC(narc, COVER_TILES, FALSE, tiles, HEAP_ID_BATTLE);
+    void *screenFile = Graphics_GetScrnDataFromOpenNARC(narc, COVER_TILEMAP, FALSE, &screen, HEAP_ID_BATTLE);
+    NARC_dtor(narc);
+
+    BOOL loaded = paletteFile && tilesFile && screenFile
+        && palette->szByte >= PALETTE_SIZE_BYTES
+        && (*tiles)->pixelFmt == GX_TEXFMT_PLTT16 && (*tiles)->szByte >= COVER_TILES_SIZE
+        && screen->screenWidth == HW_LCD_WIDTH && screen->screenHeight >= HW_LCD_HEIGHT
+        && screen->szByte >= COVER_TILEMAP_SIZE;
+
+    if (loaded) {
+        Bg_SetControlParam(battleSys->bgConfig, BG_LAYER_MAIN_3, BG_CONTROL_PARAM_COLOR_MODE, GX_BG_COLORMODE_16);
+        Bg_LoadTiles(battleSys->bgConfig, BG_LAYER_MAIN_3, (*tiles)->pRawData, COVER_TILES_SIZE, 0);
+        Bg_LoadTilemapBuffer(battleSys->bgConfig, BG_LAYER_MAIN_3, screen->rawData, COVER_TILEMAP_SIZE);
+        Bg_CopyTilemapBufferToVRAM(battleSys->bgConfig, BG_LAYER_MAIN_3);
+        PaletteData_LoadBuffer(battleSys->paletteData, palette->pRawData, PLTTBUF_MAIN_BG, 0, PALETTE_SIZE_BYTES);
+    }
+
+    if (screenFile) {
+        Heap_Free(screenFile);
+    }
+    if (tilesFile) {
+        Heap_Free(tilesFile);
+    }
+    if (paletteFile) {
+        Heap_Free(paletteFile);
+    }
+    Heap_Free(tiles);
+    return loaded;
+}
+
+static void BattleMain_MirrorNicknameBackdrop(BattleSystem *battleSys, int backdropRows)
 {
     battleSys->wideNicknameBackdrop = SIM_SetWideUI(TRUE) > HW_LCD_WIDTH;
     if (!battleSys->wideNicknameBackdrop) {
@@ -432,7 +497,6 @@ static void BattleMain_MirrorNicknameBackdrop(BattleSystem *battleSys)
 
     enum {
         BLOCK_TILES = 32,
-        BACKDROP_ROWS = 20,
         VISIBLE_ROWS = HW_LCD_HEIGHT / TILE_HEIGHT_PIXELS,
     };
     u16 *tilemap = Bg_GetTilemapBuffer(battleSys->bgConfig, BG_LAYER_MAIN_3);
@@ -443,8 +507,8 @@ static void BattleMain_MirrorNicknameBackdrop(BattleSystem *battleSys)
 
         // The original backdrop ends behind the message box. Reflect its bottom
         // edge into the rows that are exposed beside the box in widescreen.
-        if (row >= BACKDROP_ROWS) {
-            const u16 *source = tilemap + (2 * BACKDROP_ROWS - 1 - row) * BLOCK_TILES;
+        if (row >= backdropRows) {
+            const u16 *source = tilemap + (2 * backdropRows - 1 - row) * BLOCK_TILES;
             for (int col = 0; col < BLOCK_TILES; col++) {
                 nativeRow[col] = source[col] ^ BG_TILE_FLIP_V;
             }
@@ -539,20 +603,29 @@ void BattleSystem_SetupBattleScreen(BattleSystem *battleSys, BOOL restoreTerrain
     int frame = BattleSystem_GetOptionsFrame(battleSys);
 
     ReplaceTransparentTiles(battleSys->bgConfig, 1, 1, 10, frame, HEAP_ID_BATTLE);
+    BOOL bw2NicknameBackdrop = FALSE;
+#ifdef SDK_PORT
+    if (!restoreTerrain && SIM_Config_prj_GetConfig()->bw2BattleVisuals) {
+        bw2NicknameBackdrop = BattleMain_LoadBw2NicknameBackdrop(battleSys);
+    }
+#endif
     if (restoreTerrain && battleSys->bgTileSnapshot != NULL) {
         // Terrain sprites are baked into this background before being freed.
         Bg_LoadTiles(battleSys->bgConfig, BG_LAYER_MAIN_3, battleSys->bgTileSnapshot, 0x10000, 0);
         PaletteData_LoadBuffer(battleSys->paletteData, battleSys->bgPaletteSnapshot, PLTTBUF_MAIN_BG, 0, HW_BG_PLTT_SIZE);
-    } else {
+    } else if (!bw2NicknameBackdrop) {
         Graphics_LoadTilesToBgLayer(NARC_INDEX_BATTLE__GRAPHIC__PL_BATT_BG, 3 + battleSys->background, battleSys->bgConfig, BG_LAYER_MAIN_3, 0, 0, 1, HEAP_ID_BATTLE);
         PaletteData_LoadBufferFromFileStart(battleSys->paletteData, NARC_INDEX_BATTLE__GRAPHIC__PL_BATT_BG, 172 + battleSys->background * 3 + BattleSystem_GetBackgroundTimeOffset(battleSys), HEAP_ID_BATTLE, PLTTBUF_MAIN_BG, 0, PLTT_DEST(0));
     }
     PaletteData_LoadBufferFromFileStart(battleSys->paletteData, NARC_INDEX_GRAPHIC__PL_WINFRAME, GetMessageBoxPaletteNARCMember(frame), HEAP_ID_BATTLE, PLTTBUF_MAIN_BG, PALETTE_SIZE_BYTES, PLTT_DEST(10));
     PaletteData_LoadBufferFromFileStart(battleSys->paletteData, NARC_INDEX_GRAPHIC__PL_FONT, 7, HEAP_ID_BATTLE, PLTTBUF_MAIN_BG, PALETTE_SIZE_BYTES, PLTT_DEST(11));
-    Graphics_LoadTilemapToBgLayer(NARC_INDEX_BATTLE__GRAPHIC__PL_BATT_BG, 2, battleSys->bgConfig, 3, 0, 0, 1, HEAP_ID_BATTLE);
+    if (!bw2NicknameBackdrop) {
+        Graphics_LoadTilemapToBgLayer(NARC_INDEX_BATTLE__GRAPHIC__PL_BATT_BG, 2, battleSys->bgConfig, 3, 0, 0, 1, HEAP_ID_BATTLE);
+    }
 #ifdef SDK_PORT
     if (!restoreTerrain && SIM_Config_prj_GetConfig()->widescreenPokedex) {
-        BattleMain_MirrorNicknameBackdrop(battleSys);
+        const int backdropHeight = bw2NicknameBackdrop ? HW_LCD_HEIGHT : 160;
+        BattleMain_MirrorNicknameBackdrop(battleSys, backdropHeight / TILE_HEIGHT_PIXELS);
     }
 #endif
 
