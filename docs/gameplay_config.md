@@ -101,6 +101,8 @@ Fast openings skip the encounter text and opening camera shots, show the player 
 
 With BW2 battle visuals, a successful capture of a new species fades from the capture camera directly into its Pokédex entry. The camera return and the brief “data was added” message are hidden during this transition. Previously registered species and special capture modes keep their existing flow.
 
+The nickname prompt uses the Black 2 / White 2 Pokédex backdrop when **BW2 battle visuals** is enabled and the backdrop is available. Use **Re-extract BW2 ROM** to add it to an older extraction.
+
 ## Developer encounter settings
 
 **Tab → Developer → Overworld encounters → Overworld encounter count** controls the maximum number of visible wild Pokémon. It defaults to `8`, accepts `0–30`, and saves automatically as `OverworldEncounterCount` under `[Developer]` in `sim_config_prj.ini`. Changes affect new spawns immediately; existing Pokémon remain until they leave. `0` stops new spawns. Available space and map objects can limit the actual count. Overworld encounters must be enabled.

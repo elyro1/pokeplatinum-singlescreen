@@ -15,6 +15,7 @@
 
 #include "types.h"
 #include "assets/bw2_assets.h"
+#include "constants/arc.h"
 #include "gfl/arc.h"
 
 // The BW2 archives bwbattle reads, by archive ID (docs/bwbattle.md). BW2 opens archive N at the ROM path
@@ -101,6 +102,10 @@ BOOL BwAssets_ArcExists(u32 arcId) {
 
     ArcPath(arcId, path, sizeof(path));
     return FileExists(path);
+}
+
+bool BwBattle_NicknameBackdropReady(void) {
+    return BwAssets_ArcExists(ARCID_ZUKAN_GRA);
 }
 
 bool BwBattle_AssetsReady(void) {
@@ -304,8 +309,8 @@ BwBattleExtractResult BwBattle_ExtractAssets(const char *romPath) {
     // Optional to the battle view, but extracted by the same action, and older extractions are upgraded: the overworld
     // models' records (47) and textures (48, also Iris's), the VS mugshots (267), the walking Pokémon's object codes
     // (208), which the followers and overworld encounters use (port/follower_assets.cpp), and the icons (7), which
-    // the BW sprites setting uses (port/bw_mon_sprites.c)
-    static const u16 optionalArcs[] = { 7, 47, 48, 208, 267 };
+    // the BW sprites setting uses (port/bw_mon_sprites.c), and the nickname prompt's Pokédex graphics.
+    static const u16 optionalArcs[] = { 7, 47, 48, ARCID_ZUKAN_GRA, 208, 267 };
     for (size_t i = 0; i < NELEMS(optionalArcs) && result == BWBATTLE_EXTRACT_OK; i++) {
         if (!BwAssets_ArcExists(optionalArcs[i])) {
             ArcPath(optionalArcs[i], path, sizeof(path));
