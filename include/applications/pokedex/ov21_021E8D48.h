@@ -12,4 +12,8 @@ BOOL ov21_021E8DEC(const UnkStruct_ov21_021E8D48 *param0);
 PokemonSprite *ov21_021E8E00(UnkStruct_ov21_021E8D48 *param0);
 void ov21_021E8E04(UnkStruct_ov21_021E8D48 *param0, BOOL param1);
 
+#ifdef SDK_PORT
+BOOL PokedexCaughtEntry_StepNicknameSlide(UnkStruct_ov21_021E8D48 *entry);
+#endif
+
 #endif // POKEPLATINUM_OV21_021E8D48_H

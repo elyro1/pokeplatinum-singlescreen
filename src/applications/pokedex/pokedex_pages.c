@@ -387,27 +387,25 @@ static void FitString(String *string, enum Font font, int maxWidth)
     String_Clear(string);
 }
 
-static void LoadTypeIcons(PageGraphics *graphics, PokedexGraphicData *graphicData, enum HeapID heapID)
+static void LoadTypeIcons(PageGraphics *graphics, NARC *narc, SpriteList *spriteList, SpriteResourceCollection **collections, enum HeapID heapID)
 {
-    NARC *narc = PokedexGraphics_GetNARC(graphicData);
-
-    graphics->typeResources[SPRITE_RESOURCE_CHAR] = SpriteResourceCollection_AddTilesFrom(graphicData->spriteResourceCollection[SPRITE_RESOURCE_CHAR], narc, type_icons_NCGR_lz, TRUE, TYPE_ICON_RESOURCE_ID, NNS_G2D_VRAM_TYPE_2DMAIN, heapID);
+    graphics->typeResources[SPRITE_RESOURCE_CHAR] = SpriteResourceCollection_AddTilesFrom(collections[SPRITE_RESOURCE_CHAR], narc, type_icons_NCGR_lz, TRUE, TYPE_ICON_RESOURCE_ID, NNS_G2D_VRAM_TYPE_2DMAIN, heapID);
     SpriteTransfer_RequestCharAtEnd(graphics->typeResources[SPRITE_RESOURCE_CHAR]);
     SpriteResource_ReleaseData(graphics->typeResources[SPRITE_RESOURCE_CHAR]);
 
-    graphics->typeResources[SPRITE_RESOURCE_PLTT] = SpriteResourceCollection_AddPaletteFrom(graphicData->spriteResourceCollection[SPRITE_RESOURCE_PLTT], narc, type_icons_NCLR, FALSE, TYPE_ICON_RESOURCE_ID, NNS_G2D_VRAM_TYPE_2DMAIN, 5, heapID);
+    graphics->typeResources[SPRITE_RESOURCE_PLTT] = SpriteResourceCollection_AddPaletteFrom(collections[SPRITE_RESOURCE_PLTT], narc, type_icons_NCLR, FALSE, TYPE_ICON_RESOURCE_ID, NNS_G2D_VRAM_TYPE_2DMAIN, 5, heapID);
     SpriteTransfer_RequestPlttFreeSpace(graphics->typeResources[SPRITE_RESOURCE_PLTT]);
     SpriteResource_ReleaseData(graphics->typeResources[SPRITE_RESOURCE_PLTT]);
 
-    graphics->typeResources[SPRITE_RESOURCE_CELL] = SpriteResourceCollection_AddFrom(graphicData->spriteResourceCollection[SPRITE_RESOURCE_CELL], narc, type_icons_cell_NCER_lz, TRUE, TYPE_ICON_RESOURCE_ID, SPRITE_RESOURCE_CELL, heapID);
-    graphics->typeResources[SPRITE_RESOURCE_ANIM] = SpriteResourceCollection_AddFrom(graphicData->spriteResourceCollection[SPRITE_RESOURCE_ANIM], narc, type_icons_anim_NANR_lz, TRUE, TYPE_ICON_RESOURCE_ID, SPRITE_RESOURCE_ANIM, heapID);
+    graphics->typeResources[SPRITE_RESOURCE_CELL] = SpriteResourceCollection_AddFrom(collections[SPRITE_RESOURCE_CELL], narc, type_icons_cell_NCER_lz, TRUE, TYPE_ICON_RESOURCE_ID, SPRITE_RESOURCE_CELL, heapID);
+    graphics->typeResources[SPRITE_RESOURCE_ANIM] = SpriteResourceCollection_AddFrom(collections[SPRITE_RESOURCE_ANIM], narc, type_icons_anim_NANR_lz, TRUE, TYPE_ICON_RESOURCE_ID, SPRITE_RESOURCE_ANIM, heapID);
 
     SpriteResourcesHeader header;
     SpriteListTemplate template;
 
-    SpriteResourcesHeader_Init(&header, TYPE_ICON_RESOURCE_ID, TYPE_ICON_RESOURCE_ID, TYPE_ICON_RESOURCE_ID, TYPE_ICON_RESOURCE_ID, 0xffffffff, 0xffffffff, FALSE, 0, graphicData->spriteResourceCollection[SPRITE_RESOURCE_CHAR], graphicData->spriteResourceCollection[SPRITE_RESOURCE_PLTT], graphicData->spriteResourceCollection[SPRITE_RESOURCE_CELL], graphicData->spriteResourceCollection[SPRITE_RESOURCE_ANIM], NULL, NULL);
+    SpriteResourcesHeader_Init(&header, TYPE_ICON_RESOURCE_ID, TYPE_ICON_RESOURCE_ID, TYPE_ICON_RESOURCE_ID, TYPE_ICON_RESOURCE_ID, 0xffffffff, 0xffffffff, FALSE, 0, collections[SPRITE_RESOURCE_CHAR], collections[SPRITE_RESOURCE_PLTT], collections[SPRITE_RESOURCE_CELL], collections[SPRITE_RESOURCE_ANIM], NULL, NULL);
 
-    template.list = graphicData->spriteList;
+    template.list = spriteList;
     template.resourceData = &header;
     template.priority = 32;
     template.vramType = NNS_G2D_VRAM_TYPE_2DMAIN;
@@ -422,7 +420,7 @@ static void LoadTypeIcons(PageGraphics *graphics, PokedexGraphicData *graphicDat
     }
 }
 
-static void FreeTypeIcons(PageGraphics *graphics, PokedexGraphicData *graphicData)
+static void FreeTypeIcons(PageGraphics *graphics, SpriteResourceCollection **collections)
 {
     for (int i = 0; i < MAX_TYPE_SPRITES; i++) {
         Sprite_Delete(graphics->typeSprites[i]);
@@ -432,7 +430,7 @@ static void FreeTypeIcons(PageGraphics *graphics, PokedexGraphicData *graphicDat
     SpriteTransfer_ResetPlttTransfer(graphics->typeResources[SPRITE_RESOURCE_PLTT]);
 
     for (int i = 0; i < 4; i++) {
-        SpriteResourceCollection_Remove(graphicData->spriteResourceCollection[i], graphics->typeResources[i]);
+        SpriteResourceCollection_Remove(collections[i], graphics->typeResources[i]);
     }
 }
 
@@ -530,7 +528,7 @@ static void EnterIconOams(PageGraphics *graphics)
 
 // Drawing
 
-static void DrawFrame(PageGraphics *graphics, const PageData *data)
+static void DrawFrame(PageGraphics *graphics, BOOL caught)
 {
     PokedexCanvas *canvas = graphics->canvas;
     const int nameBoxH = SCREEN_BOTTOM - NAME_BOX_TOP;
@@ -548,7 +546,7 @@ static void DrawFrame(PageGraphics *graphics, const PageData *data)
     PokedexCanvas_Fill(canvas, graphics->leftX + 1, NAME_BOX_TOP + 16, graphics->leftW - 2, 1, PDW_GOLD_DARK);
     PokedexCanvas_Fill(canvas, graphics->leftX + 6, NAME_BOX_TOP + 35, graphics->leftW - 12, 1, PDW_GREY);
 
-    if (PokedexSort_CurrentCaughtStatus(data->sortData) == CS_CAUGHT) {
+    if (caught) {
         PokedexCanvas_Ball(canvas, graphics->leftX + graphics->leftW - 6 - POKEDEX_CANVAS_BALL_SIZE, NAME_BOX_TOP + 3);
     }
 
@@ -565,15 +563,20 @@ static void DrawRowLines(PageGraphics *graphics, int rows)
     }
 }
 
-static void DrawLeftText(PageGraphics *graphics, const PageData *data, enum HeapID heapID)
+static void DrawLeftText(PageGraphics *graphics, int species, BOOL nationalDex, enum HeapID heapID)
 {
     Window *window = &graphics->leftWindow;
-    const int species = data->species;
-    const int dexNumber = PokedexSort_IsNationalDex(data->sortData) ? species : Pokemon_SinnohDexNumber(species);
+    const int dexNumber = nationalDex ? species : Pokemon_SinnohDexNumber(species);
     String *string = GetMessage(TEXT_BANK_POKEDEX, pl_msg_pokedex_wide_number, heapID);
-    String *number = String_Init(8, heapID);
+    String *number;
 
-    String_FormatInt(number, dexNumber, 3, PADDING_MODE_ZEROES, CHARSET_MODE_EN);
+    if (dexNumber > 0) {
+        number = String_Init(8, heapID);
+        String_FormatInt(number, dexNumber, 3, PADDING_MODE_ZEROES, CHARSET_MODE_EN);
+    } else {
+        number = GetMessage(TEXT_BANK_POKEDEX, pl_msg_pokedex_none, heapID);
+    }
+
     String_Concat(string, number);
     PrintAt(window, FONT_SYSTEM, string, graphics->leftX + 6, NAME_BOX_TOP, 0, TEXT_HEADER);
     String_Free(number);
@@ -584,10 +587,10 @@ static void DrawLeftText(PageGraphics *graphics, const PageData *data, enum Heap
 
 #define TYPE_ICON_GAP 2
 
-static void ShowSpeciesTypes(PageGraphics *graphics, const PageData *data)
+static void ShowSpeciesTypes(PageGraphics *graphics, int species, int form)
 {
-    const int type1 = SpeciesData_GetFormValue(data->species, data->form, SPECIES_DATA_TYPE_1);
-    const int type2 = SpeciesData_GetFormValue(data->species, data->form, SPECIES_DATA_TYPE_2);
+    const int type1 = SpeciesData_GetFormValue(species, form, SPECIES_DATA_TYPE_1);
+    const int type2 = SpeciesData_GetFormValue(species, form, SPECIES_DATA_TYPE_2);
     const int x = graphics->leftX + 6;
     const int y = NAME_BOX_TOP + 42;
 
@@ -1297,12 +1300,14 @@ static void WrapEntry(String *string, int maxWidth, enum HeapID heapID)
 #define INFO_VALUE_X       (INFO_LABEL_X + 32)
 #define INFO_ENTRY_TOP     (BODY_TOP + 36)
 
-static void DrawInfoPage(PageGraphics *graphics, const PageData *data, enum HeapID heapID)
+static void DrawInfoPage(PageGraphics *graphics, int species, int form, BOOL caught, enum HeapID heapID)
 {
     Window *window = &graphics->rightWindow;
     // As in Platinum, the details wait for the Pokémon to be caught.
-    const BOOL caught = PokedexSort_CurrentCaughtStatus(data->sortData) == CS_CAUGHT;
-    const int species = caught ? data->species : SPECIES_NONE;
+    if (!caught) {
+        species = SPECIES_NONE;
+    }
+
     String *string = PokedexText_Category(species, GAME_LANGUAGE, heapID);
 
     FitString(string, FONT_SYSTEM, graphics->rightW - 16);
@@ -1316,7 +1321,7 @@ static void DrawInfoPage(PageGraphics *graphics, const PageData *data, enum Heap
 
     if (caught) {
         // Giratina's Origin Forme leaves no print, like Metapod.
-        const int print = data->species == SPECIES_GIRATINA && data->form > 0 ? SPECIES_METAPOD : data->species;
+        const int print = species == SPECIES_GIRATINA && form > 0 ? SPECIES_METAPOD : species;
 
         DrawFootprint(graphics->canvas, print, boxX + (INFO_FOOTPRINT_BOX - 16) / 2, boxY + (INFO_FOOTPRINT_BOX - 16) / 2, heapID);
     }
@@ -1391,16 +1396,37 @@ static void CenterSpriteArt(PokemonSprite *sprite, int x, int y, enum HeapID hea
     PokemonSprite_SetAttribute(sprite, MON_SPRITE_Y_CENTER, y);
 }
 
-static void Redraw(PageGraphics *graphics, PokedexGraphicData *graphicData, const PageData *data, enum HeapID heapID)
+static void DrawPageFrame(PageGraphics *graphics, int species, int form, BOOL nationalDex, BOOL caught, enum HeapID heapID)
 {
     HideTypeIcons(graphics);
-    DrawFrame(graphics, data);
-
+    DrawFrame(graphics, caught);
     Window_FillTilemap(&graphics->leftWindow, 0);
     Window_FillTilemap(&graphics->rightWindow, 0);
+    DrawLeftText(graphics, species, nationalDex, heapID);
+    ShowSpeciesTypes(graphics, species, form);
+}
 
-    DrawLeftText(graphics, data, heapID);
-    ShowSpeciesTypes(graphics, data);
+static void UploadPage(PageGraphics *graphics, BgConfig *bgConfig)
+{
+    PokedexCanvas_Upload(graphics->canvas, bgConfig, BG_LAYER_MAIN_3, 1, 1023, 0, 0);
+    Window_CopyToVRAM(&graphics->leftWindow);
+    Window_CopyToVRAM(&graphics->rightWindow);
+}
+
+static void PositionPageSprite(PageGraphics *graphics, PokemonSprite *sprite, enum HeapID heapID)
+{
+    // Keep the sprite in the native 3D viewport and shift it to the wide sprite box.
+    const int spriteX = graphics->leftX + graphics->leftW / 2;
+
+    PokedexWide_Set3DOffset(spriteX - graphics->left - 48);
+    CenterSpriteArt(sprite, 48, PANEL_TOP + SPRITE_BOX_H / 2, heapID);
+}
+
+static void Redraw(PageGraphics *graphics, PokedexGraphicData *graphicData, const PageData *data, enum HeapID heapID)
+{
+    const BOOL caught = PokedexSort_CurrentCaughtStatus(data->sortData) == CS_CAUGHT;
+
+    DrawPageFrame(graphics, data->species, data->form, PokedexSort_IsNationalDex(data->sortData), caught, heapID);
 
     switch (data->kind) {
     case POKEDEX_WIDE_PAGE_STATS:
@@ -1413,20 +1439,14 @@ static void Redraw(PageGraphics *graphics, PokedexGraphicData *graphicData, cons
         DrawEvosPage(graphics, data, heapID);
         break;
     case POKEDEX_WIDE_PAGE_INFO:
-        DrawInfoPage(graphics, data, heapID);
+        DrawInfoPage(graphics, data->species, data->form, caught, heapID);
         break;
     }
 
-    PokedexCanvas_Upload(graphics->canvas, graphicData->bgConfig, BG_LAYER_MAIN_3, 1, 1023, 0, 0);
-    Window_CopyToVRAM(&graphics->leftWindow);
-    Window_CopyToVRAM(&graphics->rightWindow);
+    UploadPage(graphics, graphicData->bgConfig);
 
-    // The Pokémon sprite, centered in its box: the 3D layer moves to put native x 48 there.
-    const int spriteX = graphics->leftX + graphics->leftW / 2;
-
-    PokedexWide_Set3DOffset(spriteX - graphics->left - 48);
     PokedexMain_DisplayPokemonSprite(graphicData, data->sortData, data->species, 2, 48, PANEL_TOP + SPRITE_BOX_H / 2);
-    CenterSpriteArt(PokemonGraphics_GetPokemonChar(graphicData), 48, PANEL_TOP + SPRITE_BOX_H / 2, heapID);
+    PositionPageSprite(graphics, PokemonGraphics_GetPokemonChar(graphicData), heapID);
     PokemonSprite_SetAttribute(PokemonGraphics_GetPokemonChar(graphicData), MON_SPRITE_HIDE, FALSE);
     PokemonSprite_SetAttribute(PokemonGraphics_GetPokemonChar(graphicData), MON_SPRITE_ALPHA, 31);
 
@@ -1460,6 +1480,80 @@ static void StartFade(PageGraphics *graphics, PokedexGraphicData *graphicData, B
     graphics->fade = fadeIn ? PAGE_FADE_IN : PAGE_FADE_OUT;
 }
 
+static void SetupPageLayout(PageGraphics *graphics, BgConfig *bgConfig, enum HeapID heapID)
+{
+    graphics->width = PokedexWide_Width();
+    graphics->left = PokedexWide_Left();
+    graphics->leftX = 8;
+
+    int leftW = ((graphics->width - 24) * 34 / 100) & ~7;
+    graphics->leftW = leftW < 96 ? 96 : leftW > 144 ? 144 : leftW;
+    graphics->rightX = graphics->leftX + graphics->leftW + 8;
+    graphics->rightW = graphics->width - 8 - graphics->rightX;
+
+    PokedexWide_ConfigureLayer(bgConfig, BG_LAYER_MAIN_1, TRUE);
+    PokedexWide_ConfigureLayer(bgConfig, BG_LAYER_MAIN_3, TRUE);
+    PokedexWide_LoadPalette();
+
+    const int leftRows = 24 - NAME_BOX_TOP / 8;
+
+    Window_Add(bgConfig, &graphics->leftWindow, BG_LAYER_MAIN_1, graphics->leftX / 8, NAME_BOX_TOP / 8, graphics->leftW / 8, leftRows, POKEDEX_WIDE_PLTT, 1);
+    Window_Add(bgConfig, &graphics->rightWindow, BG_LAYER_MAIN_1, graphics->rightX / 8, PANEL_TOP / 8, graphics->rightW / 8, 24 - PANEL_TOP / 8, POKEDEX_WIDE_PLTT, 1 + (graphics->leftW / 8) * leftRows);
+
+    graphics->canvas = PokedexCanvas_New(graphics->width, 192, heapID);
+}
+
+static void FreePageLayout(PageGraphics *graphics)
+{
+    Window_Remove(&graphics->leftWindow);
+    Window_Remove(&graphics->rightWindow);
+    PokedexCanvas_Free(graphics->canvas);
+}
+
+#ifdef SDK_PORT
+PageGraphics *PokedexInfoPage_ShowCaught(const PokedexEntryScreenParams *params, PokemonSprite *sprite, NARC *narc, SpriteList *spriteList, SpriteResourceCollection **collections)
+{
+    const enum HeapID heapID = params->heapID;
+    const int species = Pokemon_GetValue(params->mon, MON_DATA_SPECIES, NULL);
+    const int form = Pokemon_GetValue(params->mon, MON_DATA_FORM, NULL);
+    PageGraphics *graphics = Heap_Alloc(heapID, sizeof(PageGraphics));
+
+    memset(graphics, 0, sizeof(PageGraphics));
+    PokedexWide_Begin();
+    SetupPageLayout(graphics, params->bgConfig, heapID);
+    LoadTypeIcons(graphics, narc, spriteList, collections, heapID);
+    graphics->spritesShown = TRUE;
+
+    DrawPageFrame(graphics, species, form, params->hasNationalDex, TRUE, heapID);
+    DrawInfoPage(graphics, species, form, TRUE, heapID);
+    PokedexCanvas_Fill(graphics->canvas, 0, 0, graphics->width, 16, PDW_RED_DARK);
+    UploadPage(graphics, params->bgConfig);
+
+    Window title;
+    const Window *right = &graphics->rightWindow;
+    const int titleTile = right->baseTile + right->width * right->height;
+
+    Window_Add(params->bgConfig, &title, BG_LAYER_MAIN_1, 0, 0, graphics->width / 8, 2, POKEDEX_WIDE_PLTT, titleTile);
+    Window_FillTilemap(&title, 0);
+    PrintMessage(&title, FONT_SYSTEM, TEXT_BANK_POKEDEX, pl_msg_pokedex_registered, graphics->width / 2, 0, 2, TEXT_LIGHT, heapID);
+    Window_CopyToVRAM(&title);
+    Window_Remove(&title);
+
+    PositionPageSprite(graphics, sprite, heapID);
+    return graphics;
+}
+
+void PokedexInfoPage_FreeCaught(PageGraphics *graphics, BgConfig *bgConfig, SpriteResourceCollection **collections)
+{
+    FreeTypeIcons(graphics, collections);
+    FreePageLayout(graphics);
+    Bg_FreeTilemapBuffer(bgConfig, BG_LAYER_MAIN_1);
+    Bg_FreeTilemapBuffer(bgConfig, BG_LAYER_MAIN_3);
+    PokedexWide_End();
+    Heap_Free(graphics);
+}
+#endif
+
 static BOOL PageGraphics_Init(void *graphicsData, PokedexGraphicsManager *graphicsMan, const void *pageData, const PokedexDataManager *dataMan)
 {
     PokedexGraphicData *graphicData = *(PokedexGraphicData **)graphicsData;
@@ -1478,28 +1572,8 @@ static BOOL PageGraphics_Init(void *graphicsData, PokedexGraphicsManager *graphi
             PokedexWide_Begin();
         }
 
-        graphics->width = PokedexWide_Width();
-        graphics->left = PokedexWide_Left();
-        graphics->leftX = 8;
-
-        int leftW = ((graphics->width - 24) * 34 / 100) & ~7;
-        graphics->leftW = leftW < 96 ? 96 : leftW > 144 ? 144 : leftW;
-        graphics->rightX = graphics->leftX + graphics->leftW + 8;
-        graphics->rightW = graphics->width - 8 - graphics->rightX;
-
-        BgConfig *bgConfig = graphicData->bgConfig;
-
-        PokedexWide_ConfigureLayer(bgConfig, BG_LAYER_MAIN_1, TRUE);
-        PokedexWide_ConfigureLayer(bgConfig, BG_LAYER_MAIN_3, TRUE);
-        PokedexWide_LoadPalette();
-
-        const int leftRows = 24 - NAME_BOX_TOP / 8;
-
-        Window_Add(bgConfig, &graphics->leftWindow, BG_LAYER_MAIN_1, graphics->leftX / 8, NAME_BOX_TOP / 8, graphics->leftW / 8, leftRows, POKEDEX_WIDE_PLTT, 1);
-        Window_Add(bgConfig, &graphics->rightWindow, BG_LAYER_MAIN_1, graphics->rightX / 8, PANEL_TOP / 8, graphics->rightW / 8, 24 - PANEL_TOP / 8, POKEDEX_WIDE_PLTT, 1 + (graphics->leftW / 8) * leftRows);
-
-        graphics->canvas = PokedexCanvas_New(graphics->width, 192, heapID);
-        LoadTypeIcons(graphics, graphicData, heapID);
+        SetupPageLayout(graphics, graphicData->bgConfig, heapID);
+        LoadTypeIcons(graphics, PokedexGraphics_GetNARC(graphicData), graphicData->spriteList, graphicData->spriteResourceCollection, heapID);
 
         if (data->kind == POKEDEX_WIDE_PAGE_EVOS) {
             SetupIcons(graphics, graphicData, heapID);
@@ -1569,15 +1643,13 @@ static BOOL PageGraphics_Exit(void *graphicsData, PokedexGraphicsManager *graphi
     case 2: {
         BgConfig *bgConfig = graphicData->bgConfig;
 
-        FreeTypeIcons(graphics, graphicData);
+        FreeTypeIcons(graphics, graphicData->spriteResourceCollection);
 
         if (data->kind == POKEDEX_WIDE_PAGE_EVOS) {
             FreeIcons(graphics, graphicData);
         }
 
-        Window_Remove(&graphics->leftWindow);
-        Window_Remove(&graphics->rightWindow);
-        PokedexCanvas_Free(graphics->canvas);
+        FreePageLayout(graphics);
 
         PokedexWide_ConfigureLayer(bgConfig, BG_LAYER_MAIN_1, FALSE);
         PokedexWide_ConfigureLayer(bgConfig, BG_LAYER_MAIN_3, FALSE);

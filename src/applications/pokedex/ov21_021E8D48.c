@@ -10,6 +10,13 @@
 #include "applications/pokedex/pokedex_text_manager.h"
 #include "applications/pokedex/struct_ov21_021E8E0C.h"
 
+#ifdef SDK_PORT
+#include "applications/pokedex/pokedex_pages.h"
+#include "applications/pokedex/pokedex_wide.h"
+
+#include "port/battle_timing.h"
+#endif
+
 #include "bg_window.h"
 #include "char_transfer.h"
 #include "graphics.h"
@@ -77,6 +84,14 @@ typedef struct UnkStruct_ov21_021E8D48_t {
     SysTask *unk_224;
     UnkStruct_ov21_021E9A9C unk_228;
     BOOL unk_248;
+#ifdef SDK_PORT
+    PageGraphics *widePage;
+    int slideFrame;
+    int slideDuration;
+    int slideStartX;
+    int slideStartY;
+    int slideStartOffset;
+#endif
 } UnkStruct_ov21_021E8D48;
 
 static void ov21_021E9828(SysTask *param0, void *param1);
@@ -178,6 +193,44 @@ void ov21_021E8E04(UnkStruct_ov21_021E8D48 *param0, BOOL param1)
     param0->unk_248 = param1;
 }
 
+#ifdef SDK_PORT
+BOOL PokedexCaughtEntry_StepNicknameSlide(UnkStruct_ov21_021E8D48 *entry)
+{
+    PokemonSprite *sprite = entry->unk_0C;
+    const int targetX = HW_LCD_WIDTH / 2;
+    const int targetY = 72;
+
+    if (entry->slideFrame == 0) {
+        entry->slideDuration = BattleTiming_ShouldSmoothAnimations() ? 40 : 20;
+        entry->slideStartOffset = PokedexWide_Get3DOffset();
+        entry->slideStartX = PokemonSprite_GetAttribute(sprite, MON_SPRITE_X_CENTER) + entry->slideStartOffset;
+        entry->slideStartY = PokemonSprite_GetAttribute(sprite, MON_SPRITE_Y_CENTER);
+        // Keep the sprite in front of the entry text as it crosses the fading page.
+        Bg_SetPriority(BG_LAYER_MAIN_0, 0);
+        // This slide supplies a pose on every frame, including the battle's off ticks.
+        PokemonSprite_SetBattleSmoothingEnabled(sprite, FALSE);
+    }
+
+    entry->slideFrame++;
+    const fx32 t = entry->slideFrame * FX32_ONE / entry->slideDuration;
+    const fx32 eased = FX_Mul(FX_Mul(t, t), 3 * FX32_ONE - 2 * t);
+    const int offset = entry->slideStartOffset * (FX32_ONE - eased) / FX32_ONE;
+    const int x = entry->slideStartX + (targetX - entry->slideStartX) * eased / FX32_ONE;
+    const int y = entry->slideStartY + (targetY - entry->slideStartY) * eased / FX32_ONE;
+
+    // Move in screen coordinates while bringing the shifted 3D viewport back to center.
+    PokedexWide_Set3DOffset(offset);
+    PokemonSprite_SetAttribute(sprite, MON_SPRITE_X_CENTER, x - offset);
+    PokemonSprite_SetAttribute(sprite, MON_SPRITE_Y_CENTER, y);
+
+    if (entry->slideFrame == entry->slideDuration) {
+        PokemonSprite_SetBattleSmoothingEnabled(sprite, TRUE);
+        return TRUE;
+    }
+    return FALSE;
+}
+#endif
+
 static void ov21_021E8E0C(UnkStruct_ov21_021E8D48 *param0, const PokedexEntryScreenParams *dexEntryScreenParams)
 {
     PokedexTextManagerTemplate textManTemplate;
@@ -195,6 +248,20 @@ static void ov21_021E8E0C(UnkStruct_ov21_021E8D48 *param0, const PokedexEntryScr
 
     param0->unk_0C = ov21_021E99E0(dexEntryScreenParams->monSpriteMan, dexEntryScreenParams->mon, 48, 72, dexEntryScreenParams->heapID);
     param0->unk_08 = dexEntryScreenParams->plttData;
+
+#ifdef SDK_PORT
+    PokedexWide_LatchEnabled();
+    if (PokedexWide_IsEnabled()) {
+        Bg_SetPriority(BG_LAYER_MAIN_0, 2);
+        GXLayers_EngineAToggleLayers(GX_PLANEMASK_BG0, TRUE);
+        GXLayers_EngineAToggleLayers(GX_PLANEMASK_BG2, FALSE);
+        ov21_021E9208(param0->unk_1A0, dexEntryScreenParams->heapID);
+        param0->widePage = PokedexInfoPage_ShowCaught(dexEntryScreenParams, param0->unk_0C, v1, param0->unk_19C, param0->unk_1A0);
+        G2_SetBlendBrightness(POKEDEX_WIDE_FADE_PLANES, -16);
+        NARC_dtor(v1);
+        return;
+    }
+#endif
 
     textManTemplate.spriteList = param0->unk_19C;
     textManTemplate.bgConfig = param0->unk_00;
@@ -244,6 +311,16 @@ static void ov21_021E8E0C(UnkStruct_ov21_021E8D48 *param0, const PokedexEntryScr
 
 static void ov21_021E900C(UnkStruct_ov21_021E8D48 *param0)
 {
+#ifdef SDK_PORT
+    if (param0->widePage) {
+        PokedexInfoPage_FreeCaught(param0->widePage, param0->unk_00, param0->unk_1A0);
+        ov21_021E9228(param0->unk_1A0);
+        SpriteList_Delete(param0->unk_19C);
+        ov21_021E9A38();
+        return;
+    }
+#endif
+
     ov21_021E9AC8(&param0->unk_228);
     ov21_021E968C(&param0->unk_200);
     ov21_021E95EC(&param0->unk_200, param0->unk_1A0);

@@ -92,6 +92,7 @@ int PokedexWide_Left(void);
 int PokedexWide_TileWidth(void);
 // Moves the native-width 3D layer (the Pokémon sprite) by dots within the view.
 void PokedexWide_Set3DOffset(int dots);
+int PokedexWide_Get3DOffset(void);
 // Main BG layers 1-3: 512-dot screens laid out in view coordinates, or back to the
 // Pokédex's original 256-dot templates. Clears the layer either way.
 void PokedexWide_ConfigureLayer(BgConfig *bgConfig, u8 layer, BOOL wide);

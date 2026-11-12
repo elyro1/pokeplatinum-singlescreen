@@ -1,6 +1,8 @@
 #include "battle/battle_main.h"
 
 #ifdef SDK_PORT
+#include <simulator/sim.h>
+
 #include "bwbattle/bw_adapter.h"
 #include "bwbattle/bwbattle.h"
 #endif
@@ -13,6 +15,7 @@
 #include "constants/battle.h"
 #include "constants/battle/battle_controller.h"
 #include "constants/communication/comm_error.h"
+#include "constants/graphics.h"
 #include "constants/heap.h"
 #include "generated/game_records.h"
 #include "generated/trainer_classes.h"
@@ -346,6 +349,12 @@ void BattleSystem_EnterSubMenu(BattleSystem *battleSys)
 
 void BattleSystem_FreeGraphics(BattleSystem *battleSys)
 {
+#ifdef SDK_PORT
+    if (battleSys->wideNicknameBackdrop) {
+        SIM_SetWideUI(FALSE);
+        battleSys->wideNicknameBackdrop = FALSE;
+    }
+#endif
     SetVBlankCallback(NULL, NULL);
     BattleSubscreen_Free(battleSys->btlSubscreen);
     // The capture flow can finish directly from the Pokedex, which has already
@@ -412,6 +421,43 @@ void BattleSystem_HideBattleScreen(BattleSystem *battleSys)
     Bg_FreeTilemapBuffer(battleSys->bgConfig, BG_LAYER_MAIN_3);
     BattleSystem_HideHealthboxes(battleSys);
 }
+
+#ifdef SDK_PORT
+static void BattleMain_MirrorNicknameBackdrop(BattleSystem *battleSys)
+{
+    battleSys->wideNicknameBackdrop = SIM_SetWideUI(TRUE) > HW_LCD_WIDTH;
+    if (!battleSys->wideNicknameBackdrop) {
+        return;
+    }
+
+    enum {
+        BLOCK_TILES = 32,
+        BACKDROP_ROWS = 20,
+        VISIBLE_ROWS = HW_LCD_HEIGHT / TILE_HEIGHT_PIXELS,
+    };
+    u16 *tilemap = Bg_GetTilemapBuffer(battleSys->bgConfig, BG_LAYER_MAIN_3);
+    u16 *mirrored = tilemap + BLOCK_TILES * BLOCK_TILES;
+
+    for (int row = 0; row < VISIBLE_ROWS; row++) {
+        u16 *nativeRow = tilemap + row * BLOCK_TILES;
+
+        // The original backdrop ends behind the message box. Reflect its bottom
+        // edge into the rows that are exposed beside the box in widescreen.
+        if (row >= BACKDROP_ROWS) {
+            const u16 *source = tilemap + (2 * BACKDROP_ROWS - 1 - row) * BLOCK_TILES;
+            for (int col = 0; col < BLOCK_TILES; col++) {
+                nativeRow[col] = source[col] ^ BG_TILE_FLIP_V;
+            }
+        }
+
+        // BG3 wraps, so both side margins sample the second 256-dot block.
+        for (int col = 0; col < BLOCK_TILES; col++) {
+            mirrored[row * BLOCK_TILES + col] = nativeRow[BLOCK_TILES - 1 - col] ^ BG_TILE_FLIP_H;
+        }
+    }
+    Bg_CopyTilemapBufferToVRAM(battleSys->bgConfig, BG_LAYER_MAIN_3);
+}
+#endif
 
 void BattleSystem_SetupBattleScreen(BattleSystem *battleSys, BOOL restoreTerrain)
 {
@@ -504,6 +550,11 @@ void BattleSystem_SetupBattleScreen(BattleSystem *battleSys, BOOL restoreTerrain
     PaletteData_LoadBufferFromFileStart(battleSys->paletteData, NARC_INDEX_GRAPHIC__PL_WINFRAME, GetMessageBoxPaletteNARCMember(frame), HEAP_ID_BATTLE, PLTTBUF_MAIN_BG, PALETTE_SIZE_BYTES, PLTT_DEST(10));
     PaletteData_LoadBufferFromFileStart(battleSys->paletteData, NARC_INDEX_GRAPHIC__PL_FONT, 7, HEAP_ID_BATTLE, PLTTBUF_MAIN_BG, PALETTE_SIZE_BYTES, PLTT_DEST(11));
     Graphics_LoadTilemapToBgLayer(NARC_INDEX_BATTLE__GRAPHIC__PL_BATT_BG, 2, battleSys->bgConfig, 3, 0, 0, 1, HEAP_ID_BATTLE);
+#ifdef SDK_PORT
+    if (!restoreTerrain && SIM_Config_prj_GetConfig()->widescreenPokedex) {
+        BattleMain_MirrorNicknameBackdrop(battleSys);
+    }
+#endif
 
     GX_SetVisibleWnd(GX_WNDMASK_NONE);
     GXS_SetVisibleWnd(GX_WNDMASK_NONE);
