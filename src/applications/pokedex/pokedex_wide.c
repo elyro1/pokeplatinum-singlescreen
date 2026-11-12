@@ -17,6 +17,7 @@
 #include "screen_fade.h"
 
 static int sWidth = 256;
+static int s3DOffset;
 static BOOL sEnabled = FALSE;
 static BOOL sActive = FALSE;
 static BOOL sHoldBlack = FALSE;
@@ -65,7 +66,7 @@ void PokedexWide_End(void)
         SIM_SetHeldMainScreenFirstLine(0);
     }
 
-    SIM_SetWideUI3DOffset(0);
+    PokedexWide_Set3DOffset(0);
     SIM_SetWideUI(FALSE);
     RenderView_SetHorizontalMargin(0);
 #endif
@@ -261,9 +262,15 @@ int PokedexWide_TileWidth(void)
 
 void PokedexWide_Set3DOffset(int dots)
 {
+    s3DOffset = sWidth > 256 ? dots : 0;
 #ifdef SDK_PORT
-    SIM_SetWideUI3DOffset(dots);
+    SIM_SetWideUI3DOffset(s3DOffset);
 #endif
+}
+
+int PokedexWide_Get3DOffset(void)
+{
+    return s3DOffset;
 }
 
 // The layout of pokedex_graphics.c's InitBackgrounds. The wide screens take the

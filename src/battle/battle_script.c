@@ -25,6 +25,7 @@
 
 #include "applications/naming_screen.h"
 #include "applications/pokedex/ov21_021E8D48.h"
+#include "applications/pokedex/pokedex_wide.h"
 #include "applications/pokedex/struct_ov21_021E8E0C.h"
 #include "battle/battle_context.h"
 #include "battle/battle_controller.h"
@@ -10789,6 +10790,14 @@ static void BattleScript_CatchMonTask(SysTask *task, void *inData)
         }
         break;
     case SEQ_CATCH_MON_MOVE_FOR_ASK_NICKNAME:
+#ifdef SDK_PORT
+        if (PokedexWide_IsActive()) {
+            if (PokedexCaughtEntry_StepNicknameSlide(data->tmpPtr[0])) {
+                data->seqNum = SEQ_CATCH_MON_CLOSE_POKEDEX;
+            }
+            break;
+        }
+#endif
         PokemonSprite *monSprite = ov21_021E8E00(data->tmpPtr[0]);
         PokemonSprite_AddAttribute(monSprite, MON_SPRITE_X_CENTER, 4);
 
