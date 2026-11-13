@@ -911,9 +911,12 @@ static void Evolution_InitGraphics(EvolutionData *evolutionData, BgConfig *bgCon
     Graphics_LoadTilemapToBgLayer(NARC_INDEX_GRAPHIC__POKETCH, national_dex_blank_NSCR, bgConfig, BG_LAYER_SUB_0, 0, 0, TRUE, evolutionData->heapID);
     PaletteData_LoadBufferFromFileStart(evolutionData->paletteData, NARC_INDEX_GRAPHIC__POKETCH, 12, evolutionData->heapID, PLTTBUF_SUB_BG, PALETTE_SIZE_BYTES, PLTT_DEST(0));
 
-    GX_SetVisibleWnd(GX_WNDMASK_W0);
+    // A DS window excludes its right edge, so window 0 (0..255) misses the
+    // last column. Window 1 covers it with the same planes and rows.
+    GX_SetVisibleWnd(GX_WNDMASK_W0 | GX_WNDMASK_W1);
     GXS_SetVisibleWnd(GX_WNDMASK_NONE);
     G2_SetWnd0InsidePlane(GX_WND_PLANEMASK_BG0 | GX_WND_PLANEMASK_BG1 | GX_WND_PLANEMASK_BG2 | GX_WND_PLANEMASK_BG3 | GX_WND_PLANEMASK_OBJ, 0);
+    G2_SetWnd1InsidePlane(GX_WND_PLANEMASK_BG0 | GX_WND_PLANEMASK_BG1 | GX_WND_PLANEMASK_BG2 | GX_WND_PLANEMASK_BG3 | GX_WND_PLANEMASK_OBJ, 0);
     G2_SetWndOutsidePlane(GX_WND_PLANEMASK_BG1 | GX_WND_PLANEMASK_OBJ, 0);
 
     evolutionData->windowLeft = 0;
@@ -963,6 +966,7 @@ static void Evolution_VBlankCallback(void *data)
     EvolutionData *evolutionData = (EvolutionData *)data;
 
     G2_SetWnd0Position(evolutionData->windowLeft, evolutionData->windowTop, evolutionData->windowRight, evolutionData->windowBottom);
+    G2_SetWnd1Position(HW_LCD_WIDTH - 1, evolutionData->windowTop, 0, evolutionData->windowBottom);
 
     PokemonSpriteManager_UpdateCharAndPltt(evolutionData->monSpriteMan);
     VramTransfer_Process();
