@@ -1959,7 +1959,8 @@ void Healthbox_StartBobAnimation(HealthBox *healthbox)
     }
 
     healthbox->degrees = 0;
-    healthbox->bobbingAnimTask = SysTask_StartBattleUI(Healthbox_Task_Bob, healthbox, 1010);
+    // Same clock as the idle bounce it mirrors (idle_bounce_anim.c); the UI clock bobs twice as fast in Smooth.
+    healthbox->bobbingAnimTask = SysTask_StartBattleAnimation(Healthbox_Task_Bob, healthbox, 1010);
 }
 
 void Healthbox_StopBobAnimation(HealthBox *healthbox)
