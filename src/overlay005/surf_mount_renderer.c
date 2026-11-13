@@ -12,9 +12,11 @@
 #include "field/field_system.h"
 #include "overlay005/field_effect_manager.h"
 #include "overlay005/object_event_gfx_data.h"
+#include "overlay005/ov5_021EB1A0.h"
 #include "overlay005/ov5_021ECC20.h"
 #include "overlay005/ov5_021F17B8.h"
 
+#include "camera.h"
 #include "field_system.h"
 #include "fx_util.h"
 #include "heap.h"
@@ -44,6 +46,14 @@
 #define POKEMON_MOUNT_POS_OFFSET_Z   (FX32_ONE * 6)
 #define POKEMON_RIDER_HEIGHT         (FX32_ONE * 24)
 #define POKEMON_LARGE_RIDER_HEIGHT   (FX32_ONE * 32)
+// Surf seat, in texels: sideways the rider sits this far from the head toward
+// the tail; facing north, this far down from the top of the outline.
+#define SEAT_TAIL_PERCENT  62
+#define SEAT_NORTH_PERCENT 35
+// The rider sprite's legs hang this far below the seat; facing south they are
+// partly hidden behind the head, so less of the rider drops below it.
+#define RIDER_HIP             12
+#define RIDER_HIP_BEHIND_HEAD 6
 
 typedef struct SurfMountResources {
     FieldEffectManager *fieldEffMan;
@@ -71,6 +81,14 @@ typedef struct SurfPokemonVisual {
     NNSGfdPlttKey plttKey;
     u16 graphicsID;
     BOOL ready;
+    MapObject *player;
+    // Surf only: where the rider sits for each facing, in texels from the
+    // sprite's bottom centre.
+    BOOL seated;
+    BOOL riderBehindHead;
+    s8 seatX[4];
+    s8 seatHeight[4];
+    BOOL riderBehind;
 } SurfPokemonVisual;
 
 typedef struct SurfMountRenderer {
@@ -182,6 +200,96 @@ void PokemonMountVisual_Free(SurfPokemonVisual *visual)
     Heap_Free(visual);
 }
 
+// Sprites are drawn one texel per pixel, but a world height offset moves them
+// by only the cosine of the camera's pitch on screen. Lift by texels instead.
+static fx32 TexelsToHeight(const MapObject *player, int texels)
+{
+    const Camera *camera = MapObject_FieldSystem(player)->camera;
+    VecFx32 target = Camera_GetTarget(camera), position = Camera_GetPosition(camera), view;
+    VEC_Subtract(&position, &target, &view);
+    VEC_Normalize(&view, &view);
+    fx32 horizontal = FX_Sqrt(FX_Mul(view.x, view.x) + FX_Mul(view.z, view.z));
+    if (horizontal < FX32_ONE / 8) {
+        return texels * FX32_ONE;
+    }
+    return FX_Div(texels * FX32_ONE, horizontal);
+}
+
+static int TexelAt(const u8 *frame, int width, int x, int y)
+{
+    return frame[(y * width + x) / 2] >> ((x & 1) * 4) & 15;
+}
+
+// The seat follows the mount's outline: on its back behind the head, toward
+// the tail when it faces sideways. Measured on each facing's first frame.
+static void SurfPokemonVisual_MeasureSeats(SurfPokemonVisual *visual, const NNSG3dResTex *texture, const BillboardAnim *anims, const BillboardGfxSequence *sequence)
+{
+    const u8 *images = (const u8 *)texture + texture->texInfo.ofsTex;
+
+    for (int dir = DIR_NORTH; dir <= DIR_EAST; dir++) {
+        u8 textureIdx = BillboardGfxSequence_GetTexPlttIndexAt(sequence, anims[dir].startFrame).textureIdx;
+        if (textureIdx >= texture->dict.numEntry) {
+            return;
+        }
+        u32 param = NNS_G3dGetTexDataByIdx(texture, textureIdx)->texImageParam;
+        int width = 8 << (param >> 20 & 7), height = 8 << (param >> 23 & 7);
+        if ((param >> 26 & 7) != GX_TEXFMT_PLTT16) {
+            return;
+        }
+        const u8 *frame = images + ((param & 0xffff) << 3);
+        int left = width, right = -1, top = height, bottom = -1;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                if (TexelAt(frame, width, x, y) != 0) {
+                    left = x < left ? x : left;
+                    right = x > right ? x : right;
+                    top = y < top ? y : top;
+                    bottom = y > bottom ? y : bottom;
+                }
+            }
+        }
+        if (right < 0) {
+            return;
+        }
+        int seatX = (left + right + 1) / 2;
+        if (dir == DIR_WEST) {
+            seatX = left + (right - left + 1) * SEAT_TAIL_PERCENT / 100;
+        } else if (dir == DIR_EAST) {
+            seatX = right + 1 - (right - left + 1) * SEAT_TAIL_PERCENT / 100;
+        }
+        int seatRow = bottom;
+        // Large mounts' outlines peak at the back or tail, not the head, so
+        // facing south the rider sits on the back in front, as when facing north.
+        BOOL behindHead = dir == DIR_SOUTH && height <= 32;
+        if (dir == DIR_SOUTH) {
+            visual->riderBehindHead = behindHead;
+        }
+        if (dir == DIR_NORTH || (dir == DIR_SOUTH && !behindHead)) {
+            seatRow = top + (bottom - top) * SEAT_NORTH_PERCENT / 100;
+        } else {
+            for (int x = seatX - 2; x <= seatX + 2; x++) {
+                for (int y = 0; y < height && x >= 0 && x < width; y++) {
+                    if (TexelAt(frame, width, x, y) != 0) {
+                        seatRow = y < seatRow ? y : seatRow;
+                        break;
+                    }
+                }
+            }
+        }
+        visual->seatX[dir] = seatX - width / 2;
+        visual->seatHeight[dir] = height - 1 - seatRow;
+    }
+    visual->seated = TRUE;
+}
+
+// Facing the camera, the rider sits behind the head, so the mount draws in front.
+// Otherwise the rider covers the mount's back.
+static void SurfPokemonVisual_UpdateDepth(Billboard *mount, void *context)
+{
+    SurfPokemonVisual *visual = context;
+    PokemonReflection_SetLayer(mount, ov5_021EB1A0(visual->player), visual->riderBehind, NNS_G3dGlbGetCameraMtx(), NNS_G3dGlbGetProjectionMtx());
+}
+
 static void SurfPokemonVisual_Upload(SysTask *task, void *context)
 {
     SurfPokemonVisual *visual = context;
@@ -195,7 +303,7 @@ static void SurfPokemonVisual_Upload(SysTask *task, void *context)
     SysTask_Done(task);
 }
 
-PokemonMountVisual *PokemonMountVisual_New(MapObject *player, u16 graphicsID, BOOL reflection)
+PokemonMountVisual *PokemonMountVisual_New(MapObject *player, u16 graphicsID, BOOL surf)
 {
 #ifdef SDK_PORT
     if (!FollowerAssets_Ready()) {
@@ -212,6 +320,7 @@ PokemonMountVisual *PokemonMountVisual_New(MapObject *player, u16 graphicsID, BO
     }
     memset(visual, 0, sizeof(*visual));
     visual->graphicsID = graphicsID;
+    visual->player = player;
 
     const ObjectEventGfxModelAnimEntry *entry = &gObjectEventGfxModelAnimsTable[graphicsID - OVERWORLD_POKEMON_GFX_BASE];
     const ObjectEventGfxFileEntry *model = gObjectEventGfxModelsTable;
@@ -256,6 +365,9 @@ PokemonMountVisual *PokemonMountVisual_New(MapObject *player, u16 graphicsID, BO
         : OVERWORLD_POKEMON_SEQUENCE_NORMAL;
     BillboardGfxSequence sequence;
     BillboardGfxSequence_SetData(OverworldPokemonAssets_GetResource(sequenceID, &sequenceSize), &sequence);
+    if (surf) {
+        SurfPokemonVisual_MeasureSeats(visual, texture, entry->animations, &sequence);
+    }
     BillboardResources resources;
     BillboardResources_Set(&resources, visual->modelData, texture, entry->animations, &sequence, visual->texKey, visual->tex4x4Key, visual->plttKey);
     VecFx32 position = { 0, 0, 0 };
@@ -265,13 +377,16 @@ PokemonMountVisual *PokemonMountVisual_New(MapObject *player, u16 graphicsID, BO
         return NULL;
     }
     Billboard_SetDrawFlag(visual->billboard, FALSE);
+    if (surf) {
+        Billboard_SetCallback(visual->billboard, SurfPokemonVisual_UpdateDepth, visual);
+    }
     DC_FlushRange(texture, texture->header.size);
     visual->uploadTask = SysTask_ExecuteOnVBlank(SurfPokemonVisual_Upload, visual, 0xffff);
     if (visual->uploadTask == NULL) {
         PokemonMountVisual_Free(visual);
         return NULL;
     }
-    if (reflection) {
+    if (surf) {
         visual->reflection = PokemonReflection_New(fieldEffMan, &resources, &position);
     }
     return visual;
@@ -305,6 +420,7 @@ void PokemonMountVisual_Render(PokemonMountVisual *visual, const VecFx32 *positi
     if (visible) {
         VecFx32 anchor = *position;
         anchor.z += POKEMON_MOUNT_POS_OFFSET_Z;
+        visual->riderBehind = visual->seated && visual->riderBehindHead && direction == DIR_SOUTH;
         Billboard_SetPos(billboard, &anchor);
         if (Billboard_GetAnimNum(billboard) != direction) {
             Billboard_SetAnimNum(billboard, direction);
@@ -484,6 +600,11 @@ static void SurfMountRenderer_AnimTick(OverworldAnimManager *animMan, void *cont
     VecFx32 spritePosOffset;
     spritePosOffset.x = MAP_OBJECT_BASE_POS_OFFSET_X;
     spritePosOffset.y = SurfMountRenderer_RiderHeight(renderer) + renderer->yOffset;
+    if (renderer->pokemon != NULL && renderer->pokemon->ready && renderer->pokemon->seated) {
+        const SurfPokemonVisual *mount = renderer->pokemon;
+        spritePosOffset.x += mount->seatX[renderer->dir] * FX32_ONE;
+        spritePosOffset.y = TexelsToHeight(playerMapObj, mount->seatHeight[renderer->dir] - (renderer->dir == DIR_SOUTH && mount->riderBehindHead ? RIDER_HIP_BEHIND_HEAD : RIDER_HIP)) + renderer->yOffset;
+    }
     spritePosOffset.z = MAP_OBJECT_BASE_POS_OFFSET_Z;
 
     MapObject_SetSpritePosOffset(playerMapObj, &spritePosOffset);

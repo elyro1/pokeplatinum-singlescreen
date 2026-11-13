@@ -9,6 +9,7 @@
 #include "field/field_system.h"
 #include "field/field_system_sub2_t.h"
 #include "overlay005/map_name_popup.h"
+#include "overlay005/ov5_021DFB54.h"
 #include "overlay005/save_info_window.h"
 
 #include "encounter.h"
@@ -25,6 +26,8 @@
 #include "player_avatar.h"
 
 #include "poketch.h"
+#include "terrain_collision_manager.h"
+#include "map_tile_behavior.h"
 
 static FieldSystem *s_fieldSystem = NULL;
 static OverworldPokemonHandle sDebugPokemon[32];
@@ -208,6 +211,62 @@ static void DebugPokemonFrame(FieldSystem *fieldSystem)
     }
 }
 
+// PLATINUM_DEBUG_SURF=<species> turns the first party Pokemon into that species, teaches it Surf and surfs onto the
+// tile the player faces (warp to a shore with PLATINUM_DEBUG_MAP first; it faces south). If that tile isn't water,
+// it prints the surfable tiles around the player instead.
+static BOOL FieldTask_DebugSurf(FieldTask *task)
+{
+    int *state = FieldTask_GetState(task);
+
+    if (*state == 0) {
+        (*state)++;
+        FieldTask_StartUseSurf(task, PlayerAvatar_GetFacingDir(FieldTask_GetFieldSystem(task)->playerAvatar), 0);
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static void DebugSurfFrame(FieldSystem *fieldSystem)
+{
+    static BOOL sDone;
+    static int sFrames;
+    const char *setting = getenv("PLATINUM_DEBUG_SURF");
+
+    if (sDone || setting == NULL || (getenv("PLATINUM_DEBUG_MAP") != NULL && !sDebugMapTriggered)
+        || fieldSystem->processManager->pause || !fieldSystem->runningFieldMap || FieldSystem_IsRunningTask(fieldSystem)
+        || fieldSystem->playerAvatar == NULL) {
+        sFrames = 0;
+        return;
+    }
+    if (++sFrames < 60) {
+        return;
+    }
+    sDone = TRUE;
+
+    int x = PlayerAvatar_GetXPos(fieldSystem->playerAvatar), z = PlayerAvatar_GetZPos(fieldSystem->playerAvatar);
+    if (!TileBehavior_IsSurfable(TerrainCollisionManager_GetTileBehavior(fieldSystem, x, z + 1))) {
+        for (int dz = -12; dz <= 12; dz++) {
+            char row[64];
+            int n = 0;
+            for (int dx = -24; dx <= 24; dx++) {
+                u8 tile = TerrainCollisionManager_GetTileBehavior(fieldSystem, x + dx, z + dz);
+                row[n++] = dx == 0 && dz == 0 ? '@' : (TileBehavior_IsSurfable(tile) ? '~' : '.');
+            }
+            row[n] = '\0';
+            fprintf(stderr, "[debug-surf] z=%4d x=%4d..: %s\n", z + dz, x - 24, row);
+        }
+        return;
+    }
+    Pokemon *mon = Party_GetPokemonBySlotIndex(SaveData_GetParty(fieldSystem->saveData), 0);
+    int species = atoi(setting);
+    if (species > 0 && species <= NATIONAL_DEX_COUNT) {
+        Pokemon_SetValue(mon, MON_DATA_SPECIES, &species);
+        Pokemon_CalcLevelAndStats(mon);
+    }
+    Pokemon_ResetMoveSlot(mon, MOVE_SURF, 0);
+    FieldSystem_CreateTask(fieldSystem, FieldTask_DebugSurf, NULL);
+}
+
 void DEBUG_FieldFrame(FieldSystem *fieldSystem)
 {
     // Optional destination for reproducible follower/transition tests. Like the
@@ -225,6 +284,7 @@ void DEBUG_FieldFrame(FieldSystem *fieldSystem)
         }
     }
     DebugPokemonFrame(fieldSystem);
+    DebugSurfFrame(fieldSystem);
     static BOOL sTriggered;
     static int sControlFrames;
 
