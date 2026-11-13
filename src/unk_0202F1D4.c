@@ -48,6 +48,12 @@ int BattleRecording_SaveSize(void)
     return sizeof(BattleRecording);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(BattleRecording) == 7504, "BattleRecording must keep its DS save size");
+_Static_assert(offsetof(BattleRecording, unk_84) == 132 && sizeof(UnkStruct_0202F41C) == 100 && offsetof(BattleRecording, unk_E8) == 232, "The recording header must keep its DS layout");
+#endif
+
 void BattleRecording_Init(BattleRecording *battleRecording)
 {
     MI_CpuClear32(battleRecording, sizeof(BattleRecording));

@@ -19,6 +19,11 @@ int Party_SaveSize(void)
     return sizeof(Party);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(Party) == 1424, "Party must keep its DS save size");
+#endif
+
 Party *Party_New(enum HeapID heapID)
 {
     Party *party = Heap_Alloc(heapID, sizeof(Party));

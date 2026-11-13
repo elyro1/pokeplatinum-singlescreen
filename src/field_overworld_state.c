@@ -19,10 +19,20 @@ int FieldOverworldState_Size(void)
     return sizeof(FieldOverworldState);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(FieldOverworldState) == 160, "FieldOverworldState must keep its DS save size");
+#endif
+
 int FieldOverworldSave_Size(void)
 {
     return sizeof(FieldOverworldSave);
 }
+
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(FieldOverworldSave) == 5120, "FieldOverworldSave must keep its DS save size");
+#endif
 
 void FieldOverworldSave_Init(FieldOverworldSave *fieldSave)
 {

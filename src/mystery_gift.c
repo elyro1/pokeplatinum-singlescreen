@@ -20,6 +20,11 @@ int MysteryGift_SaveSize(void)
     return sizeof(MysteryGift);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(MysteryGift) == 4904, "MysteryGift must keep its DS save size");
+#endif
+
 void MysteryGift_Init(MysteryGift *mysteryGift)
 {
     SaveData_SetChecksum(SAVE_TABLE_ENTRY_MYSTERY_GIFT);

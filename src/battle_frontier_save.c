@@ -17,6 +17,11 @@ int BattleFrontierSave_Size(void)
     return sizeof(BattleFrontierSave);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(BattleFrontierSave) == 5672, "BattleFrontierSave must keep its DS save size");
+#endif
+
 void BattleFrontier_Init(BattleFrontierSave *frontier)
 {
     MI_CpuClear8(frontier, sizeof(BattleFrontierSave));

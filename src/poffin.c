@@ -240,6 +240,11 @@ int PoffinCase_SaveSize(void)
     return sizeof(PoffinCase);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(PoffinCase) == 800, "PoffinCase must keep its DS save size");
+#endif
+
 void PoffinCase_Init(PoffinCase *poffinCase)
 {
     int i;

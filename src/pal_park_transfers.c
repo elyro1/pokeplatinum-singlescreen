@@ -11,6 +11,11 @@ int MigratedPokemon_SaveSize(void)
     return sizeof(MigratedPokemon);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(MigratedPokemon) == 1672, "MigratedPokemon must keep its DS save size");
+#endif
+
 void PalParkTransfer_Init(MigratedPokemon *transferData)
 {
     int i;

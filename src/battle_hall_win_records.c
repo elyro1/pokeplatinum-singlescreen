@@ -20,6 +20,11 @@ int BattleHallWinRecords_SaveSize(void)
     return sizeof(BattleHallWinRecords);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(BattleHallWinRecords) == 2976, "BattleHallWinRecords must keep its DS save size");
+#endif
+
 void BattleHallWinRecords_Init(BattleHallWinRecords *records)
 {
     MI_CpuClear8(records, sizeof(BattleHallWinRecords));

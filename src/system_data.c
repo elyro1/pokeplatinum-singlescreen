@@ -10,6 +10,12 @@ int SystemData_SaveSize()
     return sizeof(SystemData);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(SystemData) == 92, "SystemData must keep its DS save size");
+_Static_assert(offsetof(SystemData, gameTime) == 16 && offsetof(GameTime, startTimestamp) == 36, "GameTime timestamps must keep their DS offsets");
+#endif
+
 void SystemData_Clear(SystemData *systemData)
 {
     MI_CpuClearFast(systemData, sizeof(SystemData));

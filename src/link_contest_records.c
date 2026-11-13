@@ -12,6 +12,11 @@ int LinkContestRecords_SaveSize(void)
     return sizeof(LinkContestRecords);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(LinkContestRecords) == 40, "LinkContestRecords must keep its DS save size");
+#endif
+
 void LinkContestRecords_Init(LinkContestRecords *linkContestRecords)
 {
     int placement;

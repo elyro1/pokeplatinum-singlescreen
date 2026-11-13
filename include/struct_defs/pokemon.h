@@ -6,6 +6,8 @@
 
 #include "struct_defs/seal_case.h"
 
+#include "port/ds_layout.h"
+
 #include "charcode.h"
 #include "mail.h"
 
@@ -79,7 +81,7 @@ typedef struct PokemonDataBlockC {
     /* 0x16 */ u8 unused;
     /* 0x17 */ u8 originGame;
 
-    /* 0x18 */ u64 ribbonsDS2; //!< A bitmask of ribbons given to the Pokemon from Sinnoh's Super Contests.
+    /* 0x18 */ u64_ds ribbonsDS2; //!< A bitmask of ribbons given to the Pokemon from Sinnoh's Super Contests.
 } PokemonDataBlockC;
 
 /**

@@ -23,6 +23,11 @@ int GameRecords_SaveSize(void)
     return sizeof(GameRecords);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(GameRecords) == 444, "GameRecords must keep its DS save size");
+#endif
+
 void GameRecords_Init(GameRecords *records)
 {
     MI_CpuClear32(records, sizeof(GameRecords));

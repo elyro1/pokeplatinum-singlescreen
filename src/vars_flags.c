@@ -17,6 +17,11 @@ int VarsFlags_SaveSize(void)
     return sizeof(VarsFlags);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(VarsFlags) == 940, "VarsFlags must keep its DS save size");
+#endif
+
 void VarsFlags_Init(VarsFlags *varsFlags)
 {
     memset(varsFlags, 0, sizeof(VarsFlags));

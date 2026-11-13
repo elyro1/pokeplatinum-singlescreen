@@ -17,6 +17,11 @@ int RecordMixedRNG_SaveSize()
     return sizeof(RecordMixedRNG) * RECORD_MIXED_RNG_MAX;
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(RecordMixedRNG) * RECORD_MIXED_RNG_MAX == 264, "RecordMixedRNG must keep its DS save size");
+#endif
+
 void RecordMixedRNG_CopyEntry(RecordMixedRNG *rngCollection, enum RecordMixedRNGEntry srcEntry, enum RecordMixedRNGEntry destEntry)
 {
     rngCollection[destEntry] = rngCollection[srcEntry];

@@ -1,4 +1,4 @@
-#include "port/ds_save_import.h"
+#include "port/save_migration.h"
 
 #include "constants/savedata/save_table.h"
 #include "constants/savedata/savedata.h"
@@ -26,17 +26,15 @@
 #define BOXES_ENTRY           37
 #define BLOCK_COUNT           2
 #define RECORDING_DS_SIZE     7504
-#define RECORDING_PC_SIZE     7512
+#define RECORDING_OLD_SIZE    7512
 #define RECORDING_COUNT       4
 #define RECORDING_FIRST_ID    EXTRA_SAVE_TABLE_ENTRY_MY_RECORDINGS
 #define BACKUP_NAME_ATTEMPTS  1000
 
-_Static_assert(SAVE_TABLE_ENTRY_MAX == ENTRY_COUNT, "DS save import needs updating for the save table");
+_Static_assert(SAVE_TABLE_ENTRY_MAX == ENTRY_COUNT, "Save migration needs updating for the save table");
 
-static const char sDesmumeFooter[] = "|-DESMUME SAVE-|";
-#define DESMUME_FOOTER_SIZE (sizeof(sDesmumeFooter) - 1)
-
-// sizeof each gSaveTable entry on DS, indexed by save table ID.
+// sizeof each gSaveTable entry on DS, indexed by save table ID. The port uses
+// the same layout (see save_layout_asserts.c).
 static const int sDsSizes[ENTRY_COUNT] = {
     92, 44, 1424, 1908, 940, 280, 160, 804, 480, 2176, 1932,
     5120, 2484, 32, 2100, 1120, 800, 264, 1120, 1568, 444, 368,
@@ -57,8 +55,9 @@ typedef struct {
     int count;
 } BlockCopies;
 
-// The entries whose size differs are exactly those that ConvertEntry remaps.
-static int PcEntrySize(int index)
+// Older 64-bit builds placed 64-bit fields on 8-byte boundaries. Only the
+// entries listed here grew; ConvertEntry undoes exactly those.
+static int OldEntrySize(int index)
 {
     switch (index) {
     case 0:
@@ -187,25 +186,36 @@ static int SelectPair(const BlockCopies found[BLOCK_COUNT], BlockCopy best[BLOCK
     return have;
 }
 
+static int HasPair(const u8 *data, int (*entrySize)(int))
+{
+    int sizes[BLOCK_COUNT];
+    BlockSizes(entrySize, sizes);
+    BlockCopies found[BLOCK_COUNT];
+    BlockCopy pair[BLOCK_COUNT];
+    FindBlocks(data, sizes, found);
+    return SelectPair(found, pair);
+}
+
 static void ConvertEntry(int index, const u8 *source, u8 *target)
 {
     switch (index) {
     case 0:
-        // GameTime: align its two s64 timestamps to 8 and add tail padding.
+        // SystemData: drop the alignment gaps before GameTime's two s64
+        // timestamps and the tail padding.
         memcpy(target, source, 52);
-        memcpy(target + 56, source + 52, 20);
-        memcpy(target + 80, source + 72, 20);
+        memcpy(target + 52, source + 56, 20);
+        memcpy(target + 72, source + 80, 20);
         break;
     case 8:
-        // Two 236-byte DaycareMon records become 240-byte records.
+        // Two 240-byte DaycareMon records become 236-byte records.
         memcpy(target, source, 236);
-        memcpy(target + 240, source + 236, 236);
-        memcpy(target + 480, source + 472, 8);
+        memcpy(target + 236, source + 240, 236);
+        memcpy(target + 472, source + 480, 8);
         break;
     case BOXES_ENTRY:
-        // Align the BoxPokemon array; Pokemon bytes and encryption stay intact.
+        // Drop the gap after currentBoxID; Pokemon bytes and encryption stay intact.
         memcpy(target, source, 4);
-        memcpy(target + 8, source + 4, 74179);
+        memcpy(target + 4, source + 8, 74179);
         break;
     default:
         memcpy(target, source, sDsSizes[index]);
@@ -219,13 +229,13 @@ static int ConvertBody(int blockID, const u8 *source, u8 *target)
     int end = blockID == 0 ? BOXES_ENTRY : ENTRY_COUNT;
     int written = 0;
     for (int index = first; index < end; index++) {
-        int pageSize = PageSize(PcEntrySize(index));
+        int pageSize = PageSize(sDsSizes[index]);
         u8 *page = target + written;
         memset(page, 0, pageSize);
         ConvertEntry(index, source, page);
         Write16(page + pageSize - 4, Crc16(page, pageSize - 4));
         written += pageSize;
-        source += PageSize(sDsSizes[index]);
+        source += PageSize(OldEntrySize(index));
     }
     return written;
 }
@@ -237,27 +247,28 @@ static void ConvertRecordings(const u8 *data, u8 *output)
         for (int i = 0; i < RECORDING_COUNT; i++) {
             size_t offset = (size_t)half * HALF_SIZE + sRecordingPages[i] * (size_t)SAVE_SECTOR_SIZE;
             const u8 *old = data + offset;
-            const u8 *footer = old + RECORDING_DS_SIZE;
+            const u8 *footer = old + RECORDING_OLD_SIZE;
             int id = RECORDING_FIRST_ID + i;
-            if (Read32(footer) != SECTOR_SIGNATURE || Read32(footer + 8) != RECORDING_DS_SIZE
+            if (Read32(footer) != SECTOR_SIGNATURE || Read32(footer + 8) != RECORDING_OLD_SIZE
                 || Read16(footer + 12) != id
-                || Read16(footer + 14) != Crc16(old, RECORDING_DS_SIZE + EXTRA_FOOTER_SIZE - 2)) {
+                || Read16(footer + 14) != Crc16(old, RECORDING_OLD_SIZE + EXTRA_FOOTER_SIZE - 2)) {
                 continue;
             }
+            // The header moves from 136 back to 132 and loses its tail padding;
+            // the encrypted battle data after it has the same layout.
             u8 *record = output + offset;
-            memset(record, 0, RECORDING_PC_SIZE);
+            memset(record, 0xFF, RECORDING_OLD_SIZE + EXTRA_FOOTER_SIZE);
             memcpy(record, old, 132);
-            memcpy(record + 136, old + 132, 100);
-            memcpy(record + 240, old + 232, RECORDING_DS_SIZE - 232);
-            // The native validator hashes 92 bytes of battleInfo, compared with
-            // 88 on DS; the encrypted battleData itself has identical layout.
-            Write16(record + 232, Crc16(record + 136, 92));
-            u8 *newFooter = record + RECORDING_PC_SIZE;
+            memcpy(record + 132, old + 136, 100);
+            memcpy(record + 232, old + 240, RECORDING_DS_SIZE - 232);
+            // The header checksum covers the 88 bytes before the u64 and itself.
+            Write16(record + 132 + 96, Crc16(record + 132, 88));
+            u8 *newFooter = record + RECORDING_DS_SIZE;
             Write32(newFooter, SECTOR_SIGNATURE);
             Write32(newFooter + 4, Read32(footer + 4));
-            Write32(newFooter + 8, RECORDING_PC_SIZE);
+            Write32(newFooter + 8, RECORDING_DS_SIZE);
             Write16(newFooter + 12, (u16)id);
-            Write16(newFooter + 14, Crc16(record, RECORDING_PC_SIZE + EXTRA_FOOTER_SIZE - 2));
+            Write16(newFooter + 14, Crc16(record, RECORDING_DS_SIZE + EXTRA_FOOTER_SIZE - 2));
         }
     }
 }
@@ -291,10 +302,10 @@ static int LiveLayoutMatches(void)
 {
     if (gSaveTableSize != ENTRY_COUNT) return 0;
     for (int i = 0; i < ENTRY_COUNT; i++) {
-        if (gSaveTable[i].sizeFunc() != PcEntrySize(i)) return 0;
+        if (gSaveTable[i].sizeFunc() != DsEntrySize(i)) return 0;
     }
     for (int i = 0; i < RECORDING_COUNT; i++) {
-        if (gExtraSaveTable[RECORDING_FIRST_ID + i].sizeFunc() != RECORDING_PC_SIZE) return 0;
+        if (gExtraSaveTable[RECORDING_FIRST_ID + i].sizeFunc() != RECORDING_DS_SIZE) return 0;
     }
     return 1;
 }
@@ -327,7 +338,7 @@ static int WriteAndClose(FILE *file, const u8 *data, size_t size)
 }
 
 // Stores the original beside the slot. Never replaces an existing backup: one
-// with the same bytes is reused, which also completes an interrupted import.
+// with the same bytes is reused, which also completes an interrupted migration.
 static int StoreBackup(int slot, const u8 *data, size_t size)
 {
     char path[32];
@@ -349,7 +360,7 @@ static int StoreBackup(int slot, const u8 *data, size_t size)
                 remove(path);
                 return 0;
             }
-            fprintf(stderr, "[save-import] Kept the original DS save as %s\n", path);
+            fprintf(stderr, "[save-import] Kept the original save as %s\n", path);
             return 1;
         }
         if (errno != EEXIST) return 0;
@@ -381,57 +392,63 @@ static int PublishConverted(const char *path, const u8 *data)
     return ok;
 }
 
-static int IsDsSaveSize(const u8 *data, size_t size)
-{
-    if (size == FLASH_SIZE) return 1;
-    return size > FLASH_SIZE && size <= FLASH_SIZE + DESMUME_MAX_EXTRA
-        && memcmp(data + size - DESMUME_FOOTER_SIZE, sDesmumeFooter, DESMUME_FOOTER_SIZE) == 0;
-}
-
-static void ImportSlot(int slot)
+static void MigrateSlot(int slot)
 {
     char path[16];
     snprintf(path, sizeof(path), "save%d.bin", slot);
 
-    // The PC backend writes only as far as its last used address, so most PC
-    // saves are shorter than any DS save and end here without being read.
+    // Full-size files (with or without an emulator's trailer) are only
+    // migrated if they hold the old layout; anything bigger is not a save.
     FILE *probe = fopen(path, "rb");
     if (!probe) return;
     long length = -1;
     if (fseek(probe, 0, SEEK_END) == 0) length = ftell(probe);
     fclose(probe);
-    if (length < FLASH_SIZE || length > FLASH_SIZE + DESMUME_MAX_EXTRA) return;
+    if (length <= 0 || length > FLASH_SIZE + DESMUME_MAX_EXTRA) return;
 
     size_t size = 0;
     u8 *data = ReadWhole(path, &size);
+    // Unwritten flash reads as 0xFF, and so does the part of a short file
+    // that the old backend never wrote.
+    u8 *flash = malloc(FLASH_SIZE);
     u8 *output = malloc(FLASH_SIZE);
-    if (!data || !output) goto cleanup;
-    if (!IsDsSaveSize(data, size)) goto cleanup;
+    if (!data || !flash || !output) goto cleanup;
+    memset(flash, 0xFF, FLASH_SIZE);
+    memcpy(flash, data, size < FLASH_SIZE ? size : FLASH_SIZE);
 
-    int dsSizes[BLOCK_COUNT], pcSizes[BLOCK_COUNT];
+    // Footers store their block size and the layouts differ, so neither
+    // layout can be mistaken for the other.
+    if (HasPair(flash, DsEntrySize)) {
+        if (size >= FLASH_SIZE) goto cleanup;
+        // Already the DS layout; pad it so it also works on a DS or emulator.
+        if (PublishConverted(path, flash)) {
+            fprintf(stderr, "[save-import] Padded %s to the DS flash size\n", path);
+        } else {
+            fprintf(stderr, "[save-import] Could not pad %s; left unchanged\n", path);
+        }
+        goto cleanup;
+    }
+
+    int oldSizes[BLOCK_COUNT], dsSizes[BLOCK_COUNT];
+    BlockSizes(OldEntrySize, oldSizes);
     BlockSizes(DsEntrySize, dsSizes);
-    BlockSizes(PcEntrySize, pcSizes);
     BlockCopies found[BLOCK_COUNT];
-
-    // Footers store their block size and the layouts differ, so this cannot
-    // mistake one format for the other.
-    FindBlocks(data, pcSizes, found);
-    if (found[0].count && found[1].count) goto cleanup;
-
     BlockCopy pair[BLOCK_COUNT];
-    FindBlocks(data, dsSizes, found);
+    FindBlocks(flash, oldSizes, found);
     if (!SelectPair(found, pair)) {
-        fprintf(stderr, "[save-import] %s holds no convertible DS save data; left unchanged\n", path);
+        if (found[0].count || found[1].count) {
+            fprintf(stderr, "[save-import] %s holds an incomplete old PC save; left unchanged\n", path);
+        }
         goto cleanup;
     }
     if (!LiveLayoutMatches()) {
-        fprintf(stderr, "[save-import] This build's save layout is not supported by the DS import; %s left unchanged\n", path);
+        fprintf(stderr, "[save-import] This build's save layout is not the DS layout; %s left unchanged\n", path);
         goto cleanup;
     }
 
-    Convert(data, pair, output);
+    Convert(flash, pair, output);
     BlockCopy verified[BLOCK_COUNT];
-    FindBlocks(output, pcSizes, found);
+    FindBlocks(output, dsSizes, found);
     if (!SelectPair(found, verified)) {
         fprintf(stderr, "[save-import] Conversion of %s did not validate; left unchanged\n", path);
         goto cleanup;
@@ -445,16 +462,17 @@ static void ImportSlot(int slot)
         fprintf(stderr, "[save-import] Could not write the converted %s; left unchanged\n", path);
         goto cleanup;
     }
-    fprintf(stderr, "[save-import] Converted DS save %s to the PC layout\n", path);
+    fprintf(stderr, "[save-import] Converted old PC save %s to the DS layout\n", path);
 
 cleanup:
     free(data);
+    free(flash);
     free(output);
 }
 
-void PC_ImportDsSaves(void)
+void PC_MigrateSaves(void)
 {
     for (int slot = 1; slot <= 3; slot++) {
-        ImportSlot(slot);
+        MigrateSlot(slot);
     }
 }
