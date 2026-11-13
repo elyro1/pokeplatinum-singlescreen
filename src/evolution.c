@@ -56,6 +56,10 @@
 #include "res/graphics/diploma/diploma.naix"
 #include "res/text/bank/battle_strings.h"
 
+#ifdef SDK_PORT
+#include "port/evolution_wide.h"
+#endif
+
 static void SysTask_Evolution(SysTask *task, void *data);
 BOOL Evolution_IsDone(EvolutionData *evolutionData);
 void Evolution_Free(EvolutionData *evolutionData);
@@ -866,6 +870,9 @@ static void Evolution_InitGraphics(EvolutionData *evolutionData, BgConfig *bgCon
         },
     };
 
+#ifdef SDK_PORT
+    EvolutionWide_Begin();
+#endif
     Bg_InitFromTemplate(bgConfig, BG_LAYER_MAIN_1, &bgTemplates[0], BG_TYPE_STATIC);
     Bg_ClearTilemap(bgConfig, BG_LAYER_MAIN_1);
     Bg_InitFromTemplate(bgConfig, BG_LAYER_MAIN_2, &bgTemplates[1], BG_TYPE_STATIC);
@@ -924,6 +931,10 @@ static void Evolution_InitGraphics(EvolutionData *evolutionData, BgConfig *bgCon
     evolutionData->windowRight = HW_LCD_WIDTH - 1;
     evolutionData->windowBottom = 160;
 
+#ifdef SDK_PORT
+    EvolutionWide_Setup(bgConfig, evolutionData->paletteData, frame, evolutionData->heapID);
+#endif
+
     GXLayers_TurnBothDispOn();
     GXLayers_EngineAToggleLayers(GX_PLANEMASK_OBJ, 1);
     SetVBlankCallback(Evolution_VBlankCallback, evolutionData);
@@ -931,6 +942,9 @@ static void Evolution_InitGraphics(EvolutionData *evolutionData, BgConfig *bgCon
 
 static void Evolution_FreeBgs(BgConfig *bgConfig)
 {
+#ifdef SDK_PORT
+    EvolutionWide_End();
+#endif
     GXLayers_EngineAToggleLayers(GX_PLANEMASK_BG0, 0);
     GXLayers_EngineAToggleLayers(GX_PLANEMASK_BG1, 0);
     Bg_FreeTilemapBuffer(bgConfig, BG_LAYER_MAIN_1);
@@ -967,6 +981,9 @@ static void Evolution_VBlankCallback(void *data)
 
     G2_SetWnd0Position(evolutionData->windowLeft, evolutionData->windowTop, evolutionData->windowRight, evolutionData->windowBottom);
     G2_SetWnd1Position(HW_LCD_WIDTH - 1, evolutionData->windowTop, 0, evolutionData->windowBottom);
+#ifdef SDK_PORT
+    EvolutionWide_ReplaceLetterbox(evolutionData->windowTop);
+#endif
 
     PokemonSpriteManager_UpdateCharAndPltt(evolutionData->monSpriteMan);
     VramTransfer_Process();

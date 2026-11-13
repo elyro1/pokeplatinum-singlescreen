@@ -102,6 +102,11 @@ void BattleSpeedContents() {
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Turn off to use the classic Pok\xC3\xA9" "mon summary. Applies the next time it opens.");
     }
+    ConfigCheckBox("Widescreen evolution", &myConfig->widescreenEvolution, configChanged);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("The evolution scene's backdrop and effects fill the whole view; the message box stays centered.\n"
+            "Turn off for the 4:3 scene. Applies to the next evolution.");
+    }
     ConfigCheckBox("Single-screen bag", &myConfig->gridBag, configChanged);
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("On: with the single-screen layout, the bag shows its items as a grid of icons\n"

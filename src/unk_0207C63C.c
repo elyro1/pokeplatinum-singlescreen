@@ -138,6 +138,10 @@ static ParticleSystem *sub_0207C7CC(enum HeapID heapID)
     v0 = ParticleSystem_New(sub_0207C794, sub_0207C7B0, v1, 0x4800*2, 1, heapID);
     #endif
     camera = ParticleSystem_GetCamera(v0);
+#ifdef SDK_PORT
+    // The evolution's glows are small textures stretched over large quads.
+    v0->smoothTextures = TRUE;
+#endif
 
     if (camera != NULL) {
         Camera_SetClipping(FX32_ONE, FX32_ONE * 900, camera);
