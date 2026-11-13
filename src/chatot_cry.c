@@ -10,6 +10,11 @@ int ChatotCry_SaveSize(void)
     return sizeof(ChatotCry);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(ChatotCry) == 1004, "ChatotCry must keep its DS save size");
+#endif
+
 void ChatotCry_Init(ChatotCry *chatotCry)
 {
     MI_CpuClear32(chatotCry, sizeof(ChatotCry));

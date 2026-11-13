@@ -25,6 +25,11 @@ int Bag_SaveSize(void)
     return sizeof(Bag);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(Bag) == 1908, "Bag must keep its DS save size");
+#endif
+
 Bag *Bag_New(enum HeapID heapID)
 {
     Bag *bag = Heap_Alloc(heapID, sizeof(Bag));

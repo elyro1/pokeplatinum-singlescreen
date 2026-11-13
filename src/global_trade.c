@@ -16,6 +16,11 @@ int GlobalTrade_SaveSize(void)
     return sizeof(GlobalTrade);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(GlobalTrade) == 248, "GlobalTrade must keep its DS save size");
+#endif
+
 void GlobalTrade_Init(GlobalTrade *globalTrade)
 {
     MI_CpuClearFast(globalTrade, sizeof(GlobalTrade));

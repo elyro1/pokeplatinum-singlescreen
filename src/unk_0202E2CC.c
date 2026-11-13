@@ -28,6 +28,11 @@ int TVBroadcast_SaveSize(void)
     return sizeof(TVBroadcast);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(TVBroadcast) == 3016, "TVBroadcast must keep its DS save size");
+#endif
+
 void TVBroadcast_Init(TVBroadcast *broadcast)
 {
     MI_CpuClearFast(broadcast, sizeof(TVBroadcast));

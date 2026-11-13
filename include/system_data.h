@@ -3,6 +3,8 @@
 
 #include <nitro/rtc.h>
 
+#include "port/ds_layout.h"
+
 #include "savedata.h"
 
 typedef struct GameTime {
@@ -10,13 +12,13 @@ typedef struct GameTime {
     RTCDate date;
     RTCTime time;
     u32 day;
-    s64 startTimestamp;
-    s64 firstCompletionTimestamp; // the first time the hall of fame was entered
+    s64_ds startTimestamp;
+    s64_ds firstCompletionTimestamp; // the first time the hall of fame was entered
     u32 penaltyInMinutes;
 } GameTime;
 
 typedef struct SystemData {
-    s64 rtcOffset;
+    s64_ds rtcOffset;
     u8 macAddress[6];
     u8 ownerBirthMonth;
     u8 ownerBirthDayOfMonth;

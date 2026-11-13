@@ -21,6 +21,11 @@ int BattleRegulation_SaveSize(void)
     return sizeof(BattleRegulationData);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(BattleRegulationData) == 32, "BattleRegulation must keep its DS save size");
+#endif
+
 void BattleRegulation_Copy(const BattleRegulation *src, BattleRegulation *dst)
 {
     MI_CpuCopy8(src, dst, sizeof(BattleRegulation));

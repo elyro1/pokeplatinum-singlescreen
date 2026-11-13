@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise DS save detection, conversion, backups and failure recovery."""
+"""Exercise old PC save migration, padding, backups and failure recovery."""
 
 import argparse
 import json
@@ -23,10 +23,10 @@ def main():
     # Test-only defines can invalidate the game's precompiled header.
     flags.remove('-fpch-preprocess')
     flags[flags.index('-include') + 1] = str(ROOT / 'include/pch/global_pch.h')
-    with tempfile.TemporaryDirectory(prefix='platinum-ds-import-') as directory:
+    with tempfile.TemporaryDirectory(prefix='platinum-save-migration-') as directory:
         executable = Path(directory) / 'test'
         subprocess.run(flags + ['-UNDEBUG', '-Werror=implicit-function-declaration',
-                                str(ROOT / 'tools/scripts/ds_save_import_test.c'),
+                                str(ROOT / 'tools/scripts/save_migration_test.c'),
                                 '-o', str(executable)], cwd=build, check=True)
         subprocess.run([str(executable)], cwd=directory, check=True)
 

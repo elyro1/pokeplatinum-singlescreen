@@ -101,6 +101,11 @@ int Underground_SaveSize(void)
     return sizeof(Underground);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(Underground) == 2484, "Underground must keep its DS save size");
+#endif
+
 int SecretBase_Size(void)
 {
     return sizeof(SecretBase);

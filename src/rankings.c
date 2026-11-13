@@ -68,6 +68,11 @@ int Rankings_SaveSize(void)
     return sizeof(Rankings);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(Rankings) == 3744, "Rankings must keep its DS save size");
+#endif
+
 void Rankings_Init(Rankings *rankings)
 {
     MI_CpuClear8(rankings, sizeof(Rankings));

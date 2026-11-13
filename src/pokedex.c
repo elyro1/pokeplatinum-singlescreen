@@ -32,6 +32,11 @@ int Pokedex_SaveSize(void)
     return sizeof(Pokedex);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(Pokedex) == 804, "Pokedex must keep its DS save size");
+#endif
+
 Pokedex *Pokedex_New(enum HeapID heapID)
 {
     Pokedex *pokedexData = Heap_Alloc(heapID, sizeof(Pokedex));

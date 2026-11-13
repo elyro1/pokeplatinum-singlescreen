@@ -25,6 +25,12 @@ u32 PCBoxes_SaveSize(void)
     return sizeof(PCBoxes);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(PCBoxes) == 74184, "PCBoxes must keep its DS save size");
+_Static_assert(offsetof(PCBoxes, boxMons) == 4 && sizeof(BoxPokemon) == 136, "BoxPokemon must keep its DS alignment");
+#endif
+
 static void PCBoxes_InitInternal(PCBoxes *pcBoxes)
 {
     u32 boxID, i;

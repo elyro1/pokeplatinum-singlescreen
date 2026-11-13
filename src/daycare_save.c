@@ -15,6 +15,12 @@ int Daycare_SaveSize(void)
     return sizeof(Daycare);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(Daycare) == 480, "Daycare must keep its DS save size");
+_Static_assert(sizeof(DaycareMon) == 236, "DaycareMon must keep its DS size");
+#endif
+
 void Daycare_Init(Daycare *daycare)
 {
     memset(daycare, 0, sizeof(Daycare));

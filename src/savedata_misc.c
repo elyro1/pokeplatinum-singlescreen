@@ -19,6 +19,11 @@ int MiscSaveBlock_SaveSize(void)
     return sizeof(MiscSaveBlock);
 }
 
+#ifdef SDK_PORT
+// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+_Static_assert(sizeof(MiscSaveBlock) == 1932, "MiscSaveBlock must keep its DS save size");
+#endif
+
 void MiscSaveBlock_Init(MiscSaveBlock *miscSave)
 {
     MI_CpuClearFast(miscSave, sizeof(MiscSaveBlock));

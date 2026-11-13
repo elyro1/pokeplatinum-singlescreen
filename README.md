@@ -151,7 +151,8 @@ Works with both Platinum and BW2 visuals. More in [battle speed settings](docs/b
 ## 💾 Saves
 
 - **Save in-game before you quit.** Slots are `save1.bin`, `save2.bin`, and `save3.bin` in the game folder.
-- **Import a DS save:** rename a Platinum `.sav` or DeSmuME `.dsv` to `save1.bin`, `save2.bin`, or `save3.bin` and start the game. It's converted automatically, and the untouched original is kept as `save1.bak` (or `save1.1.bak` if that name is taken). To undo it, rename the `.bak` back to the slot name. If the file can't be converted, it's left as it is and the slot shows as unavailable.
+- **DS saves work as they are:** slots use the same format as a Platinum cartridge. Rename a `.sav` or DeSmuME `.dsv` to `save1.bin`, `save2.bin`, or `save3.bin` to play it here, or copy a slot file to a flashcart or emulator (rename it to `.sav`) to play it there.
+- **Saves from older PC builds** used a different format. They're converted automatically on the first start, and the untouched original is kept as `save1.bak` (or `save1.1.bak` if that name is taken). To undo it, rename the `.bak` back to the slot name and use an older build. If the file can't be converted, it's left as it is and the slot shows as unavailable.
 - **Back up your saves** before updating builds or deleting a slot.
 - Loading a slot always uses your last **manual** save. Autosaves are separate.
 
