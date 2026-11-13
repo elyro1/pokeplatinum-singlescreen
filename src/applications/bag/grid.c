@@ -197,7 +197,7 @@ typedef struct BagGrid {
 
 static BagGrid sGrid;
 // The view stays as it was left for as long as the game runs.
-static BOOL sListView = FALSE;
+static BOOL sListView = TRUE;
 
 #define DIGIT_WIDTH  5
 #define DIGIT_HEIGHT 7
