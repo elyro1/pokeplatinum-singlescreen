@@ -18,6 +18,8 @@ Billboard *PokemonReflection_New(FieldEffectManager *manager, const BillboardRes
 BOOL PokemonReflection_IsSurface(u8 tile);
 void PokemonReflection_Update(Billboard *reflection, const Billboard *source, const VecFx32 *position, BOOL large);
 void PokemonReflection_SetRiderLayer(Billboard *rider, Billboard *mount, const MtxFx43 *view, const MtxFx44 *projection);
+// Puts billboard just in front of (or behind) reference in depth, for this draw only.
+void PokemonReflection_SetLayer(Billboard *billboard, Billboard *reference, BOOL front, const MtxFx43 *view, const MtxFx44 *projection);
 BOOL PokemonReflection_GetWaterPosition(FieldSystem *fieldSystem, const Billboard *source, const VecFx32 *anchor, VecFx32 *position);
 OverworldAnimManager *ov5_021F1BA4(FieldEffectManager *param0, const BillboardResources *param1, const Billboard *param2, const VecFx32 *param3, int param4, int param5);
 

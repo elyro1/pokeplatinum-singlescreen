@@ -131,6 +131,11 @@ static void ReflectionClipDepth(const VecFx32 *position, const MtxFx43 *view, co
 
 void PokemonReflection_SetRiderLayer(Billboard *rider, Billboard *mount, const MtxFx43 *view, const MtxFx44 *projection)
 {
+    PokemonReflection_SetLayer(rider, mount, TRUE, view, projection);
+}
+
+void PokemonReflection_SetLayer(Billboard *rider, Billboard *mount, BOOL front, const MtxFx43 *view, const MtxFx44 *projection)
+{
     if (rider == NULL) {
         return;
     }
@@ -147,9 +152,9 @@ void PokemonReflection_SetRiderLayer(Billboard *rider, Billboard *mount, const M
             if (margin < 1) {
                 margin = 1;
             }
-            fx32 clipDelta = (fx64)mountZ * riderW / mountW - riderZ - margin;
+            fx32 clipDelta = (fx64)mountZ * riderW / mountW - riderZ + (front ? -margin : margin);
             fx32 offset = FX_Div(clipDelta, projection->_22);
-            if (offset > 0) {
+            if (front ? offset > 0 : offset < 0) {
                 rider->depthOffset = offset;
             }
         }
