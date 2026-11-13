@@ -43,6 +43,7 @@ typedef struct {
     NicknameMode nicknameMode; // Automatic nickname offers; explicit renaming remains available.
     BOOL widescreenPokedex; // Read when the Pokédex opens.
     BOOL widescreenSummary; // Read when the Pokémon summary opens.
+    BOOL widescreenEvolution; // The evolution scene across the whole view. Read when it starts.
     BOOL gridBag; // The bag's grid of item icons with the single-screen layout; off keeps the classic bag. Read when it opens.
     PokedexUnits pokedexUnits; // Heights and weights in the Pokédex.
     BOOL fastWildBattleIntro; // Shorten eligible BW2 wild battle intros.

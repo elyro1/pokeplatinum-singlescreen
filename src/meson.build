@@ -1034,6 +1034,7 @@ pokeplatinum_c += files(
     'port/bw_mon_sprites.c',
     'port/charcode_convert.c',
     'port/debug_field.c',
+    'port/evolution_wide.c',
     'port/save_migration.c',
     'port/file_commit.c',
     'port/field_lights.c',

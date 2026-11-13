@@ -48,6 +48,9 @@ static int IniHandler(void* user, const char* section, const char* name,
     if (MATCH("General", "WidescreenSummary")) {
         config->widescreenSummary = StringToBool(value);
     }
+    if (MATCH("General", "WidescreenEvolution")) {
+        config->widescreenEvolution = StringToBool(value);
+    }
     if (MATCH("General", "PokedexUnits")) {
         for (int i = 0; i < POKEDEX_UNITS_COUNT; i++) {
             if (strcmp(value, sPokedexUnitsNames[i]) == 0) {
@@ -183,6 +186,7 @@ void SIM_Config_prj_LoadDefaults(SIM_Config_prj_type * aConfig)
   aConfig->nicknameMode = NICKNAME_MODE_ASK;
   aConfig->widescreenPokedex = TRUE;
   aConfig->widescreenSummary = TRUE;
+  aConfig->widescreenEvolution = TRUE;
   aConfig->gridBag = TRUE;
   aConfig->pokedexUnits = POKEDEX_UNITS_METRIC;
   aConfig->textSpeed = PORT_SPEED_FAST;
@@ -245,6 +249,7 @@ void SIM_Config_prj_SaveConfigFile(SIM_Config_prj_type * aConfig)
     fprintf(configFile, "NicknameMode=%s\n", sNicknameModeNames[aConfig->nicknameMode]);
     fprintf(configFile, "WidescreenPokedex=%s\n", BoolToString(aConfig->widescreenPokedex));
     fprintf(configFile, "WidescreenSummary=%s\n", BoolToString(aConfig->widescreenSummary));
+    fprintf(configFile, "WidescreenEvolution=%s\n", BoolToString(aConfig->widescreenEvolution));
     fprintf(configFile, "GridBag=%s\n", BoolToString(aConfig->gridBag));
     fprintf(configFile, "PokedexUnits=%s\n", sPokedexUnitsNames[aConfig->pokedexUnits]);
     fprintf(configFile, "FastWildBattleIntro=%s\n", BoolToString(aConfig->fastWildBattleIntro));

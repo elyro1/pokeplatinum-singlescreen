@@ -84,7 +84,8 @@ BOOL DEBUG_UnlockAllPoketchApps(void)
 // grass (docs/bwbattle.md). PLATINUM_DEBUG_TRAINER=<id>[,<id>[,<partner>]] starts a trainer battle instead: the same ID
 // twice is that trainer's double battle, two IDs a tag battle, and a third the partner who fights beside the player; the
 // battle style turns to Set. PLATINUM_DEBUG_LEVEL_UP=1 also leaves the first Pokemon in the
-// party one experience point short of its next level, so that the battle's experience levels it up, and
+// party one experience point short of its next level, so that the battle's experience levels it up
+// (PLATINUM_DEBUG_LEVEL_UP=<level> above 1: one point short of that level, e.g. an evolution level), and
 // PLATINUM_DEBUG_MOVE=<move> puts that move in its first move slot. PLATINUM_DEBUG_WILD_KIND=safari or palpark makes
 // the wild battle the Safari Zone's or Pal Park's
 #define DEBUG_WILD_DELAY_FRAMES 180
@@ -254,11 +255,19 @@ void DEBUG_FieldFrame(FieldSystem *fieldSystem)
         sDebugWildSpecies = species;
         sDebugWildLevel = level;
     }
-    if (getenv("PLATINUM_DEBUG_LEVEL_UP") != NULL) {
+    const char *levelUp = getenv("PLATINUM_DEBUG_LEVEL_UP");
+    if (levelUp != NULL) {
         Pokemon *mon = Party_GetPokemonBySlotIndex(SaveData_GetParty(fieldSystem->saveData), 0);
-        u32 exp = Pokemon_GetValue(mon, MON_DATA_EXPERIENCE, NULL) + Pokemon_GetExpToNextLevel(mon) - 1;
+        int targetLevel = atoi(levelUp);
 
-        if (Pokemon_GetValue(mon, MON_DATA_LEVEL, NULL) < MAX_POKEMON_LEVEL) {
+        if (targetLevel > 1 && targetLevel <= MAX_POKEMON_LEVEL) {
+            u32 exp = Pokemon_GetSpeciesBaseExpAt(Pokemon_GetValue(mon, MON_DATA_SPECIES, NULL), targetLevel) - 1;
+
+            Pokemon_SetValue(mon, MON_DATA_EXPERIENCE, &exp);
+            Pokemon_CalcLevelAndStats(mon);
+        } else if (Pokemon_GetValue(mon, MON_DATA_LEVEL, NULL) < MAX_POKEMON_LEVEL) {
+            u32 exp = Pokemon_GetValue(mon, MON_DATA_EXPERIENCE, NULL) + Pokemon_GetExpToNextLevel(mon) - 1;
+
             Pokemon_SetValue(mon, MON_DATA_EXPERIENCE, &exp);
         }
     }
