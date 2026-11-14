@@ -1,0 +1,109 @@
+{
+  "key": 31338,
+  "messages": [
+    {
+      "id": "PoketchAppPicker_Text_DigitalWatch",
+      "en_US": "DIGITAL WATCH"
+    },
+    {
+      "id": "PoketchAppPicker_Text_Calculator",
+      "en_US": "CALCULATOR"
+    },
+    {
+      "id": "PoketchAppPicker_Text_MemoPad",
+      "en_US": "MEMO PAD"
+    },
+    {
+      "id": "PoketchAppPicker_Text_Pedometer",
+      "en_US": "PEDOMETER"
+    },
+    {
+      "id": "PoketchAppPicker_Text_PartyStatus",
+      "en_US": "POKéMON LIST"
+    },
+    {
+      "id": "PoketchAppPicker_Text_FriendshipChecker",
+      "en_US": "FRIENDSHIP"
+    },
+    {
+      "id": "PoketchAppPicker_Text_DowsingMachine",
+      "en_US": "DOWSING"
+    },
+    {
+      "id": "PoketchAppPicker_Text_BerrySearcher",
+      "en_US": "BERRY SEARCHER"
+    },
+    {
+      "id": "PoketchAppPicker_Text_DaycareChecker",
+      "en_US": "DAY-CARE"
+    },
+    {
+      "id": "PoketchAppPicker_Text_PokemonHistory",
+      "en_US": "HISTORY"
+    },
+    {
+      "id": "PoketchAppPicker_Text_Counter",
+      "en_US": "COUNTER"
+    },
+    {
+      "id": "PoketchAppPicker_Text_AnalogWatch",
+      "en_US": "ANALOG WATCH"
+    },
+    {
+      "id": "PoketchAppPicker_Text_MarkingMap",
+      "en_US": "MARKING MAP"
+    },
+    {
+      "id": "PoketchAppPicker_Text_LinkSearcher",
+      "en_US": "LINK SEARCHER"
+    },
+    {
+      "id": "PoketchAppPicker_Text_CoinToss",
+      "en_US": "COIN TOSS"
+    },
+    {
+      "id": "PoketchAppPicker_Text_MoveTester",
+      "en_US": "MOVE TESTER"
+    },
+    {
+      "id": "PoketchAppPicker_Text_Calendar",
+      "en_US": "CALENDAR"
+    },
+    {
+      "id": "PoketchAppPicker_Text_DotArtist",
+      "en_US": "DOT ARTIST"
+    },
+    {
+      "id": "PoketchAppPicker_Text_Roulette",
+      "en_US": "ROULETTE"
+    },
+    {
+      "id": "PoketchAppPicker_Text_TrainerCounter",
+      "en_US": "TRAINER COUNT"
+    },
+    {
+      "id": "PoketchAppPicker_Text_KitchenTimer",
+      "en_US": "KITCHEN TIMER"
+    },
+    {
+      "id": "PoketchAppPicker_Text_ColorChanger",
+      "en_US": "COLOR CHANGER"
+    },
+    {
+      "id": "PoketchAppPicker_Text_MatchupChecker",
+      "en_US": "MATCHUP"
+    },
+    {
+      "id": "PoketchAppPicker_Text_Stopwatch",
+      "en_US": "STOPWATCH"
+    },
+    {
+      "id": "PoketchAppPicker_Text_AlarmClock",
+      "en_US": "ALARM CLOCK"
+    },
+    {
+      "id": "PoketchAppPicker_Text_RouteEncounters",
+      "en_US": "WILD POKéMON"
+    }
+  ]
+}

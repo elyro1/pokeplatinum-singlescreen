@@ -17,6 +17,8 @@ ALLOWED_ADDITIONS = {
     'res/graphics/following_pokemon/manifest.json': 'Sprite index with offsets and hashes',
     'res/graphics/following_pokemon/reactions_manifest.json': 'Source hashes for the reaction import',
     'res/text/following_pokemon.json': 'HG/SS follower dialogue',
+    'res/text/poketch_app_picker.json': 'Port-written Pokétch app picker labels',
+    'res/text/poketch_route_encounters.json': 'Port-written route encounters app text',
     'res/trainers/data/champion_iris.json': 'Trainer definition for the Iris fight',
 }
 

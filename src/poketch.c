@@ -130,6 +130,26 @@ static int Poketch_StepAppID(Poketch *poketch, int step)
 
     return next;
 }
+
+BOOL Poketch_IsAppVisible(const Poketch *poketch, int appID)
+{
+    return appID >= 0 && appID < POKETCH_APPID_PORT_MAX && Poketch_IsCycleSlotUsed(poketch, appID);
+}
+
+BOOL Poketch_SetCurrentAppID(Poketch *poketch, int appID)
+{
+    if (!Poketch_IsAppVisible(poketch, appID)) {
+        return FALSE;
+    }
+
+    sRouteEncountersShown = appID == POKETCH_APPID_ROUTEENCOUNTERS;
+
+    if (!sRouteEncountersShown) {
+        poketch->appIndex = appID;
+    }
+
+    return TRUE;
+}
 #endif
 
 int Poketch_VisibleAppCount(const Poketch *poketch)

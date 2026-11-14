@@ -5,6 +5,7 @@
 
 #include "generated/genders.h"
 
+#include "applications/poketch/poketch_app_picker.h"
 #include "applications/poketch/poketch_button.h"
 #include "applications/poketch/poketch_graphics.h"
 #include "applications/poketch/poketch_task.h"
@@ -26,6 +27,8 @@
 #include "touch_pad.h"
 #include "touch_screen.h"
 #include "trainer_info.h"
+
+#include "res/sound/pl_sound_data.naix"
 
 FS_EXTERN_OVERLAY(poketch_digital_watch);
 FS_EXTERN_OVERLAY(poketch_stopwatch);
@@ -82,6 +85,19 @@ static void PoketchSystem_ButtonUpdate(PoketchSystem *poketchSys);
 static void PoketchSystem_OnButtonEvent(u32 buttonID, u32 buttonEvent, u32 touchEvent, void *system);
 static BOOL PoketchSystem_StartTaskIfNotActive(PoketchGraphics_TaskData *taskData, u32 taskId);
 static inline BOOL PoketchSystem_InsideScreenBounds(u32 x, u32 y);
+#ifdef SDK_PORT
+static void PoketchSystem_UpdateAppPicker(PoketchSystem *poketchSys);
+#endif
+
+#ifdef SDK_PORT
+// PoketchEvent_UpdateApp sub-states for the app picker, after the retail ones.
+enum {
+    APP_PICKER_STATE_CONCEAL = 5,
+    APP_PICKER_STATE_SHUTDOWN_APP,
+    APP_PICKER_STATE_BROWSE,
+    APP_PICKER_STATE_CLOSE,
+};
+#endif
 
 #ifdef SDK_PORT
 static void (*PoketchOverlayLoadFunctions[])(void) = {
@@ -257,6 +273,77 @@ BOOL PoketchSystem_RequestAppChange(PoketchSystem *poketchSys, enum ButtonDir di
     poketchSys->subState = 1;
     return TRUE;
 }
+
+BOOL PoketchSystem_OpenAppPicker(PoketchSystem *poketchSys)
+{
+    if (!PoketchSystem_IsReadyForMenu(poketchSys) || !poketchSys->menuActive || Poketch_VisibleAppCount(poketchSys->poketch) <= 1) {
+        return FALSE;
+    }
+
+    // The app is shut down while the picker shows, like during an app change.
+    poketchSys->menuAppInputEnabled = FALSE;
+    poketchSys->menuAWaitForRelease = TRUE;
+    poketchSys->skipApp = FALSE;
+    poketchSys->appChanging = TRUE;
+    poketchSys->appPickerResult = Poketch_CurrentAppID(poketchSys->poketch);
+    Sound_PlayEffect(SEQ_SE_DP_POKETCH_003_sseq);
+    PoketchGraphics_StartTask(poketchSys->taskData, TASK_CONCEAL_SCREEN);
+    poketchSys->subState = APP_PICKER_STATE_CONCEAL;
+    return TRUE;
+}
+
+BOOL PoketchSystem_IsAppPickerOpen(const PoketchSystem *poketchSys)
+{
+    return poketchSys != NULL
+        && poketchSys->systemState == POKETCH_SYSTEM_UPDATE
+        && poketchSys->subState >= APP_PICKER_STATE_CONCEAL;
+}
+
+static void PoketchSystem_UpdateAppPicker(PoketchSystem *poketchSys)
+{
+    switch (poketchSys->subState) {
+    case APP_PICKER_STATE_CONCEAL:
+        if (PoketchGraphics_NoActiveTasks(poketchSys->taskData)) {
+            PoketchSystem_ShutdownApp(poketchSys);
+            poketchSys->subState = APP_PICKER_STATE_SHUTDOWN_APP;
+        }
+        break;
+    case APP_PICKER_STATE_SHUTDOWN_APP:
+        if (PoketchSystem_IsAppShutdown(poketchSys)) {
+            PoketchSystem_UnloadApp(poketchSys);
+            PoketchMemory_ResetActiveAppID();
+            poketchSys->appPicker = PoketchAppPicker_New(poketchSys->bgl, poketchSys->poketch, HEAP_ID_POKETCH_APP);
+            PoketchGraphics_StartTask(poketchSys->taskData, TASK_REVEAL_SCREEN_2);
+            poketchSys->subState = APP_PICKER_STATE_BROWSE;
+        }
+        break;
+    case APP_PICKER_STATE_BROWSE: {
+        if (!poketchSys->menuActive || !poketchSys->menuAppInputEnabled || !PoketchGraphics_NoActiveTasks(poketchSys->taskData)) {
+            break;
+        }
+
+        u32 cancelKeys = gSystem.pressedKeys & (PAD_BUTTON_B | PAD_BUTTON_X | PAD_BUTTON_Y | PAD_BUTTON_SELECT | PAD_BUTTON_START);
+        int result = PoketchAppPicker_HandleInput(poketchSys->appPicker, gSystem.pressedKeysRaw, gSystem.pressedKeysRepeatableRaw, cancelKeys);
+
+        if (result != POKETCH_APP_PICKER_BROWSING) {
+            if (result != POKETCH_APP_PICKER_CANCEL) {
+                poketchSys->appPickerResult = result;
+            }
+            PoketchGraphics_StartTask(poketchSys->taskData, TASK_CONCEAL_SCREEN);
+            poketchSys->subState = APP_PICKER_STATE_CLOSE;
+        }
+    } break;
+    case APP_PICKER_STATE_CLOSE:
+        if (PoketchGraphics_NoActiveTasks(poketchSys->taskData)) {
+            PoketchAppPicker_Free(poketchSys->appPicker);
+            poketchSys->appPicker = NULL;
+            Poketch_SetCurrentAppID(poketchSys->poketch, poketchSys->appPickerResult);
+            poketchSys->constTaskData.lastAppID = Poketch_CurrentAppID(poketchSys->poketch);
+            PoketchSystem_SetState(poketchSys, POKETCH_SYSTEM_CHANGE_APP);
+        }
+        break;
+    }
+}
 #endif
 
 void PoketchSystem_SendEvent(PoketchSystem *poketchSys, enum PoketchEventID eventID, u32)
@@ -318,6 +405,7 @@ static BOOL PoketchSystem_InitInternal(PoketchSystem *poketchSys)
         poketchSys->menuPressedKeys = 0;
         poketchSys->menuAEvent = BUTTON_MANAGER_STATE_NULL;
         poketchSys->menuATouchEvent = BUTTON_TOUCH_DOWN;
+        poketchSys->appPicker = NULL;
 #endif
 
         if (PoketchSystem_ButtonInit(poketchSys)) {
@@ -414,6 +502,12 @@ static void PoketchEvent_InitApp(PoketchSystem *poketchSys)
 
 static void PoketchEvent_UpdateApp(PoketchSystem *poketchSys)
 {
+#ifdef SDK_PORT
+    if (poketchSys->subState >= APP_PICKER_STATE_CONCEAL) {
+        PoketchSystem_UpdateAppPicker(poketchSys);
+        return;
+    }
+#endif
     switch (poketchSys->subState) {
     case 0:
         if (PoketechSystem_IsRunningTask(poketchSys)) {
@@ -532,6 +626,12 @@ static void PoketchEvent_OnShutdown(PoketchSystem *poketchSys)
 {
     switch (poketchSys->subState) {
     case 0:
+#ifdef SDK_PORT
+        if (poketchSys->appPicker != NULL) {
+            PoketchAppPicker_Free(poketchSys->appPicker);
+            poketchSys->appPicker = NULL;
+        }
+#endif
         switch (poketchSys->appState) {
         case 1:
             poketchSys->subState = 1;

@@ -1017,7 +1017,8 @@ static void StartMenu_Poketch(FieldTask *fieldTask)
         }
         break;
     case START_MENU_STATE_POKETCH_RUN:
-        if (poketchSys == NULL || (gSystem.pressedKeys & (PAD_BUTTON_B | PAD_BUTTON_X))) {
+        // The app picker takes B and X to close itself.
+        if (poketchSys == NULL || (!PoketchSystem_IsAppPickerOpen(poketchSys) && (gSystem.pressedKeys & (PAD_BUTTON_B | PAD_BUTTON_X)))) {
             menu->poketchCloseRequested = TRUE;
         }
         if (!IsScreenFadeDone()) {
@@ -1036,6 +1037,14 @@ static void StartMenu_Poketch(FieldTask *fieldTask)
         case PAD_BUTTON_R:
             PoketchSystem_RequestAppChange(poketchSys, BUTTON_DOWN);
             break;
+        }
+        // Buttons the current app doesn't use open a list to jump to any app.
+        u32 pickerKeys = PAD_BUTTON_SELECT | PAD_BUTTON_START;
+        if (PoketchSystem_CurrentAppID(poketchSys) != POKETCH_APPID_PARTYSTATUS) {
+            pickerKeys |= PAD_BUTTON_Y;
+        }
+        if (gSystem.pressedKeys & pickerKeys) {
+            PoketchSystem_OpenAppPicker(poketchSys);
         }
         break;
     case START_MENU_STATE_POKETCH_CLOSE_WAIT:

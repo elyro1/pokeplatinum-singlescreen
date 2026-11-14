@@ -123,6 +123,8 @@ struct PoketchSystem {
     u32 menuPressedKeys;
     u32 menuAEvent;
     u32 menuATouchEvent;
+    struct PoketchAppPicker *appPicker;
+    int appPickerResult;
 #endif
 };
 
@@ -132,6 +134,9 @@ void PoketchSystem_SetMenuAppInputEnabled(PoketchSystem *poketchSys, BOOL enable
 u32 PoketchSystem_GetMenuPressedKeys(const PoketchSystem *poketchSys);
 BOOL PoketchSystem_IsReadyForMenu(const PoketchSystem *poketchSys);
 BOOL PoketchSystem_RequestAppChange(PoketchSystem *poketchSys, enum ButtonDir direction);
+BOOL PoketchSystem_OpenAppPicker(PoketchSystem *poketchSys);
+// TRUE from the request until the chosen app starts loading.
+BOOL PoketchSystem_IsAppPickerOpen(const PoketchSystem *poketchSys);
 
 void PoketchAppStaticInit_DigitalWatch();
 void PoketchAppStaticInit_Stopwatch();
