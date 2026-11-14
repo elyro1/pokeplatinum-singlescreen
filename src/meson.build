@@ -670,6 +670,7 @@ pokeplatinum_c = files(
     'applications/poketch/poketch_animation.c',
     'applications/poketch/poketch_button.c',
     'applications/poketch/poketch_map.c',
+    'applications/poketch/poketch_app_picker.c',
     'applications/poketch/digital_watch/main.c',
     'applications/poketch/digital_watch/graphics.c',
     'applications/poketch/stopwatch/main.c',

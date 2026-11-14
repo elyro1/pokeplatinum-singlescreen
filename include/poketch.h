@@ -102,6 +102,13 @@ int Poketch_IncrementAppID(Poketch *poketch);
  */
 int Poketch_DecrementAppID(Poketch *poketch);
 
+#ifdef SDK_PORT
+// Whether the app is in the L/R cycle: registered, or a port-only app whose setting is on.
+BOOL Poketch_IsAppVisible(const Poketch *poketch, int appID);
+// Makes a visible app current; returns FALSE for one that isn't.
+BOOL Poketch_SetCurrentAppID(Poketch *poketch, int appID);
+#endif
+
 u32 Poketch_CurrentScreenColor(const Poketch *poketch);
 
 /**
