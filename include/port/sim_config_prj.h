@@ -35,6 +35,12 @@ typedef enum {
     POKEDEX_UNITS_COUNT,
 } PokedexUnits;
 
+typedef enum {
+    RUNNING_SHOES_HOLD, // Original: hold B to run.
+    RUNNING_SHOES_AUTO_RUN, // HG/SS's shoes toggle switched on: run by default, hold B to walk.
+    RUNNING_SHOES_COUNT,
+} RunningShoesMode;
+
 typedef struct {
     BOOL enable60fps; // Speed correction is automatic at 60 FPS.
     BattlePacing battlePacing;
@@ -46,6 +52,7 @@ typedef struct {
     BOOL widescreenEvolution; // The evolution scene across the whole view. Read when it starts.
     BOOL gridBag; // The bag's grid of item icons with the single-screen layout; off keeps the classic bag. Read when it opens.
     PokedexUnits pokedexUnits; // Heights and weights in the Pokédex.
+    RunningShoesMode runningShoes;
     BOOL fastWildBattleIntro; // Shorten eligible BW2 wild battle intros.
     BOOL disableLowHPBeep; // Silences the low-HP warning in both battle presentations.
     BOOL bwMonSprites; // BW2's art for the summary screen, the Pokédex and the icons, when its assets are extracted

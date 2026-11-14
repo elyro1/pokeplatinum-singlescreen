@@ -80,6 +80,16 @@ void BattleSpeedContents() {
         ImGui::SetTooltip("Normal: half the speed of Fast. Faster: shorter changes.\n"
             "Independent of battle pacing and text.");
     }
+    SettingsRow("Running Shoes", "Overworld running once you have the shoes.");
+    int runningShoes = myConfig->runningShoes;
+    if (ImGui::Combo("##RunningShoes", &runningShoes, "Hold B to run\0Always run\0")) {
+        myConfig->runningShoes = static_cast<RunningShoesMode>(runningShoes);
+        configChanged = true;
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Hold B to run: the original controls.\n"
+            "Always run: like HG/SS with the shoes switched on; hold B to walk. Applies immediately.");
+    }
     ConfigCheckBox("Disable low-HP beep", &myConfig->disableLowHPBeep, configChanged);
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Silences the low-HP warning in Platinum and BW2 battles. Applies immediately.");
