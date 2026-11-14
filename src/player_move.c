@@ -2489,11 +2489,15 @@ static BOOL MovementAction_IsWalkOnSpotSlow(enum MovementAction movementAction)
  */
 BOOL PlayerAvatar_IsRunButtonHeld(PlayerAvatar *playerAvatar, u16 pad)
 {
-    if (pad & PAD_BUTTON_B) {
-        return TRUE;
-    }
+    BOOL held = (pad & PAD_BUTTON_B) != 0;
 
-    return FALSE;
+#ifdef SDK_PORT
+    if (SIM_Config_prj_GetConfig()->runningShoes == RUNNING_SHOES_AUTO_RUN) {
+        return !held;
+    }
+#endif
+
+    return held;
 }
 
 /**

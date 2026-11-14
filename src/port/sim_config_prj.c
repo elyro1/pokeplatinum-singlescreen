@@ -20,6 +20,7 @@ static const char *sSpeedNames[PORT_SPEED_COUNT] = { "Fast", "Faster", "Instant"
 
 static const char *sNicknameModeNames[NICKNAME_MODE_COUNT] = { "Ask", "Always", "Never" };
 static const char *sPokedexUnitsNames[POKEDEX_UNITS_COUNT] = { "Metric", "Imperial" };
+static const char *sRunningShoesNames[RUNNING_SHOES_COUNT] = { "HoldToRun", "AutoRun" };
 
 static int IniHandler(void *user, const char *section, const char *name, const char *value);
 static const char * BoolToString(BOOL arg);
@@ -91,6 +92,14 @@ static int IniHandler(void* user, const char* section, const char* name,
         for (int i = 0; i < NICKNAME_MODE_COUNT; i++) {
             if (strcmp(value, sNicknameModeNames[i]) == 0) {
                 config->nicknameMode = (NicknameMode)i;
+                break;
+            }
+        }
+    }
+    if (MATCH("General", "RunningShoes")) {
+        for (int i = 0; i < RUNNING_SHOES_COUNT; i++) {
+            if (strcmp(value, sRunningShoesNames[i]) == 0) {
+                config->runningShoes = (RunningShoesMode)i;
                 break;
             }
         }
@@ -189,6 +198,7 @@ void SIM_Config_prj_LoadDefaults(SIM_Config_prj_type * aConfig)
   aConfig->widescreenEvolution = TRUE;
   aConfig->gridBag = TRUE;
   aConfig->pokedexUnits = POKEDEX_UNITS_METRIC;
+  aConfig->runningShoes = RUNNING_SHOES_HOLD;
   aConfig->textSpeed = PORT_SPEED_FAST;
   aConfig->battleBarSpeed = PORT_SPEED_FAST;
   aConfig->fastWildBattleIntro = TRUE;
@@ -252,6 +262,7 @@ void SIM_Config_prj_SaveConfigFile(SIM_Config_prj_type * aConfig)
     fprintf(configFile, "WidescreenEvolution=%s\n", BoolToString(aConfig->widescreenEvolution));
     fprintf(configFile, "GridBag=%s\n", BoolToString(aConfig->gridBag));
     fprintf(configFile, "PokedexUnits=%s\n", sPokedexUnitsNames[aConfig->pokedexUnits]);
+    fprintf(configFile, "RunningShoes=%s\n", sRunningShoesNames[aConfig->runningShoes]);
     fprintf(configFile, "FastWildBattleIntro=%s\n", BoolToString(aConfig->fastWildBattleIntro));
     fprintf(configFile, "DisableLowHPBeep=%s\n", BoolToString(aConfig->disableLowHPBeep));
     fprintf(configFile, "BW2BattleVisuals=%s\n", BoolToString(aConfig->bw2BattleVisuals));
