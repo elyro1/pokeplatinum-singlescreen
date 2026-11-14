@@ -911,11 +911,15 @@ void NARC_ReadFile(NARC *narc, u32 bytesToRead, void *dest)
 {
 #if defined(SDK_BUILD_LINUX) || defined(SDK_BUILD_WIN64)
     if (narc->optionalData) {
-        GF_ASSERT(narc->optionalCursor <= narc->optionalSize && bytesToRead <= narc->optionalSize - narc->optionalCursor);
-        if (narc->optionalCursor <= narc->optionalSize && bytesToRead <= narc->optionalSize - narc->optionalCursor) {
-            memcpy(dest, (const u8 *)narc->optionalData + narc->optionalCursor, bytesToRead);
-            narc->optionalCursor += bytesToRead;
-        }
+        // Replacement files can be shorter than the member they stand in for, and some callers read a fixed size
+        // past the member's end (the Poketch's large icons read 1152 bytes, BW2's icons are 1072). On the DS that
+        // read runs into the next file, so give what the file has and zero the rest.
+        u32 available = narc->optionalCursor < narc->optionalSize ? narc->optionalSize - narc->optionalCursor : 0;
+        u32 copied = bytesToRead < available ? bytesToRead : available;
+
+        memcpy(dest, (const u8 *)narc->optionalData + narc->optionalCursor, copied);
+        memset((u8 *)dest + copied, 0, bytesToRead - copied);
+        narc->optionalCursor += copied;
         return;
     }
 #endif
