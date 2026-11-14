@@ -34,7 +34,7 @@ int main()
     return 0;
 #else
     assert(GameplayConfig_UsesFileOverrides());
-    assert(GameplayConfig_OptionCount() == 24);
+    assert(GameplayConfig_OptionCount() == 25);
     GameplayConfig values;
     GameplayConfig_LoadDefaults(&values);
     for (unsigned i = 0; i < GameplayConfig_OptionCount(); ++i) {

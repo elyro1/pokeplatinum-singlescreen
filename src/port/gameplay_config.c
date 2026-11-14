@@ -100,6 +100,10 @@ void GameplayConfig_LoadDefaults(GameplayConfig *config)
     // Multiply the final catch rate after ball, HP, status, and Safari modifiers; 255 or higher guarantees capture.
     // 0 or 1 keeps original rates; Master Balls, guaranteed catches, and trainer capture restrictions still apply.
     config->catchRateMultiplier = 1;
+
+    // Add a Poketch app after the retail apps that lists the current zone's wild Pokemon by method.
+    // Species not yet seen in the Pokedex show as "?". Nothing is written to the save, so FALSE removes the app cleanly.
+    config->poketchRouteEncounters = FALSE;
 }
 
 typedef enum {
@@ -146,6 +150,7 @@ static const ConfigField sConfigFields[] = {
     FIELD(friendshipGainMultiplier, CONFIG_U8, 255, "Multiply positive friendship gains: 0 and 1 preserve original gains.", "Friendship gain multiplier", "Progression & prices"),
     FIELD(eggHatchSpeedMultiplier, CONFIG_U8, 255, "Divide steps per hatch check by this value: 0 and 1 preserve original timing.", "Egg hatch speed multiplier", "Evolution & eggs"),
     FIELD(catchRateMultiplier, CONFIG_U8, 255, "Multiply final catch rate: 0 and 1 preserve original rates; trainer captures remain blocked.", "Catch rate multiplier", "Encounters & events"),
+    FIELD(poketchRouteEncounters, CONFIG_BOOL, 1, "Add a Poketch app showing the current area's wild Pokemon; unseen species show as a question mark.", "Wild Pokemon Poketch app", "Encounters & events"),
 };
 
 #undef FIELD

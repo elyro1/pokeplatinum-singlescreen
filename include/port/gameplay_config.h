@@ -32,6 +32,7 @@ typedef struct {
     u8 friendshipGainMultiplier; // Positive friendship gains only; 0 and 1 preserve original gains.
     u8 eggHatchSpeedMultiplier; // 1 = original speed; 0 also falls back to original speed.
     u8 catchRateMultiplier; // Final catch rate: 2-255 boosts it; 0 and 1 preserve original rates.
+    BOOL poketchRouteEncounters; // Adds a Poketch app listing the current zone's wild Pokemon.
 } GameplayConfig;
 
 // Relative to the game working directory, like sim_config_prj.ini and the save files.
