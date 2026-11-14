@@ -1083,6 +1083,15 @@ static BOOL MovementAction_JumpDistortionWorldEast_Step0(MapObject *mapObj)
     return TRUE;
 }
 
+#ifdef SDK_PORT
+// Map objects update once per main-loop pass, so wait counters tuned for 30 Hz
+// need twice as many ticks at 60 FPS.
+int MapObject_ScaleWaitTicks(int ticks)
+{
+    return SIM_Config_prj_GetConfig()->enable60fps ? ticks * 2 : ticks;
+}
+#endif
+
 static void MovementAction_InitDelay(MapObject *mapObj, int delay)
 {
 #ifdef SDK_PORT
