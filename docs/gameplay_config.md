@@ -78,6 +78,7 @@ All options in this table default to `false`. Set an option to `true` to enable 
 | `instantSpiritomb` | Skips Underground conversations when encountering Spiritomb. An Odd Keystone is still required; already-inserted Keystones work, and each successful encounter still uses one. |
 | `feebasWaterStoneEvolution` | Feebas evolves with a Water Stone instead of leveling up with sufficient Beauty. Disabling it restores Beauty evolution and removes the Water Stone alternative. |
 | `disableOverworldPoisonDamage` | Skips walking poison damage and its visual/survival effects. Poison status and battle damage remain. |
+| `poketchRouteEncounters` | Adds a Pokétch app after the retail apps that lists the wild Pokémon of the area you are in: grass or cave (with the current time of day's slots), Surf, and each rod. Tap the screen, or press A/Left/Right in the Pokétch menu, to switch method. Species you have not seen in the Pokédex show as a question mark; species you own get a Poké Ball mark. The app is never written to the save, so turning the option off removes it and saves stay DS-compatible. |
 
 ## Nickname offers
 

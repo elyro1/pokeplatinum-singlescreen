@@ -11,6 +11,13 @@
 #define POKETCH_REGISTRY_SIZE      32
 #define POKETCH_DOTART_SIZE_BYTES  120
 
+#ifdef SDK_PORT
+// Port-only app that is never written to appRegistry or appIndex, so saves stay
+// valid on a DS. It is listed after the retail apps while its setting is on.
+#define POKETCH_APPID_ROUTEENCOUNTERS POKETCH_APPID_MAX
+#define POKETCH_APPID_PORT_MAX        (POKETCH_APPID_MAX + 1)
+#endif
+
 /** Poketch Screen colors, used in Poketch_SetScreenColor */
 enum PoketchScreenColor {
     POKETCH_SCREEN_COLOR_GREEN = 0,
@@ -78,6 +85,8 @@ void Poketch_Enable(Poketch *poketch);
 BOOL Poketch_IsEnabled(Poketch *poketch);
 
 BOOL Poketch_IsAppRegistered(Poketch *poketch, enum PoketchAppID appID);
+// Registered apps plus the port-only apps that are currently enabled.
+int Poketch_VisibleAppCount(const Poketch *poketch);
 
 BOOL Poketch_RegisterApp(Poketch *poketch, enum PoketchAppID appID);
 

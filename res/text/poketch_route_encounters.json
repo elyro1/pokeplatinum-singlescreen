@@ -1,0 +1,37 @@
+{
+  "key": 31337,
+  "messages": [
+    {
+      "id": "PoketchRouteEncounters_Text_Grass",
+      "en_US": "GRASS"
+    },
+    {
+      "id": "PoketchRouteEncounters_Text_Cave",
+      "en_US": "CAVE"
+    },
+    {
+      "id": "PoketchRouteEncounters_Text_Surf",
+      "en_US": "SURF"
+    },
+    {
+      "id": "PoketchRouteEncounters_Text_OldRod",
+      "en_US": "OLD ROD"
+    },
+    {
+      "id": "PoketchRouteEncounters_Text_GoodRod",
+      "en_US": "GOOD ROD"
+    },
+    {
+      "id": "PoketchRouteEncounters_Text_SuperRod",
+      "en_US": "SUPER ROD"
+    },
+    {
+      "id": "PoketchRouteEncounters_Text_NoWildPokemon",
+      "en_US": "NO WILD POKéMON"
+    },
+    {
+      "id": "PoketchRouteEncounters_Text_PageSeparator",
+      "en_US": "/"
+    }
+  ]
+}

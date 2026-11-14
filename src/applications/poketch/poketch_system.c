@@ -56,6 +56,9 @@ FS_EXTERN_OVERLAY(poketch_link_searcher);
 FS_EXTERN_OVERLAY(poketch_trainer_counter);
 FS_EXTERN_OVERLAY(poketch_pokemon_history);
 FS_EXTERN_OVERLAY(poketch_unused_4);
+#ifdef SDK_PORT
+FS_EXTERN_OVERLAY(poketch_route_encounters);
+#endif
 
 static PoketchSystem *PoketchSystem_GetFromFieldSystem(void);
 static BOOL PoketchSystem_InitInternal(PoketchSystem *poketchSys);
@@ -107,6 +110,7 @@ static void (*PoketchOverlayLoadFunctions[])(void) = {
     PoketchAppStaticInit_MatchupChecker,
     PoketchAppStaticInit_Stopwatch,
     PoketchAppStaticInit_AlarmClock,
+    PoketchAppStaticInit_RouteEncounters,
 };
 #endif
 
@@ -139,7 +143,10 @@ static const struct {
     { POKETCH_APPID_CALENDAR, FS_OVERLAY_ID(poketch_calendar) },
     { POKETCH_APPID_LINKSEARCHER, FS_OVERLAY_ID(poketch_link_searcher) },
     { POKETCH_APPID_TRAINERCOUNTER, FS_OVERLAY_ID(poketch_trainer_counter) },
-    { POKETCH_APPID_POKEMONHISTORY, FS_OVERLAY_ID(poketch_pokemon_history) }
+    { POKETCH_APPID_POKEMONHISTORY, FS_OVERLAY_ID(poketch_pokemon_history) },
+#ifdef SDK_PORT
+    { POKETCH_APPID_ROUTEENCOUNTERS, FS_OVERLAY_ID(poketch_route_encounters) },
+#endif
 };
 
 static PoketchSystem *PoketchSystem_GetFromFieldSystem(void)
@@ -232,7 +239,7 @@ BOOL PoketchSystem_RequestAppChange(PoketchSystem *poketchSys, enum ButtonDir di
 {
     if (!PoketchSystem_IsReadyForMenu(poketchSys)
         || !poketchSys->menuActive
-        || poketchSys->poketch->appCount <= 1
+        || Poketch_VisibleAppCount(poketchSys->poketch) <= 1
         || (direction != BUTTON_UP && direction != BUTTON_DOWN)) {
         return FALSE;
     }

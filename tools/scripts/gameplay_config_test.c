@@ -51,6 +51,7 @@ static void AssertOriginalDefaults(void)
     assert(config->friendshipGainMultiplier == 1);
     assert(config->eggHatchSpeedMultiplier == 1);
     assert(config->catchRateMultiplier == 1);
+    assert(config->poketchRouteEncounters == FALSE);
 }
 
 static void TestConfigFile(void)
@@ -92,6 +93,7 @@ static void TestConfigFile(void)
     assert(strstr(template, "friendshipGainMultiplier=1\n"));
     assert(strstr(template, "eggHatchSpeedMultiplier=1\n"));
     assert(strstr(template, "catchRateMultiplier=1\n"));
+    assert(strstr(template, "poketchRouteEncounters=false\n"));
     GameplayConfig_Init();
     AssertOriginalDefaults();
 
@@ -120,7 +122,8 @@ static void TestConfigFile(void)
                 "shinyRolls=65535\n"
                 "friendshipGainMultiplier=255\n"
                 "eggHatchSpeedMultiplier=0\n"
-                "catchRateMultiplier=255\n");
+                "catchRateMultiplier=255\n"
+                "poketchRouteEncounters=true\n");
     // Starting again must preserve the player's existing overrides.
     GameplayConfig_Init();
     GameplayConfig *config = GameplayConfig_Get();
@@ -148,6 +151,7 @@ static void TestConfigFile(void)
     assert(config->friendshipGainMultiplier == 255);
     assert(config->eggHatchSpeedMultiplier == 0);
     assert(config->catchRateMultiplier == 255);
+    assert(config->poketchRouteEncounters == TRUE);
 
     // Legacy trainer intro entries are ignored without affecting other defaults.
     WriteConfig("[Gameplay]\nfastTrainerBattleIntro=all\nfastTrainerBattleIntro=invalid\n");

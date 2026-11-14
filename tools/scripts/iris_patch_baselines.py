@@ -8,13 +8,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SOUND = 'data/sound/pl_sound_data.sdat'
-# The end of generated/text_banks.txt: the follower dialogue, then the Pokédex's metric units.
+# The end of generated/text_banks.txt: the follower dialogue, the Pokédex's metric units,
+# then the route encounters Pokétch app.
 APPENDED_TEXT_BANKS = (
     'following_pokemon',
     'species_weight_metric',
     'species_weight_gira_metric',
     'species_height_metric',
     'species_height_gira_metric',
+    'poketch_route_encounters',
 )
 # Tracked text banks that only append messages, with their retail message counts.
 APPENDED_MESSAGE_BANKS = {

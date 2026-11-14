@@ -9,6 +9,10 @@
 #include "pokemon_icon.h"
 #include "savedata.h"
 
+#ifdef SDK_PORT
+#include "port/gameplay_config.h"
+#endif
+
 int Poketch_SaveSize(void)
 {
     return sizeof(Poketch);
@@ -81,6 +85,63 @@ BOOL Poketch_IsAppRegistered(Poketch *poketch, enum PoketchAppID appID)
     return poketch->appRegistry[appID];
 }
 
+#ifdef SDK_PORT
+// Runtime only: the save keeps the last retail app in appIndex.
+static BOOL sRouteEncountersShown;
+
+static BOOL Poketch_RouteEncountersEnabled(void)
+{
+    return GameplayConfig_Get()->poketchRouteEncounters;
+}
+
+static BOOL Poketch_IsCycleSlotUsed(const Poketch *poketch, int slot)
+{
+    if (slot == POKETCH_APPID_ROUTEENCOUNTERS) {
+        return Poketch_RouteEncountersEnabled();
+    }
+
+    return poketch->appRegistry[slot];
+}
+
+static int Poketch_StepAppID(Poketch *poketch, int step)
+{
+    int current = Poketch_CurrentAppID(poketch);
+    int next = current;
+
+    while (TRUE) {
+        next += step;
+
+        if (next >= POKETCH_APPID_PORT_MAX) {
+            next = 0;
+        } else if (next < 0) {
+            next = POKETCH_APPID_PORT_MAX - 1;
+        }
+
+        if (next == current || Poketch_IsCycleSlotUsed(poketch, next)) {
+            break;
+        }
+    }
+
+    sRouteEncountersShown = next == POKETCH_APPID_ROUTEENCOUNTERS;
+
+    if (!sRouteEncountersShown) {
+        poketch->appIndex = next;
+    }
+
+    return next;
+}
+#endif
+
+int Poketch_VisibleAppCount(const Poketch *poketch)
+{
+#ifdef SDK_PORT
+    if (Poketch_RouteEncountersEnabled()) {
+        return poketch->appCount + 1;
+    }
+#endif
+    return poketch->appCount;
+}
+
 BOOL Poketch_RegisterApp(Poketch *poketch, enum PoketchAppID appID)
 {
     BOOL appRegistered = FALSE;
@@ -103,11 +164,19 @@ BOOL Poketch_RegisterApp(Poketch *poketch, enum PoketchAppID appID)
 
 enum PoketchAppID Poketch_CurrentAppID(const Poketch *poketch)
 {
+#ifdef SDK_PORT
+    if (sRouteEncountersShown && Poketch_RouteEncountersEnabled()) {
+        return POKETCH_APPID_ROUTEENCOUNTERS;
+    }
+#endif
     return poketch->appIndex;
 }
 
 int Poketch_IncrementAppID(Poketch *poketch)
 {
+#ifdef SDK_PORT
+    return Poketch_StepAppID(poketch, 1);
+#endif
     int nextIndex = poketch->appIndex;
 
     while (TRUE) {
@@ -131,6 +200,9 @@ int Poketch_IncrementAppID(Poketch *poketch)
 
 int Poketch_DecrementAppID(Poketch *poketch)
 {
+#ifdef SDK_PORT
+    return Poketch_StepAppID(poketch, -1);
+#endif
     int prevIndex = poketch->appIndex;
 
     while (TRUE) {

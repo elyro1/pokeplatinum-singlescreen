@@ -158,6 +158,7 @@ void PoketchAppStaticInit_LinkSearcher();
 void PoketchAppStaticInit_TrainerCounter();
 void PoketchAppStaticInit_PokemonHistory();
 void PoketchAppStaticInit_Calendar();
+void PoketchAppStaticInit_RouteEncounters();
 #endif
 
 void PoketchSystem_Create(FieldSystem *fieldSystem, PoketchSystem **poketchSys, SaveData *saveData, BgConfig *bgl, NNSG2dOamManagerInstance *oamManager);
