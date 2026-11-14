@@ -1085,6 +1085,13 @@ static BOOL MovementAction_JumpDistortionWorldEast_Step0(MapObject *mapObj)
 
 static void MovementAction_InitDelay(MapObject *mapObj, int delay)
 {
+#ifdef SDK_PORT
+    // Walks take twice the ticks at 60 fps; delays must too, or scripted
+    // scenes lose their sync (e.g. the player walking into Mom at home).
+    if (SIM_Config_prj_GetConfig()->enable60fps) {
+        delay *= 2;
+    }
+#endif
     DelayMovementData *data = MapObject_InitMovementData(mapObj, sizeof(DelayMovementData));
     data->delay = delay;
 
