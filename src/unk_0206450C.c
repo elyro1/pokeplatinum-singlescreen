@@ -160,7 +160,7 @@ const int Unk_020EEAD0[];
 static void sub_0206450C(MapObject *mapObj, int param1)
 {
     UnkStruct_0206450C *v0 = sub_02062A54(mapObj, (sizeof(UnkStruct_0206450C)));
-    v0->unk_02 = sub_0206530C(Unk_020EEA88, -1);
+    v0->unk_02 = MapObject_ScaleWaitTicks(sub_0206530C(Unk_020EEA88, -1));
     v0->unk_04 = param1;
 
     sub_02062A0C(mapObj, 0x0);
@@ -235,7 +235,7 @@ void sub_020645C0(MapObject *mapObj)
             v0->unk_02--;
 
             if (v0->unk_02 <= 0) {
-                v0->unk_02 = sub_0206530C(Unk_020EEA88, -1);
+                v0->unk_02 = MapObject_ScaleWaitTicks(sub_0206530C(Unk_020EEA88, -1));
                 MapObject_TryFace(mapObj, sub_02065330(v0->unk_04, -1));
             }
         }
@@ -303,7 +303,7 @@ void sub_02064690(MapObject *mapObj)
             break;
         }
 
-        v1->unk_02 = sub_0206530C(Unk_020EEA88, -1);
+        v1->unk_02 = MapObject_ScaleWaitTicks(sub_0206530C(Unk_020EEA88, -1));
         v1->unk_00++;
     case 2:
         v1->unk_02--;
@@ -552,7 +552,7 @@ static int sub_02064A1C(MapObject *mapObj, UnkStruct_0206496C *param1)
 
     param1->unk_04++;
 
-    if (param1->unk_04 < 24) {
+    if (param1->unk_04 < MapObject_ScaleWaitTicks(24)) {
         return 0;
     }
 
@@ -647,7 +647,7 @@ static int sub_02064B5C(MapObject *mapObj, UnkStruct_0206496C *param1)
 {
     param1->unk_04++;
 
-    if (param1->unk_04 < 24) {
+    if (param1->unk_04 < MapObject_ScaleWaitTicks(24)) {
         return 0;
     }
 

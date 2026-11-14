@@ -222,7 +222,7 @@ static int sub_02067540(MapObject *param0)
     case 3: {
         v0->unk_08++;
 
-        if (v0->unk_08 < 8) {
+        if (v0->unk_08 < MapObject_ScaleWaitTicks(8)) {
             return 1;
         }
 
@@ -343,7 +343,7 @@ static int sub_020676D4(MapObject *param0)
     case 3: {
         v0->unk_08++;
 
-        if (v0->unk_08 < 8) {
+        if (v0->unk_08 < MapObject_ScaleWaitTicks(8)) {
             return 1;
         }
 

@@ -23,6 +23,15 @@ int MovementAction_GetDirFromAction(enum MovementAction movementAction);
 void MapObject_DoMovementAction(MapObject *mapObj);
 BOOL sub_020658DC(MapObject *mapObj);
 
+#ifdef SDK_PORT
+int MapObject_ScaleWaitTicks(int ticks);
+#else
+static inline int MapObject_ScaleWaitTicks(int ticks)
+{
+    return ticks;
+}
+#endif
+
 extern BOOL (*const gMovementActionFuncs_FaceNorth[])(MapObject *);
 extern BOOL (*const gMovementActionFuncs_FaceSouth[])(MapObject *);
 extern BOOL (*const gMovementActionFuncs_FaceWest[])(MapObject *);
