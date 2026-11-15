@@ -6,7 +6,7 @@
 #ifdef SDK_PORT
 #include <simulator/sim.h>
 
-#include "port/sim_config_prj.h"
+#include "port/visuals/widescreen.h"
 #endif
 
 #include "applications/pokedex/pokedex_tabs.h"
@@ -36,7 +36,7 @@ static void SetLitStrip(BOOL keepStrip);
 void PokedexWide_LatchEnabled(void)
 {
 #ifdef SDK_PORT
-    sEnabled = SIM_Config_prj_GetConfig()->widescreenPokedex;
+    sEnabled = Widescreen_PokedexEnabled();
 #endif
 }
 

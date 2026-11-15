@@ -68,14 +68,16 @@ def main():
         exe_dir.mkdir()
         harness = base / 'harness.cpp'
         harness.write_text(r'''
-#include "port/rom_setup.h"
-#include "port/sim_config_prj.h"
+#include "port/assets/rom_setup.h"
+#include "port/config/sim_config_prj.h"
 #include <cstdio>
 static SIM_Config_prj_type config;
 static int saves;
 extern "C" SIM_Config_prj_type *SIM_Config_prj_GetConfig() { return &config; }
 extern "C" void SIM_Config_prj_SaveConfigFile(SIM_Config_prj_type *) { ++saves; }
 extern "C" void GFL_ArcSysInit(const char **, unsigned) {}
+extern "C" void FollowerAssets_Reload(void) {}
+extern "C" void BwMonSprites_Reload(void) {}
 int main() {
     int platinum = RomSetup_TryExtractPlatinum();
     RomSetup_AutoExtractBw2();
@@ -86,7 +88,7 @@ int main() {
         subprocess.run(['g++', '-std=c++17', '-DSDK_BUILD_LINUX', '-DSDK_PORT',
                         '-I' + str(ROOT / 'include'),
                         '-I' + str(ROOT / 'subprojects/libntr/include'),
-                        str(harness), str(ROOT / 'src/port/rom_setup.cpp'),
+                        str(harness), str(ROOT / 'src/port/assets/rom_setup.cpp'),
                         str(ROOT / 'subprojects/libntr/libraries/sim/src/fireflower/nds-extract.cpp'),
                         str(args.build.resolve() / 'src/bwbattle/libbwbattle.a.p/assets_bw2_assets.c.o'),
                         '-lSDL2', '-o', str(binary)], check=True)

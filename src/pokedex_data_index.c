@@ -8,7 +8,7 @@
 #include "narc.h"
 
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/gameplay/port_options.h"
 #endif
 
 static enum NarcID sPokedexDataNarcID = NARC_INDEX_APPLICATION__ZUKANLIST__ZKN_DATA__ZUKAN_DATA;
@@ -36,7 +36,7 @@ enum NarcID Pokedex_Data_NARC_Index(void)
 BOOL Pokedex_UsesMetricUnits(void)
 {
 #ifdef SDK_PORT
-    return SIM_Config_prj_GetConfig()->pokedexUnits == POKEDEX_UNITS_METRIC;
+    return PortOptions_PokedexUnits() == POKEDEX_UNITS_METRIC;
 #else
     return FALSE;
 #endif

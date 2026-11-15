@@ -37,7 +37,7 @@ Every omitted option retains its built-in default. Delete or rename `gameplay_co
 
 ## Fixed defaults for ROM hacks
 
-Set your hack's defaults in `GameplayConfig_LoadDefaults` in [`src/port/gameplay_config.c`](../src/port/gameplay_config.c). In `GameplayConfig_Init` in the same file, comment out this single call and rebuild:
+Set your hack's defaults in `GameplayConfig_LoadDefaults` in [`src/port/gameplay/gameplay_config.c`](../src/port/gameplay/gameplay_config.c). In `GameplayConfig_Init` in the same file, comment out this single call and rebuild:
 
 ```c
     // GameplayConfig_LoadFile();
@@ -126,7 +126,7 @@ For example, `bpPricePercent=50` makes an ordinary 48 BP item cost 24 BP, but a 
 
 If changes do not apply, restart the game, check the filename is exactly `gameplay_config.ini` (not `.ini.txt`), and verify it is in the working directory. Check `[Gameplay]`, option spelling, accepted values, and INI syntax. The loader falls back silently; try a minimal file like the partial example above to isolate a problem.
 
-The authoritative defaults, option names, ranges, parser, template generator, and BP pricing are in [`src/port/gameplay_config.c`](../src/port/gameplay_config.c). The config structure and file path are in [`include/port/gameplay_config.h`](../include/port/gameplay_config.h). The existing config regression checks can be run against a configured Linux build with:
+The authoritative defaults, option names, ranges, parser, template generator, and BP pricing are in [`src/port/gameplay/gameplay_config.c`](../src/port/gameplay/gameplay_config.c). The config structure and file path are in [`include/port/gameplay/gameplay_config.h`](../include/port/gameplay/gameplay_config.h). The existing config regression checks can be run against a configured Linux build with:
 
 ```sh
 python3 tools/scripts/test_gameplay_config.py --build build_linux

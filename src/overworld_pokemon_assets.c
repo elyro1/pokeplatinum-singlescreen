@@ -3,7 +3,7 @@
 #include <nitro.h>
 #include <string.h>
 #ifdef SDK_PORT
-#include "port/follower_assets.h"
+#include "port/assets/follower_assets.h"
 #endif
 
 #include "constants/map_object.h"

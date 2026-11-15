@@ -14,8 +14,7 @@
 #include "heap.h"
 #include "rtc.h"
 #ifdef SDK_PORT
-#include "port/field_visuals.h"
-#include "port/sim_config_prj.h"
+#include "port/visuals/field_visuals.h"
 #endif
 
 #define AREA_LIGHT_FILE_COUNT 4
@@ -136,7 +135,7 @@ static void AreaLightManager_ApplyActiveTemplateToAreaModelAttrs(AreaLightManage
     AreaLightTemplate *activeTemplate = &areaLightMan->templates[areaLightMan->activeTemplateIndex];
 #ifdef SDK_PORT
     AreaLightTemplate blended;
-    if (SIM_Config_prj_GetConfig()->enhancedDayNight) {
+    if (FieldVisuals_EnhancedDayNightEnabled()) {
         FieldVisuals_SampleLight(areaLightMan->templates, areaLightMan->templateCount, FieldVisuals_GetTime(GetSecondsSinceMidnight()), &blended);
         activeTemplate = &blended;
     }

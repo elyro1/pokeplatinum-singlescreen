@@ -4,9 +4,7 @@
 #include <nitro.h>
 #include <string.h>
 
-#ifndef SDK_BUILD_ARM
-#include <simulator/sim.h>
-#endif
+#include "port/visuals/widescreen.h"
 
 #include "generated/genders.h"
 #include "generated/hidden_locations.h"
@@ -238,7 +236,7 @@ BOOL TownMap_HandleInput_Item(TownMapAppData *appData)
     }
 
 #ifndef SDK_BUILD_ARM
-    if (SIM_GetConfigPtr()->screenLayout == SIM_CONFIG_SCREEN_LAYOUT_TOP_ONLY
+    if (Widescreen_IsSingleScreen()
         && JOY_NEW(PAD_BUTTON_A)
         && graphicsMan->queuedMovement == 0
         && HasLocationDescription(appData, graphicsMan->hoveredBlock)) {

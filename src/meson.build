@@ -1031,44 +1031,44 @@ pokeplatinum_c = files(
 
 if(build_target != 'arm')
 if get_option('autoplay_tests')
-pokeplatinum_c += files('port/autoplay_test.c')
+pokeplatinum_c += files('port/debug/autoplay_test.c')
 endif
 pokeplatinum_c += files(
-    'port/autosave.c',
-    'port/battle_smoothing.c',
-    'port/battle_timing.c',
-    'port/bw_mon_anim.c',
-    'port/bw_mon_sprites.c',
-    'port/charcode_convert.c',
-    'port/debug_field.c',
-    'port/evolution_wide.c',
-    'port/save_migration.c',
-    'port/file_commit.c',
-    'port/field_lights.c',
-    'port/field_visuals.c',
-    'port/field_visual_effects.c',
-    'port/scripted_npc_scene.c',
-    'port/sim_config_prj.c',
-    'port/config_report.c',
-    'port/gameplay_config.c',
-    'port/gameplay_config_editor.cpp',
-    'port/gui_gameplay.cpp',
-    'port/sim_gui_prj.cpp',
-    'port/gui_cheats.cpp',
-    'port/gui_configPrj.cpp',
-    'port/gui_createitem.cpp',
-    'port/gui_createitem_utils.c',
-    'port/gui_progression.cpp',
-    'port/gui_progression_utils.c',
-    'port/gui_createmon.cpp',
-    'port/gui_createmon_utils.c',
-    'port/gui_mapjump.cpp',
-    'port/gui_mapjump_utils.c'
+    'port/config/sim_config_prj.c',
+    'port/config/config_report.c',
+    'port/gameplay/gameplay_config.c',
+    'port/gameplay/autosave.c',
+    'port/gameplay/battle_timing.c',
+    'port/visuals/battle_smoothing.c',
+    'port/visuals/bw_mon_anim.c',
+    'port/visuals/bw_mon_sprites.c',
+    'port/visuals/evolution_wide.c',
+    'port/visuals/field_lights.c',
+    'port/visuals/field_visuals.c',
+    'port/visuals/field_visual_effects.c',
+    'port/visuals/scripted_npc_scene.c',
+    'port/assets/file_commit.c',
+    'port/assets/save_migration.c',
+    'port/debug/debug_field.c',
+    'port/gui/sim_gui_prj.cpp',
+    'port/gui/gui_cheats.cpp',
+    'port/gui/gui_configPrj.cpp',
+    'port/gui/gui_gameplay.cpp',
+    'port/gui/gameplay_config_editor.cpp',
+    'port/gui/gui_createitem.cpp',
+    'port/gui/gui_createitem_utils.c',
+    'port/gui/gui_createmon.cpp',
+    'port/gui/gui_createmon_utils.c',
+    'port/gui/gui_mapjump.cpp',
+    'port/gui/gui_mapjump_utils.c',
+    'port/gui/gui_progression.cpp',
+    'port/gui/gui_progression_utils.c',
+    'port/gui/charcode_convert.c'
 )
 
 if(build_target == 'linux')
 pokeplatinum_c += files(
-    'port/sim_icon.cpp'
+    'port/gui/sim_icon.cpp'
 )
 endif
 
@@ -1127,7 +1127,7 @@ if build_target == 'linux' or build_target == 'win64'
         command: [find_program('python3', native: true), files('../tools/scripts/embed_follower_bw2.py'),
             '@INPUT@', '@OUTPUT@'],
     )
-    pokeplatinum_c += [files('port/map_patches.cpp', 'port/rom_setup.cpp', 'port/follower_assets.cpp'),
+    pokeplatinum_c += [files('port/assets/map_patches.cpp', 'port/assets/rom_setup.cpp', 'port/assets/follower_assets.cpp'),
         map_patches_header, follower_bw2_data]
     public_includes = [public_includes, include_directories('.')]
 endif

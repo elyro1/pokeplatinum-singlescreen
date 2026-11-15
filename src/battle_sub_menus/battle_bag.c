@@ -12,8 +12,8 @@
 #include "battle_sub_menus/battle_bag_text.h"
 #include "battle_sub_menus/battle_bag_utils.h"
 #include "battle_sub_menus/battle_sub_menu_cursor.h"
-#include "port/gameplay_config.h"
-#include "port/autoplay_test.h"
+#include "port/gameplay/gameplay_config.h"
+#include "port/debug/autoplay_test.h"
 
 #include "bag.h"
 #include "bg_window.h"

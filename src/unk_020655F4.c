@@ -29,7 +29,7 @@
 #include "res/sound/pl_sound_data.naix"
 
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/visuals/frame_rate.h"
 #endif
 
 typedef struct MoveAnimData {
@@ -460,8 +460,7 @@ static BOOL MovementAction_FaceEast_Step0(MapObject *mapObj)
 static void MovementAction_InitWalk(MapObject *mapObj, int dir, fx32 distance, s16 duration, u16 param4)
 {
     #ifdef SDK_PORT
-    SIM_Config_prj_type * myConfig = SIM_Config_prj_GetConfig();
-    if(myConfig->enable60fps) {
+    if(FrameRate_Is60Fps()) {
         duration = duration << 1;
         distance = distance >> 1;
     }
@@ -671,8 +670,7 @@ static BOOL MovementAction_RunEast_Step0(MapObject *mapObj)
 static void MovementAction_InitWalkOnSpot(MapObject *mapObj, int dir, s16 duration, u16 param3)
 {
 #ifdef SDK_PORT
-    SIM_Config_prj_type *myConfig = SIM_Config_prj_GetConfig();
-    if (myConfig->enable60fps) {
+    if (FrameRate_Is60Fps()) {
         // Wall collisions retry after this action, so preserve their original cadence.
         duration *= 2;
     }
@@ -828,7 +826,7 @@ static BOOL MovementAction_WalkOnSpotFasterEast_Step0(MapObject *mapObj)
 static void MovementAction_InitJumpCustomSound(MapObject *mapObj, int dir, fx32 distance, s16 duration, u16 param4, s16 param5, u16 param6, u32 seqID)
 {
 #ifdef SDK_PORT
-    if (SIM_Config_prj_GetConfig()->enable60fps) {
+    if (FrameRate_Is60Fps()) {
         duration *= 2;
         distance /= 2;
         param6 /= 2;
@@ -845,7 +843,7 @@ static void MovementAction_InitJumpCustomSound(MapObject *mapObj, int dir, fx32 
     data->unk_0F = param5;
     data->unk_08 = param6;
 #ifdef SDK_PORT
-    data->interpolateHeight = SIM_Config_prj_GetConfig()->enable60fps;
+    data->interpolateHeight = FrameRate_Is60Fps();
 #endif
 
     if (distance == 0) {
@@ -1088,7 +1086,7 @@ static BOOL MovementAction_JumpDistortionWorldEast_Step0(MapObject *mapObj)
 // need twice as many ticks at 60 FPS.
 int MapObject_ScaleWaitTicks(int ticks)
 {
-    return SIM_Config_prj_GetConfig()->enable60fps ? ticks * 2 : ticks;
+    return FrameRate_Scale(ticks);
 }
 #endif
 
@@ -1097,7 +1095,7 @@ static void MovementAction_InitDelay(MapObject *mapObj, int delay)
 #ifdef SDK_PORT
     // Walks take twice the ticks at 60 fps; delays must too, or scripted
     // scenes lose their sync (e.g. the player walking into Mom at home).
-    if (SIM_Config_prj_GetConfig()->enable60fps) {
+    if (FrameRate_Is60Fps()) {
         delay *= 2;
     }
 #endif
@@ -1324,8 +1322,7 @@ static void MovementAction_InitWalkUneven(MapObject *mapObj, int dir, s16 durati
     data->duration = duration;
 
 #ifdef SDK_PORT
-    SIM_Config_prj_type *myConfig = SIM_Config_prj_GetConfig();
-    data->frameMultiplier = myConfig->enable60fps ? 2 : 1;
+    data->frameMultiplier = FrameRate_Multiplier();
     data->duration *= data->frameMultiplier;
 #endif
 
@@ -1559,8 +1556,7 @@ static void sub_02066824(MapObject *mapObj, const VecFx32 *param1, int param2, i
     data->unk_04 = *param1;
 
 #ifdef SDK_PORT
-    SIM_Config_prj_type *myConfig = SIM_Config_prj_GetConfig();
-    if (myConfig->enable60fps) {
+    if (FrameRate_Is60Fps()) {
         data->duration *= 2;
         data->unk_04.x /= 2;
         data->unk_04.y /= 2;

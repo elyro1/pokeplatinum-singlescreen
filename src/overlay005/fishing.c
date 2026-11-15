@@ -11,7 +11,7 @@
 #include "overlay005/ov5_021DFB54.h"
 #include "overlay005/ov5_021F5A10.h"
 #include "overlay006/wild_encounters.h"
-#include "port/gameplay_config.h"
+#include "port/gameplay/gameplay_config.h"
 
 #include "bg_window.h"
 #include "encounter.h"

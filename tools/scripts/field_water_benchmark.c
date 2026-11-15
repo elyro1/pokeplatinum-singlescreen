@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 #include "field/field_system.h"
-#include "port/sim_config_prj.h"
+#include "port/config/sim_config_prj.h"
 static uintptr_t executableBase;
 static int FindExecutable(struct dl_phdr_info *info, size_t size, void *data)
 {

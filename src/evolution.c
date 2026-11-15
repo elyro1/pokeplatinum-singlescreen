@@ -57,7 +57,7 @@
 #include "res/text/bank/battle_strings.h"
 
 #ifdef SDK_PORT
-#include "port/evolution_wide.h"
+#include "port/visuals/evolution_wide.h"
 #endif
 
 static void SysTask_Evolution(SysTask *task, void *data);

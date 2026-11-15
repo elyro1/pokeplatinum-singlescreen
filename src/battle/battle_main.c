@@ -1,5 +1,5 @@
 #include "battle/battle_main.h"
-#include "port/autoplay_test.h"
+#include "port/debug/autoplay_test.h"
 
 #ifdef SDK_PORT
 #include <simulator/sim.h>
@@ -84,7 +84,7 @@
 #include "string_template.h"
 #include "sys_task.h"
 #include "sys_task_manager.h"
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 #include "system.h"
 #include "text.h"
 #include "touch_pad.h"
@@ -101,7 +101,9 @@
 #include "res/text/bank/battle_strings.h"
 
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/gameplay/port_options.h"
+#include "port/visuals/frame_rate.h"
+#include "port/visuals/widescreen.h"
 #endif
 
 FS_EXTERN_OVERLAY(overlay10);
@@ -606,7 +608,7 @@ void BattleSystem_SetupBattleScreen(BattleSystem *battleSys, BOOL restoreTerrain
     ReplaceTransparentTiles(battleSys->bgConfig, 1, 1, 10, frame, HEAP_ID_BATTLE);
     BOOL bw2NicknameBackdrop = FALSE;
 #ifdef SDK_PORT
-    if (!restoreTerrain && SIM_Config_prj_GetConfig()->bw2BattleVisuals) {
+    if (!restoreTerrain && PortOptions_Bw2BattleVisuals()) {
         bw2NicknameBackdrop = BattleMain_LoadBw2NicknameBackdrop(battleSys);
     }
 #endif
@@ -624,7 +626,7 @@ void BattleSystem_SetupBattleScreen(BattleSystem *battleSys, BOOL restoreTerrain
         Graphics_LoadTilemapToBgLayer(NARC_INDEX_BATTLE__GRAPHIC__PL_BATT_BG, 2, battleSys->bgConfig, 3, 0, 0, 1, HEAP_ID_BATTLE);
     }
 #ifdef SDK_PORT
-    if (!restoreTerrain && SIM_Config_prj_GetConfig()->widescreenPokedex) {
+    if (!restoreTerrain && Widescreen_PokedexEnabled()) {
         const int backdropHeight = bw2NicknameBackdrop ? HW_LCD_HEIGHT : 160;
         BattleMain_MirrorNicknameBackdrop(battleSys, backdropHeight / TILE_HEIGHT_PIXELS);
     }
@@ -1772,7 +1774,7 @@ static void SysTask_UpdateRedHPSound(SysTask *task, void *inBattleSys)
 
 #ifdef SDK_PORT
     // The menu can change this mid-battle, so silence a beep that is already looping.
-    if (SIM_Config_prj_GetConfig()->disableLowHPBeep) {
+    if (PortOptions_LowHPBeepDisabled()) {
         if (redHPSoundFlag & 1) {
             Sound_StopEffect(SEQ_SE_DP_HINSI_sseq, 0);
             BattleSystem_SetRedHPSoundFlag(battleSys, redHPSoundFlag & 2);
@@ -1825,7 +1827,7 @@ static void SysTask_UpdateRedHPSound(SysTask *task, void *inBattleSys)
         if (Sound_IsEffectPlaying(SEQ_SE_DP_HINSI_sseq) == FALSE
 #ifdef SDK_PORT
             // Audio plays in real time. Keep its pause at 30 Hz even with Quick pacing or accelerated UI.
-            && (!SIM_Config_prj_GetConfig()->enable60fps || (BattleTiming_GetFrame() & 1))
+            && (!FrameRate_Is60Fps() || (BattleTiming_GetFrame() & 1))
 #endif
         ) {
             if (--delay == 0) {

@@ -6,7 +6,7 @@
 #include "../../src/text.c"
 #include "../../src/render_text.c"
 #include "../../src/charcode.c"
-#include "../../src/port/battle_timing.c"
+#include "../../src/port/gameplay/battle_timing.c"
 
 static SIM_Config_prj_type sConfig;
 static SysTask sTask;

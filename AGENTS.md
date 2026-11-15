@@ -21,8 +21,21 @@ Main branch: `pc_single_screen_mod`. User-facing docs: README.md, BUILD.MD, docs
 
 ## Layout
 
-- `src/port/`: port-only features (settings GUI `gui_*.cpp`, gameplay config, autosave, DS save import, field
-  visuals/lights, BW sprites, BW2 map conversion). Headers in `include/port/`.
+- `src/port/`: port-only features, with headers at the same paths under `include/port/`:
+  - `config/`: the settings model (`sim_config_prj`) and `--print-config`.
+  - `gameplay/`: gameplay rules (`gameplay_config`), autosave, battle pacing, and the setting accessors `cheats.h`,
+    `game_speed.h`, `port_options.h`.
+  - `visuals/`: field visuals/lights/effects, BW sprites, battle smoothing, wide evolution, and the accessors
+    `widescreen.h`, `frame_rate.h`.
+  - `assets/`: ROM extraction, resource patches, follower sprites, the DS save layout and import.
+  - `gui/`: the Tab menu (ImGui) and the gameplay config editor.
+  - `debug/`: debug map/battle jumps, the autoplay test bridge, `asserts.h`.
+- Decomp code reads settings through those accessors (`Widescreen_*`, `FrameRate_*`, `GameSpeed_*`, `PortOptions_*`,
+  `Cheats_*`, `FieldVisuals_*Enabled`, `GameplayConfig_Get()`), never `SIM_Config_prj_GetConfig()` or
+  `SIM_GetConfigPtr()` directly. A new setting that decomp code checks gets an accessor there. The accessors are
+  `static inline` so test harnesses that compile decomp files against stubs still link, and they return the
+  original behaviour on the DS build. An accessor also folds in what a feature needs besides its setting
+  (e.g. followers need the BW2 sprites).
 - `src/bwbattle/{adapter,view,gfl,system,shim,assets}/`: BW2 battle visuals. The adapter maps Platinum's
   `BattleDisplay_*` commands (src/battle/battle_display.c) onto the BW2 view; Gen 4 battle logic is unchanged.
 - `src/` elsewhere: decomp code, with port changes guarded by `#ifdef SDK_BUILD_ARM` (DS build) vs the PC builds.

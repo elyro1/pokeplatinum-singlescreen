@@ -3,9 +3,7 @@
 #include <nitro.h>
 #include <string.h>
 
-#ifndef SDK_BUILD_ARM
-#include <simulator/sim.h>
-#endif
+#include "port/visuals/widescreen.h"
 
 #include "constants/graphics.h"
 #include "generated/items.h"
@@ -327,11 +325,7 @@ static const CoordinatesS16 sScratchCellPixelRegions[NUM_SCRATCH_CELLS] = {
 
 static BOOL IsSingleScreen(void)
 {
-#ifndef SDK_BUILD_ARM
-    return SIM_GetConfigPtr()->screenLayout == SIM_CONFIG_SCREEN_LAYOUT_TOP_ONLY;
-#else
-    return FALSE;
-#endif
+    return Widescreen_IsSingleScreen();
 }
 
 static void UpdateSingleScreenUI(ScratchOffCardApp *app, int state)

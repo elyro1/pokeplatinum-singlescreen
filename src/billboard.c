@@ -1,17 +1,17 @@
 #include "billboard.h"
 
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 
 #include "billboard_vram_transfer.h"
 #include "easy3d.h"
 #include "heap.h"
 
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/visuals/frame_rate.h"
 #if defined(SDK_BUILD_LINUX) || defined(SDK_BUILD_WIN64)
 #include <simulator/sim.h>
 #endif
-#include "port/field_visual_effects.h"
+#include "port/visuals/field_visual_effects.h"
 #endif
 
 enum BillboardAnimStatus {
@@ -887,8 +887,7 @@ static fx32 GetAnimStartFrame(const Billboard *billboard, int animNum)
 static int GetAndAdvanceAnim(Billboard *billboard, fx32 numFrames)
 {
 #ifdef SDK_PORT
-    SIM_Config_prj_type * myConfig = SIM_Config_prj_GetConfig();
-    if (!BattleTiming_IsActive() && myConfig->enable60fps) {
+    if (!BattleTiming_IsActive() && FrameRate_Is60Fps()) {
         numFrames = numFrames >> 1;
     }
 #endif

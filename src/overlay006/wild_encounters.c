@@ -25,7 +25,7 @@
 #include "overlay006/special_dates.h"
 #include "overlay006/swarm.h"
 #include "overlay006/wild_encounters.h"
-#include "port/gameplay_config.h"
+#include "port/gameplay/gameplay_config.h"
 
 #include "encounter.h"
 #include "field_battle_data_transfer.h"
@@ -58,7 +58,7 @@
 #include "vars_flags.h"
 
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/gameplay/cheats.h"
 #endif
 
 typedef struct RadarEncounterData {
@@ -823,8 +823,7 @@ static BOOL TryGenerateFishingEncounter(FieldSystem *fieldSystem, Pokemon *param
 static BOOL ShouldGetRandomEncounter(FieldSystem *fieldSystem, const u32 encounterRate, const u8 tileBehavior)
 {
 #ifdef SDK_PORT
-    SIM_Config_prj_type * myConfig = SIM_Config_prj_GetConfig();
-    if(myConfig->disableRandomEncounters) {
+    if(Cheats_NoRandomEncounters()) {
         return FALSE;
     }
 #endif

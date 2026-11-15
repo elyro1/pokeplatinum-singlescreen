@@ -23,20 +23,20 @@ def main():
 
     with tempfile.TemporaryDirectory(prefix='gameplay-editor-') as directory:
         temp = Path(directory)
-        original = ROOT / 'src/port/gameplay_config.c'
+        original = ROOT / 'src/port/gameplay/gameplay_config.c'
         disabled = temp / 'defaults_only.c'
         call = '    GameplayConfig_LoadFile();'
         assert original.read_text().count(call) == 1
         disabled.write_text(original.read_text().replace(call, '    // GameplayConfig_LoadFile();'))
         # CI's GCC defaults to C++17; newer local compilers may default to C++20.
-        cpp = flags_for('/port/gameplay_config_editor.cpp') + ['-std=c++17']
+        cpp = flags_for('/port/gui/gameplay_config_editor.cpp') + ['-std=c++17']
         editor = temp / 'editor.o'
-        subprocess.run(cpp + ['-c', str(ROOT / 'src/port/gameplay_config_editor.cpp'), '-o', str(editor)],
+        subprocess.run(cpp + ['-c', str(ROOT / 'src/port/gui/gameplay_config_editor.cpp'), '-o', str(editor)],
                        cwd=build, check=True)
         for name, source, defines in [('file', original, []),
                                       ('defaults-only', disabled, ['-DGAMEPLAY_CONFIG_DEFAULTS_ONLY'])]:
             config = temp / f'{name}-config.o'
-            subprocess.run(flags_for('/port/gameplay_config.c') + ['-c', str(source), '-o', str(config)],
+            subprocess.run(flags_for('/port/gameplay/gameplay_config.c') + ['-c', str(source), '-o', str(config)],
                            cwd=build, check=True)
             test = temp / f'{name}-test.o'
             subprocess.run(cpp + ['-UNDEBUG', *defines, '-c',

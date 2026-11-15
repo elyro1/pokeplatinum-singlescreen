@@ -20,7 +20,7 @@ def main():
     parser.add_argument('--scales',type=int,nargs='+',default=[2,3,10])
     args=parser.parse_args();build=args.build.resolve()
     commands=json.loads((build/'compile_commands.json').read_text())
-    entry=next(x for x in commands if x['file'].endswith('/port/field_visuals.c'))
+    entry=next(x for x in commands if x['file'].endswith('/port/visuals/field_visuals.c'))
     flags=shlex.split(entry['command']);flags=flags[:flags.index('-MD')]
     i=flags.index('-include');del flags[i:i+2];flags.remove('-fpch-preprocess')
     flags+=['-D_GNU_SOURCE','-include',str(ROOT/'include/pch/global_pch.h')]

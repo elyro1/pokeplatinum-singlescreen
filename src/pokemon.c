@@ -5,7 +5,7 @@
 #include <string.h>
 
 #ifdef SDK_PORT
-#include "port/gameplay_config.h"
+#include "port/gameplay/gameplay_config.h"
 #endif
 
 #include "constants/charcode.h"

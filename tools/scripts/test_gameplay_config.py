@@ -17,11 +17,11 @@ def main():
     args = parser.parse_args()
     build = args.build.resolve()
     commands = json.loads((build / "compile_commands.json").read_text())
-    entry = next(c for c in commands if c["file"].endswith("/src/port/gameplay_config.c"))
+    entry = next(c for c in commands if c["file"].endswith("/src/port/gameplay/gameplay_config.c"))
     flags = shlex.split(entry["command"])
     flags = flags[:flags.index("-MD")]
     with tempfile.TemporaryDirectory(prefix="gameplay-config-") as directory:
-        source = ROOT / "src/port/gameplay_config.c"
+        source = ROOT / "src/port/gameplay/gameplay_config.c"
         # Exercise the documented ROM hack workflow by commenting out the actual startup call.
         disabled_source = Path(directory) / "gameplay_config_defaults_only.c"
         contents = source.read_text()

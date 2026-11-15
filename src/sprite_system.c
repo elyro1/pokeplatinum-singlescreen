@@ -6,7 +6,7 @@
 #include "constants/heap.h"
 
 #include "nnsys/g2d/g2d_Image.h"
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 
 #include "cell_transfer.h"
 #include "char_transfer.h"

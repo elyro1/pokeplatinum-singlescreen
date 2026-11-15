@@ -64,7 +64,7 @@ def main():
               'and make the results unreliable', flush=True)
     build = args.build.resolve()
     commands = json.loads((build / 'compile_commands.json').read_text())
-    entry = next(x for x in commands if x['file'].endswith('/port/field_visuals.c'))
+    entry = next(x for x in commands if x['file'].endswith('/port/visuals/field_visuals.c'))
     flags = shlex.split(entry['command'])
     flags = flags[:flags.index('-MD')]
     index = flags.index('-include')

@@ -24,7 +24,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix='battle-speed-') as directory:
         temp = Path(directory)
         for name, suffix, extra in [
-            ('config', '/port/sim_config_prj.c', [ROOT / 'subprojects/libntr/libraries/sim/src/config/ini.c',
+            ('config', '/port/config/sim_config_prj.c', [ROOT / 'subprojects/libntr/libraries/sim/src/config/ini.c',
                                                    ROOT / 'subprojects/libntr/libraries/sim/src/config/config_check.c']),
             ('bars', '/battle/healthbox.c', []),
             ('text', '/src/text.c', []),

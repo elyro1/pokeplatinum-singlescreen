@@ -1,5 +1,5 @@
 #include "menu.h"
-#include "port/autoplay_test.h"
+#include "port/debug/autoplay_test.h"
 
 #include "bg_window.h"
 #include "colored_arrow.h"

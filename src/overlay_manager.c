@@ -1,5 +1,5 @@
 #include "overlay_manager.h"
-#include "port/autoplay_test.h"
+#include "port/debug/autoplay_test.h"
 
 #include <nitro.h>
 #include <string.h>

@@ -43,8 +43,8 @@
 #ifdef SDK_PORT
 #include "map_object.h"
 #include "player_avatar.h"
-#include "port/autosave.h"
-#include "port/debug_field.h"
+#include "port/gameplay/autosave.h"
+#include "port/debug/debug_field.h"
 #endif
 
 FS_EXTERN_OVERLAY(overlay5);

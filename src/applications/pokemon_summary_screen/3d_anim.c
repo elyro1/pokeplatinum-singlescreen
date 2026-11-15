@@ -12,7 +12,7 @@
 #include "camera.h"
 #include "gx_layers.h"
 #ifdef SDK_PORT
-#include "port/bw_mon_sprites.h"
+#include "port/visuals/bw_mon_sprites.h"
 #endif
 #include "pokemon.h"
 #include "pokemon_anim.h"

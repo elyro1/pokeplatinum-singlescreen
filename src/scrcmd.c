@@ -228,9 +228,9 @@
 #include "res/text/bank/tough_words.h"
 
 #ifdef SDK_PORT
-#include "port/scripted_npc_scene.h"
-#include "port/gameplay_config.h"
-#include "port/sim_config_prj.h"
+#include "port/visuals/scripted_npc_scene.h"
+#include "port/gameplay/gameplay_config.h"
+#include "port/gameplay/port_options.h"
 #endif
 
 typedef struct {
@@ -793,7 +793,7 @@ static BOOL ScrCmd_GetNicknameMode(ScriptContext *ctx)
     u16 *dest = ScriptContext_GetVarPointer(ctx);
     *dest = 0;
 #ifdef SDK_PORT
-    *dest = SIM_Config_prj_GetConfig()->nicknameMode;
+    *dest = PortOptions_NicknameMode();
 #endif
     return FALSE;
 }

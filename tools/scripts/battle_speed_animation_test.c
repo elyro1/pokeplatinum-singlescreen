@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../../src/port/battle_timing.c"
+#include "../../src/port/gameplay/battle_timing.c"
 #include "../../src/sys_task_manager.c"
 #include "../../src/pokemon_sprite.c"
 #include "../../src/particle_system.c"

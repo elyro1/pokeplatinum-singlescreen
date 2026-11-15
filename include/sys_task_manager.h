@@ -1,7 +1,7 @@
 #ifndef POKEPLATINUM_SYS_TASK_MANAGER_H
 #define POKEPLATINUM_SYS_TASK_MANAGER_H
 
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 
 typedef struct SysTask SysTask;
 typedef struct SysTaskManager SysTaskManager;

@@ -77,7 +77,7 @@
 #include "sprite_system.h"
 #include "sys_task.h"
 #include "sys_task_manager.h"
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 #include "system.h"
 #include "text.h"
 #include "trainer_info.h"

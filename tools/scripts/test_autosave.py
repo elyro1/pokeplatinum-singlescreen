@@ -17,7 +17,7 @@ def main():
     args = parser.parse_args()
     build = args.build.resolve()
     commands = json.loads((build / 'compile_commands.json').read_text())
-    entry = next(c for c in commands if c['file'].endswith('/src/port/gameplay_config.c'))
+    entry = next(c for c in commands if c['file'].endswith('/src/port/gameplay/gameplay_config.c'))
     flags = shlex.split(entry['command'])
     flags = flags[:flags.index('-MD')]
     # Test-only defines can invalidate the game's precompiled header.

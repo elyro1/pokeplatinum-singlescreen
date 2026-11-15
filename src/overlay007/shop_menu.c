@@ -13,8 +13,8 @@
 #include "field/field_system.h"
 #include "overlay005/fieldmap.h"
 #include "overlay005/sprite_resource_manager.h"
-#include "port/gameplay_config.h"
-#include "port/autoplay_test.h"
+#include "port/gameplay/gameplay_config.h"
+#include "port/debug/autoplay_test.h"
 
 #include "bag.h"
 #include "bag_context.h"

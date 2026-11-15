@@ -13,7 +13,7 @@ Status: implemented with the clean dark style. TAB opens one centered panel with
 ## Findings in the current code
 
 - `subprojects/libntr/libraries/sim/src/sim_gui.cpp` creates the `libntr` launcher. Each `AppButton` has its own open flag and draws an independent window.
-- `src/port/sim_gui_prj.cpp` adds a second launcher, `pokeplatinum`, with more independent windows. A typical settings operation therefore leaves multiple overlapping windows open.
+- `src/port/gui/sim_gui_prj.cpp` adds a second launcher, `pokeplatinum`, with more independent windows. A typical settings operation therefore leaves multiple overlapping windows open.
 - Neither launcher specifies a deliberate panel position or size. Buttons often use fixed dimensions such as 100 × 20 or 80 × 20.
 - GUI initialization has no application-level font/style scale setup. `ImGuiIO igIO = ImGui::GetIO()` also copies the IO object, so the intended keyboard-navigation flag is not applied to the context.
 - The SDL backend reports framebuffer scale and provides content-scale helpers, but the application does not use those helpers to size its UI. The backend itself notes limitations in Linux DPI detection. A reliable manual override is needed alongside automatic scaling.

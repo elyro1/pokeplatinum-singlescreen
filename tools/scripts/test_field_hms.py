@@ -17,7 +17,7 @@ def main():
     args = parser.parse_args()
     build = args.build.resolve()
     commands = json.loads((build / "compile_commands.json").read_text())
-    entry = next(c for c in commands if c["file"].endswith("/src/port/gameplay_config.c"))
+    entry = next(c for c in commands if c["file"].endswith("/src/port/gameplay/gameplay_config.c"))
     flags = shlex.split(entry["command"])
     flags = flags[:flags.index("-MD")]
     with tempfile.TemporaryDirectory(prefix="field-hms-") as directory:
@@ -26,7 +26,7 @@ def main():
                                str(ROOT / "tools/scripts/field_hm_test.c"),
                                str(ROOT / "src/unk_02054884.c"),
                                str(ROOT / "src/item.c"),
-                               str(ROOT / "src/port/gameplay_config.c"),
+                               str(ROOT / "src/port/gameplay/gameplay_config.c"),
                                str(ROOT / "subprojects/libntr/libraries/sim/src/config/ini.c"),
                                str(ROOT / "subprojects/libntr/libraries/sim/src/config/config_check.c"),
                                "-Wl,--gc-sections", "-o", str(executable)], cwd=build, check=True)

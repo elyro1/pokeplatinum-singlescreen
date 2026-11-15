@@ -7,8 +7,8 @@
 #include <simulator/config/sim_config.h>
 
 #include "constants/overworld_encounters.h"
-#include "port/gameplay_config.h"
-#include "port/sim_config_prj.h"
+#include "port/gameplay/gameplay_config.h"
+#include "port/config/sim_config_prj.h"
 
 static void Write(const char *path, const char *text)
 {

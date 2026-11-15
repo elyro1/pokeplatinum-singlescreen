@@ -30,7 +30,7 @@
 #include "sprite_util.h"
 #include "sys_task.h"
 #include "sys_task_manager.h"
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 
 #ifdef SDK_PORT
 #include "bwbattle/bw_adapter.h"

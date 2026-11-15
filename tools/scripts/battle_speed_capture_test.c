@@ -6,7 +6,7 @@
 #include "../../src/battle/battle_display.c"
 #include "../../src/pokemon_sprite.c"
 #include "../../src/palette.c"
-#include "../../src/port/battle_timing.c"
+#include "../../src/port/gameplay/battle_timing.c"
 #include "../../src/sys_task_manager.c"
 #include "../../src/sys_task.c"
 
@@ -18,6 +18,9 @@ static int sCleared;
 System gSystem;
 SIM_Config_prj_type *SIM_Config_prj_GetConfig(void) { return &sConfig; }
 void ErrorHandling_AssertFail(void) { assert(0); }
+void MIi_CpuClear16(u16 data, void *destp, u32 size) { for (u32 i = 0; i < size / 2; i++) ((u16 *)destp)[i] = data; }
+void MIi_CpuCopy16(const void *srcp, void *destp, u32 size) { memmove(destp, srcp, size); }
+BOOL BwMonSprites_LoadPalette(const PokemonSpriteTemplate *spriteTemplate, u16 *palette) { return FALSE; }
 void *Heap_Alloc(u32 heap, u32 size) { return calloc(1, size); }
 void Heap_Free(void *data) { free(data); }
 int BattleSystem_GetMaxBattlers(BattleSystem *sys) { return 2; }

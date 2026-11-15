@@ -39,7 +39,7 @@
 #include "game_overlay.h"
 #include "graphics.h"
 #include "grid_menu_cursor_position.h"
-#include "port/autoplay_test.h"
+#include "port/debug/autoplay_test.h"
 #include "gx_layers.h"
 #include "heap.h"
 #include "height_weight_data.h"
@@ -80,7 +80,7 @@
 #endif
 
 #ifdef SDK_PORT
-#include "port/gameplay_config.h"
+#include "port/gameplay/gameplay_config.h"
 #endif
 
 FS_EXTERN_OVERLAY(party_menu_form_change);

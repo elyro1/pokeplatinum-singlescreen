@@ -22,8 +22,10 @@
 
 #include "bwbattle/bwbattle.h"
 #include <simulator/sim.h>
-#include "port/sim_config_prj.h"
-#include "port/battle_timing.h"
+#include "port/gameplay/game_speed.h"
+#include "port/gameplay/port_options.h"
+#include "port/visuals/frame_rate.h"
+#include "port/gameplay/battle_timing.h"
 
 #include "battle/battle_display.h"
 #include "battle/healthbox.h"
@@ -148,7 +150,7 @@ static BOOL sStepEffectRunning;
 
 BOOL BwAdapter_IsEnabled(void)
 {
-    return SIM_Config_prj_GetConfig()->bw2BattleVisuals && BwBattle_AssetsReady();
+    return PortOptions_Bw2BattleVisuals() && BwBattle_AssetsReady();
 }
 
 BOOL BwAdapter_IsActive(void)
@@ -797,7 +799,7 @@ static BOOL BwAdapter_ChooseFastIntro(BattleSystem *battleSys)
         || (status & (BATTLE_STATUS_RECORDED | BATTLE_STATUS_RECORDING | BATTLE_STATUS_FIRST_BATTLE | BATTLE_STATUS_GIRATINA))) {
         return FALSE;
     }
-    return SIM_Config_prj_GetConfig()->fastWildBattleIntro;
+    return PortOptions_FastWildBattleIntro();
 }
 
 BOOL BwAdapter_FastIntro(void)
@@ -1927,12 +1929,11 @@ void BwAdapter_SetSuspended(BOOL suspended)
 // frames runs two of BW2's. Quick doubles effects; Turbo triples them. Ambient motion keeps its normal clock.
 static unsigned int BwAdapter_ViewFrames(void)
 {
-    const SIM_Config_prj_type *config = SIM_Config_prj_GetConfig();
-
-    if (!config->enable60fps) {
+    if (!FrameRate_Is60Fps()) {
         return 2;
     }
-    return config->battlePacing == BATTLE_PACING_TURBO ? 3 : (config->battlePacing == BATTLE_PACING_QUICK ? 2 : 1);
+    BattlePacing pacing = GameSpeed_BattlePacing();
+    return pacing == BATTLE_PACING_TURBO ? 3 : (pacing == BATTLE_PACING_QUICK ? 2 : 1);
 }
 
 BOOL BwAdapter_Draw(BattleSystem *battleSys)
@@ -1956,7 +1957,7 @@ BOOL BwAdapter_Draw(BattleSystem *battleSys)
     if (sFastPlayerSendOut) {
         frames *= 2;
     }
-    BwBattleView_Main(frames, SIM_Config_prj_GetConfig()->enable60fps ? 1 : 2);
+    BwBattleView_Main(frames, FrameRate_Is60Fps() ? 1 : 2);
     return TRUE;
 }
 

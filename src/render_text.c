@@ -1,6 +1,6 @@
 #include "render_text.h"
 
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 
 #include <nitro.h>
 #include <string.h>

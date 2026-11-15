@@ -14,7 +14,7 @@
 #include "applications/pokedex/pokedex_pages.h"
 #include "applications/pokedex/pokedex_wide.h"
 
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 #endif
 
 #include "bg_window.h"

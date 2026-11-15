@@ -8,7 +8,7 @@
 #include <simulator/g3_draw.h>
 #endif
 
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 
 #include "camera.h"
 #include "fx_util.h"

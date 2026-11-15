@@ -1,5 +1,5 @@
 #include "applications/pc_boxes/box_menu.h"
-#include "port/autoplay_test.h"
+#include "port/debug/autoplay_test.h"
 
 #include <nitro.h>
 

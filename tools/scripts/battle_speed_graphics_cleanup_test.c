@@ -15,6 +15,7 @@ void SpriteSystem_FreeResourcesAndManager(SpriteSystem *sys, SpriteManager *mana
 void SpriteSystem_Free(SpriteSystem *sys) {}
 void VramTransfer_Free(void) {}
 void Font_Free(enum Font font) {}
+u32 SIM_SetWideUI(BOOL enabled) { return 256; }
 
 int main(void)
 {

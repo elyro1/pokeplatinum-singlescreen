@@ -259,7 +259,7 @@ static void PokeGra_DrawSpindaSpots(NNSG2dCharacterData *chars, u32 personality)
     }
 }
 
-// bwbattle: for Platinum's screens, which have the characters without an NNSG2dCharacterData (port/bw_mon_sprites.c)
+// bwbattle: for Platinum's screens, which have the characters without an NNSG2dCharacterData (port/visuals/bw_mon_sprites.c)
 void BwBattle_DrawSpindaSpots(u8 *tiles, u32 personality) {
     NNSG2dCharacterData chars = { 0 };
 

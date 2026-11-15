@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes src/port/bw_icon_palettes.inc, BW2's table of which of the three icon palettes each icon uses.
+"""Writes src/port/visuals/bw_icon_palettes.inc, BW2's table of which of the three icon palettes each icon uses.
 
 The table is in BW2's ARM9 (read by PokeIcon_GetPalette, 0x02021034 in US Black 2), not in an archive, so the
 game can't get it from the archives it extracts. It holds palette numbers only, no art. Run once by hand with a

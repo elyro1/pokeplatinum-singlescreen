@@ -7,7 +7,7 @@
 #include "constants/heap.h"
 #include "constants/narc.h"
 
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 
 #include "camera.h"
 #include "spl.h"

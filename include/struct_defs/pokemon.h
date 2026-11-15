@@ -6,7 +6,7 @@
 
 #include "struct_defs/seal_case.h"
 
-#include "port/ds_layout.h"
+#include "port/assets/ds_layout.h"
 
 #include "charcode.h"
 #include "mail.h"

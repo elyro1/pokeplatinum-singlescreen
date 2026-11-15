@@ -7,6 +7,8 @@
 #include <simulator/sim.h>
 #endif
 
+#include "port/visuals/widescreen.h"
+
 #include "constants/charcode.h"
 #include "constants/graphics.h"
 #include "constants/heap.h"
@@ -1147,7 +1149,7 @@ static BOOL NamingScreen_Init(ApplicationManager *appMan, int *state)
             : DS_SCREEN_SUB;
 #ifdef SDK_PORT
         // Show the keyboard for every naming type when only one screen is visible.
-        if (SIM_GetConfigPtr()->screenLayout == SIM_CONFIG_SCREEN_LAYOUT_TOP_ONLY) {
+        if (Widescreen_IsSingleScreen()) {
             gSystem.whichScreenIs3D = DS_SCREEN_MAIN;
         }
 #endif

@@ -11,7 +11,7 @@
 #include "string_gf.h"
 
 #ifdef SDK_PORT
-#include "port/gameplay_config.h"
+#include "port/gameplay/gameplay_config.h"
 #endif
 
 #include "res/items/item_berry_list.h"

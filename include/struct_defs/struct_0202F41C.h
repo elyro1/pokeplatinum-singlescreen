@@ -3,7 +3,7 @@
 
 #include "struct_defs/struct_0202F298_sub1.h"
 
-#include "port/ds_layout.h"
+#include "port/assets/ds_layout.h"
 
 #include "battle_regulation.h"
 

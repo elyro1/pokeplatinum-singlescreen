@@ -33,19 +33,19 @@ def main():
             '-o', str(config)], cwd=build, check=True)
         cpp = flags_for('/sim_gui.cpp')
         graphics = temp / 'graphics.o'
-        subprocess.run(flags_for('/port/gui_configPrj.cpp') + [
+        subprocess.run(flags_for('/port/gui/gui_configPrj.cpp') + [
             '-ffunction-sections', '-fdata-sections', '-c',
-            str(ROOT / 'src/port/gui_configPrj.cpp'), '-o', str(graphics)], cwd=build, check=True)
+            str(ROOT / 'src/port/gui/gui_configPrj.cpp'), '-o', str(graphics)], cwd=build, check=True)
         test = temp / 'test.o'
         subprocess.run(cpp + [f'-I{ROOT / "include"}', '-UNDEBUG', '-c', str(ROOT / 'tools/scripts/menu_gui_test.cpp'),
                              '-o', str(test)], cwd=build, check=True)
         sdl = shlex.split(subprocess.check_output(['pkg-config', '--libs', 'sdl2'], text=True))
         executable = temp / 'menu-test'
         subprocess.run([cpp[0], str(test), str(config), str(graphics),
-                        str(build / 'main.p/src_port_sim_config_prj.c.o'),
-                        str(build / 'main.p/src_port_gameplay_config.c.o'),
-                        str(build / 'main.p/src_port_gameplay_config_editor.cpp.o'),
-                        str(build / 'main.p/src_port_gui_gameplay.cpp.o'),
+                        str(build / 'main.p/src_port_config_sim_config_prj.c.o'),
+                        str(build / 'main.p/src_port_gameplay_gameplay_config.c.o'),
+                        str(build / 'main.p/src_port_gui_gameplay_config_editor.cpp.o'),
+                        str(build / 'main.p/src_port_gui_gui_gameplay.cpp.o'),
                         str(build / 'subprojects/libntr/libraries/sim/libsim.a'),
                         '-Wl,--gc-sections', *sdl, '-ldl', '-o', str(executable)], check=True)
         env = dict(os.environ, SDL_VIDEODRIVER='offscreen', SDL_AUDIODRIVER='dummy')

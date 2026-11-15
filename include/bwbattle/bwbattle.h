@@ -47,7 +47,7 @@ void *BwBattle_ReadMemberRaw(const char *path, unsigned int member, unsigned int
 void BwBattle_DrawSpindaSpots(unsigned char *tiles, unsigned int personality);
 // The same on an animated sprite's 256x128 image
 void BwBattle_DrawMcssSpindaSpots(unsigned char *pixels, unsigned int personality);
-// The BW sprites setting's icons, which take the place of members of pl_poke_icon.narc (port/bw_mon_sprites.c)
+// The BW sprites setting's icons, which take the place of members of pl_poke_icon.narc (port/visuals/bw_mon_sprites.c)
 const void *BwMonIcons_Resource(unsigned int member, unsigned int *size);
 bool BwBattle_PlayHydreigonCry(void *handle, unsigned int player);
 // Extracts the archives bwbattle needs from a ROM, skipping those already there

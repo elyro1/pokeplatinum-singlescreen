@@ -3,7 +3,7 @@
 #include <nitro.h>
 
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/gameplay/port_options.h"
 #endif
 
 #include "constants/menu.h"
@@ -158,12 +158,12 @@ static BOOL EggHatchCutscene_Normal(EggHatchCutscene *eggHatch)
 
 #ifdef SDK_PORT
         // Finish the hatch presentation before bypassing the question and menu.
-        if (SIM_Config_prj_GetConfig()->nicknameMode != NICKNAME_MODE_ASK) {
+        if (PortOptions_NicknameMode() != NICKNAME_MODE_ASK) {
             if (PokemonAnimManager_HasAnimCompleted(eggHatch->graphics.animMan, 0) != TRUE
                 || PokemonSprite_IsAnimActive(eggHatch->monSprite)) {
                 break;
             }
-            eggHatch->app->nicknameMon = SIM_Config_prj_GetConfig()->nicknameMode == NICKNAME_MODE_ALWAYS;
+            eggHatch->app->nicknameMon = PortOptions_NicknameMode() == NICKNAME_MODE_ALWAYS;
             eggHatch->state = 14; // No menu was allocated, so skip menu cleanup.
             break;
         }
@@ -312,12 +312,12 @@ static BOOL EggHatchCutscene_Manaphy(EggHatchCutscene *eggHatch)
 
 #ifdef SDK_PORT
         // Finish the hatch presentation before bypassing the question and menu.
-        if (SIM_Config_prj_GetConfig()->nicknameMode != NICKNAME_MODE_ASK) {
+        if (PortOptions_NicknameMode() != NICKNAME_MODE_ASK) {
             if (PokemonAnimManager_HasAnimCompleted(eggHatch->graphics.animMan, 0) != TRUE
                 || PokemonSprite_IsAnimActive(eggHatch->monSprite)) {
                 break;
             }
-            eggHatch->app->nicknameMon = SIM_Config_prj_GetConfig()->nicknameMode == NICKNAME_MODE_ALWAYS;
+            eggHatch->app->nicknameMon = PortOptions_NicknameMode() == NICKNAME_MODE_ALWAYS;
             eggHatch->state = 14; // No menu was allocated, so skip menu cleanup.
             break;
         }

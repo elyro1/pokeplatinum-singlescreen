@@ -18,8 +18,8 @@ static int TestSync(int fd)
 
 #define rename TestRename
 #define fsync TestSync
-#include "../../src/port/file_commit.c"
-#include "../../src/port/save_migration.c"
+#include "../../src/port/assets/file_commit.c"
+#include "../../src/port/assets/save_migration.c"
 #undef rename
 #undef fsync
 
