@@ -163,6 +163,16 @@ def main():
         run(dev)
         assert not (dev / '.map-patch-originals').exists()
         print('PASS: development assets are recognized without backups or rewriting')
+        # An older build patched this directory without backups; the new build
+        # only appends text banks, which must still apply.
+        older = work / 'older-dev'
+        older_data = dict(expected)
+        older_data[TEXT] = expected[TEXT][:-2]
+        populate(older, older_data)
+        run(older)
+        assert members(older / TEXT) == expected[TEXT]
+        assert not (older / '.map-patch-originals' / TEXT).exists()
+        print('PASS: patched assets without backups gain newly appended members')
         corrupt_indices = {MATRIX: 0, MENU: 3}
         for path, _, index, before_member in resource_baselines(build):
             if expected[path][index] != before_member:
