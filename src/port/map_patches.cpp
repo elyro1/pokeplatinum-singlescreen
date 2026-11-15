@@ -205,27 +205,37 @@ void patchAll() {
             complete &= p->member<current.files.size() && sha256(current.files[p->member])==p->after;
         }
         if (complete) continue;
+        auto applied=[&](const MapPatch *p) {
+            return p->member<current.files.size() && sha256(current.files[p->member])==p->after;
+        };
         auto backup=std::filesystem::path(".map-patch-originals") / path;
+        bool saveBackup=!std::filesystem::exists(backup);
         Bytes original;
-        if (std::filesystem::exists(backup)) original=read(backup);
+        if (!saveBackup) original=read(backup);
         else {
             original=read(path);
-            // Never save a modified file as the original. Development builds
-            // already containing all output hashes take the fast path above.
-            for (auto p:group.second)
+            // Without a backup, an archive patched by an older build can only
+            // gain new patches whose sources are still original.
+            for (auto p:group.second) {
+                if (applied(p)) {
+                    saveBackup=false; // Never save a modified file as the original.
+                    continue;
+                }
                 if (p->sourceMember>=current.files.size() || sha256(current.files[p->sourceMember])!=p->before)
                     throw std::runtime_error("Original map data unavailable. Re-extract a clean US Platinum ROM into a fresh game directory.");
+            }
         }
         Archive base(original);
         // Preserve unrelated members from the current archive (e.g. user mods).
         for (auto p:group.second) {
+            if (applied(p)) continue;
             if (p->sourceMember>=base.files.size()) throw std::runtime_error("Missing original map member");
             if (p->member>current.files.size()) throw std::runtime_error("Non-contiguous added NARC member");
             Bytes patched=applyDelta(*p,base.files[p->sourceMember]);
             if (p->member==current.files.size()) current.files.push_back(std::move(patched));
             else current.files[p->member]=std::move(patched);
         }
-        if (!std::filesystem::exists(backup)) {
+        if (saveBackup) {
             std::filesystem::create_directories(backup.parent_path());
             writeAtomic(backup,original);
         }
