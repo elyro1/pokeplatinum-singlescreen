@@ -5,7 +5,7 @@
 
 #include "constants/graphics.h"
 
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 
 #define IS_SCREEN_SELECTED(screenMask, screenConst) (screenMask & screenConst)
 

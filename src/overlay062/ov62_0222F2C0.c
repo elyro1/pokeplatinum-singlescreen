@@ -38,9 +38,7 @@
 #include "unk_0208C010.h"
 #include "vram_transfer.h"
 
-#ifndef SDK_BUILD_ARM
-#include <simulator/sim.h>
-#endif
+#include "port/visuals/widescreen.h"
 
 static void ov62_0222F670(BgConfig *param0);
 static void ov62_0222F848(UnkStruct_0208C06C *param0);
@@ -470,10 +468,10 @@ void ov62_0222F8E4(void *param0)
     Bg_RunScheduledUpdates(v0->unk_14.unk_10);
 
 #ifndef SDK_BUILD_ARM
-    if (v0->unk_00 == 0 && SIM_GetConfigPtr()->screenLayout == SIM_CONFIG_SCREEN_LAYOUT_TOP_ONLY) {
+    if (v0->unk_00 == 0 && Widescreen_IsSingleScreen()) {
         // Presentation only: preserve the application's logical screen swaps.
         BOOL showSub = v0->recorderShowSubScreen;
-        if (SIM_GetConfigPtr()->swapScreens) {
+        if (Widescreen_AreScreensSwapped()) {
             showSub = !showSub;
         }
         GX_SetDispSelect(showSub ? GX_DISP_SELECT_SUB_MAIN : GX_DISP_SELECT_MAIN_SUB);

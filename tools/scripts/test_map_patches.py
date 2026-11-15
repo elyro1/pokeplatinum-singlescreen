@@ -110,7 +110,7 @@ def main():
         static = ['-static'] if windows else []
         subprocess.run([args.cxx, *static, '-std=c++17', '-Wall', '-Wextra', '-Werror', '-DMAP_PATCH_TEST',
                         '-I' + str(ROOT / 'include'), '-I' + str(work),
-                        str(ROOT / 'src/port/map_patches.cpp'), '-o', str(binary)], check=True)
+                        str(ROOT / 'src/port/assets/map_patches.cpp'), '-o', str(binary)], check=True)
         def run(directory, success=True):
             result = subprocess.run([*runner, str(binary)], cwd=directory, capture_output=True, text=True,
                                     env=dict(os.environ, PATH=str(work / 'no-python')))

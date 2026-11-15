@@ -30,12 +30,10 @@
 #include "unk_020655F4.h"
 
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
-#include "port/follower_assets.h"
+#include "port/gameplay/port_options.h"
+#include "port/visuals/frame_rate.h"
 #endif
-#ifndef SDK_BUILD_ARM
-#include <simulator/sim.h>
-#endif
+#include "port/visuals/widescreen.h"
 
 // Half extents of the visible field in tiles from the player, with slack for
 // the perspective camera. Sprites leave only beyond the view plus a margin.
@@ -75,7 +73,7 @@ typedef struct OverworldEncounterManager {
 static int FrameTicks(int ticks)
 {
 #ifdef SDK_PORT
-    return SIM_Config_prj_GetConfig()->enable60fps ? ticks * 2 : ticks;
+    return FrameRate_Scale(ticks);
 #else
     return ticks;
 #endif
@@ -88,12 +86,10 @@ static int Abs(int value)
 
 static int ViewHalfWidth(void)
 {
-#ifndef SDK_BUILD_ARM
     // The port widens the field (up to 448 dots) only in the top-only layout.
-    if (SIM_GetConfigPtr()->screenLayout == SIM_CONFIG_SCREEN_LAYOUT_TOP_ONLY) {
+    if (Widescreen_IsSingleScreen()) {
         return 448 / 32 + 1;
     }
-#endif
     return 256 / 32 + 1;
 }
 
@@ -102,8 +98,7 @@ static int ViewHalfWidth(void)
 static BOOL Active(FieldSystem *field)
 {
 #ifdef SDK_PORT
-    if (!SIM_Config_prj_GetConfig()->overworldEncounters || !FollowerAssets_Ready()
-        || SIM_Config_prj_GetConfig()->disableRandomEncounters) {
+    if (!PortOptions_OverworldEncountersEnabled()) {
         return FALSE;
     }
 #endif
@@ -464,7 +459,7 @@ void OverworldEncounters_Update(FieldSystem *field)
     }
     int spawnLimit = OVERWORLD_ENCOUNTER_DEFAULT_COUNT;
 #ifdef SDK_PORT
-    spawnLimit = SIM_Config_prj_GetConfig()->overworldEncounterCount;
+    spawnLimit = PortOptions_OverworldEncounterLimit();
 #endif
     // At the limit, a new spawn takes over an offscreen sprite of another zone.
     // Above it (the limit was lowered) or at 0, nothing new appears.

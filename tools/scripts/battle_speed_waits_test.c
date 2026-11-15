@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 #include "../../src/battle/battle_script.c"
-#include "../../src/port/battle_timing.c"
+#include "../../src/port/gameplay/battle_timing.c"
 
 static SIM_Config_prj_type sConfig;
 System gSystem;

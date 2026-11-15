@@ -43,7 +43,7 @@
 #include "pokemon.h"
 #include "pokemon_icon.h"
 #include "pokemon_sprite.h"
-#include "port/bw_mon_sprites.h"
+#include "port/visuals/bw_mon_sprites.h"
 #include "render_oam.h"
 #include "sound_playback.h"
 #include "sprite.h"

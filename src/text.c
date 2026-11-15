@@ -1,5 +1,5 @@
 #include "text.h"
-#include "port/autoplay_test.h"
+#include "port/debug/autoplay_test.h"
 
 #include <nitro.h>
 #include <string.h>
@@ -7,9 +7,10 @@
 #include "constants/heap.h"
 #include "constants/narc.h"
 
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/gameplay/game_speed.h"
+#include "port/visuals/frame_rate.h"
 #endif
 
 #include "bg_window.h"
@@ -188,9 +189,8 @@ u8 Text_AddPrinter(const TextPrinterTemplate *template, u32 renderDelay, TextPri
     // Keep immediate/static text on its existing path. Timed dialogue always uses
     // a task, even in Instant mode, so control codes and callbacks can still wait.
     if (renderDelay != TEXT_SPEED_INSTANT && renderDelay != TEXT_SPEED_NO_TRANSFER) {
-        const SIM_Config_prj_type *config = SIM_Config_prj_GetConfig();
-        renderDelay = config->textSpeed == PORT_SPEED_NORMAL
-            ? TEXT_SPEED_NORMAL * (config->enable60fps ? 2 : 1) : TEXT_SPEED_FAST;
+        renderDelay = GameSpeed_Text() == PORT_SPEED_NORMAL
+            ? TEXT_SPEED_NORMAL * FrameRate_Multiplier() : TEXT_SPEED_FAST;
     }
 #endif
 
@@ -260,10 +260,9 @@ static void SysTask_RunTextPrinter(SysTask *task, void *data)
 
     int glyphBudget = 1;
 #ifdef SDK_PORT
-    const SIM_Config_prj_type *config = SIM_Config_prj_GetConfig();
-    PortSpeed speed = config->textSpeed;
+    PortSpeed speed = GameSpeed_Text();
     u8 delay = speed == PORT_SPEED_NORMAL
-        ? TEXT_SPEED_NORMAL * (config->enable60fps ? 2 : 1) - 1 : TEXT_SPEED_FAST - 1;
+        ? TEXT_SPEED_NORMAL * FrameRate_Multiplier() - 1 : TEXT_SPEED_FAST - 1;
     // Only shorten an active character delay; scripted pauses use the same counter.
     if (printer->state == 0 && printer->textSpeedBottom != delay && printer->delayCounter > delay)
         printer->delayCounter = delay;

@@ -24,7 +24,7 @@
 #include "screen_fade.h"
 #include "sound_system.h"
 #include "sys_task_manager.h"
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 #include "system.h"
 #include "timer.h"
 #include "touch_pad.h"
@@ -35,18 +35,19 @@
 #include "unk_0209A74C.h"
 
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
-#include "port/gameplay_config.h"
-#include "port/config_report.h"
+#include "port/config/sim_config_prj.h"
+#include "port/visuals/frame_rate.h"
+#include "port/gameplay/gameplay_config.h"
+#include "port/config/config_report.h"
 #include <simulator/config/config_check.h>
 #include <simulator/sim.h>
 #include <stdlib.h>
 #if defined(SDK_BUILD_LINUX) || defined(SDK_BUILD_WIN64)
-#include "port/map_patches.h"
-#include "port/rom_setup.h"
+#include "port/assets/map_patches.h"
+#include "port/assets/rom_setup.h"
 #endif
 #ifdef SDK_BUILD_LINUX
-#include "port/sim_icon.h"
+#include "port/gui/sim_icon.h"
 #endif
 #endif
 
@@ -187,7 +188,7 @@ void NitroMain(void)
 
             if (!gSystem.frameCounter
 #ifdef SDK_PORT
-             && myConfig && (!myConfig->enable60fps || sForce30Hz)
+             && (!FrameRate_Is60Fps() || sForce30Hz)
 #endif
             ) {
                 OS_WaitIrq(TRUE, OS_IE_V_BLANK);

@@ -3,7 +3,7 @@
 #include <nitro.h>
 #include <string.h>
 
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 
 #include "sys_task_manager.h"
 #include "system.h"

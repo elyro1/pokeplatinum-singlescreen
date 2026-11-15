@@ -566,7 +566,7 @@ void Encounter_NewVsSpeciesAtLevel(FieldTask *task, u16 species, u8 level, int *
 }
 
 #ifdef SDK_PORT
-// Debug (port/debug_field.c): a wild battle against that Pokemon as the Safari Zone's or Pal Park's, with balls of
+// Debug (port/debug/debug_field.c): a wild battle against that Pokemon as the Safari Zone's or Pal Park's, with balls of
 // those to throw
 void Encounter_NewDebugVsSpeciesAtLevel(FieldTask *task, u16 species, u8 level, BOOL palPark)
 {

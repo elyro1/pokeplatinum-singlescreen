@@ -1,5 +1,5 @@
 #include "system.h"
-#include "port/autoplay_test.h"
+#include "port/debug/autoplay_test.h"
 
 #include "nitro/pad/common/pad.h"
 #include <string.h>

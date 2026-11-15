@@ -13,7 +13,7 @@ int SealCase_SaveSize(void)
 }
 
 #ifdef SDK_PORT
-// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+// The port keeps the DS save layout byte for byte; see port/assets/ds_layout.h.
 _Static_assert(sizeof(SealCase) == 368, "SealCase must keep its DS save size");
 #endif
 

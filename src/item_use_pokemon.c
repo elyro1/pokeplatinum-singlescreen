@@ -12,7 +12,7 @@
 #include "generated/moves.h"
 #include "generated/species.h"
 
-#include "port/gameplay_config.h"
+#include "port/gameplay/gameplay_config.h"
 
 #include "heap.h"
 #include "item.h"

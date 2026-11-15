@@ -19,7 +19,7 @@ def check_environment_list():
         for path in directory.rglob('*'):
             if path.suffix in ('.c', '.cpp') and 'imgui' not in path.parts:
                 used |= set(re.findall(r'getenv\("(PLATINUM_[A-Z0-9_]+)"\)', path.read_text(errors='ignore')))
-    report = (ROOT / 'src/port/config_report.c').read_text()
+    report = (ROOT / 'src/port/config/config_report.c').read_text()
     table = report[report.index('sEnvironmentVariables[] = {'):]
     listed = set(re.findall(r'"(PLATINUM_[A-Z0-9_]+)"', table[:table.index('};')]))
     documented = set(re.findall(r'^\| `(PLATINUM_[A-Z0-9_]+)`', (ROOT / 'docs/environment_variables.md').read_text(),
@@ -46,9 +46,9 @@ def main():
         for source, suffix in [(LIBNTR / 'config/sim_config.c', '/config/sim_config.c'),
                                (LIBNTR / 'config/config_check.c', '/config/config_check.c'),
                                (LIBNTR / 'config/ini.c', '/config/ini.c'),
-                               (ROOT / 'src/port/sim_config_prj.c', '/port/sim_config_prj.c'),
-                               (ROOT / 'src/port/gameplay_config.c', '/port/gameplay_config.c'),
-                               (ROOT / 'tools/scripts/config_check_test.c', '/port/sim_config_prj.c')]:
+                               (ROOT / 'src/port/config/sim_config_prj.c', '/port/config/sim_config_prj.c'),
+                               (ROOT / 'src/port/gameplay/gameplay_config.c', '/port/gameplay/gameplay_config.c'),
+                               (ROOT / 'tools/scripts/config_check_test.c', '/port/config/sim_config_prj.c')]:
             output = temp / (source.stem + '.o')
             subprocess.run(flags_for(suffix) + ['-UNDEBUG', '-ffunction-sections', '-fdata-sections', '-c',
                                                 str(source), '-o', str(output)], cwd=build, check=True)

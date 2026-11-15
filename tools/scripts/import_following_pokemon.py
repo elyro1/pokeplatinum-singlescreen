@@ -3,7 +3,7 @@
 
 Usage: python3 tools/scripts/import_following_pokemon.py /path/to/pokeheartgold
 Normal builds use the generated metadata; desktop graphics are converted from the player's BW2 extraction
-(src/port/follower_assets.cpp, with shiny palettes from import_follower_shiny_palettes.py).
+(src/port/assets/follower_assets.cpp, with shiny palettes from import_follower_shiny_palettes.py).
 """
 import argparse
 import csv

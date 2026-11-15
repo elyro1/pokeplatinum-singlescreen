@@ -5,10 +5,10 @@
 
 #include "constants/overworld_weather.h"
 #include "generated/map_headers.h"
-#include "port/field_lights.h"
-#include "port/field_visuals.h"
+#include "port/visuals/field_lights.h"
+#include "port/visuals/field_visuals.h"
 #include "overlay005/area_light.h"
-#include "port/sim_config_prj.h"
+#include "port/config/sim_config_prj.h"
 
 #include "lighting_fixtures.h"
 

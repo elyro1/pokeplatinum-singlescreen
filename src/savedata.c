@@ -16,7 +16,7 @@
 #include "unk_0209AA74.h"
 
 #ifdef SDK_PORT
-#include "port/save_migration.h"
+#include "port/assets/save_migration.h"
 #endif
 
 static void SaveTable_Clear(SaveDataBody *body, const SavePageInfo *pageInfo);

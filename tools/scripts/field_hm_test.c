@@ -5,7 +5,7 @@
 #include "constants/items.h"
 #include "generated/moves.h"
 #include "item.h"
-#include "port/gameplay_config.h"
+#include "port/gameplay/gameplay_config.h"
 #include "unk_02054884.h"
 
 // Isolate field eligibility from encrypted Pokemon storage and species resource I/O.

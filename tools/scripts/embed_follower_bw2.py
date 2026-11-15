@@ -2,7 +2,7 @@
 """Generate the BW2 follower conversion data from bw2_sprites.json.
 
 Emits each variant's BW2 key and HG/SS shiny palette, and the NSBTX header that
-port/follower_assets.cpp puts before eight frames and the normal/shiny palettes.
+port/assets/follower_assets.cpp puts before eight frames and the normal/shiny palettes.
 The header matches HG/SS's layout, so the converted files keep the manifest's sizes.
 """
 import json

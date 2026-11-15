@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 
 #ifdef SDK_PORT
 #include <simulator/sim.h>

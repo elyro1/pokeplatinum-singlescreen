@@ -1,5 +1,5 @@
 #include "battle_sub_menus/battle_party.h"
-#include "port/autoplay_test.h"
+#include "port/debug/autoplay_test.h"
 
 #include "constants/contests.h"
 #include "constants/moves.h"

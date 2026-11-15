@@ -18,7 +18,7 @@ int RecordMixedRNG_SaveSize()
 }
 
 #ifdef SDK_PORT
-// The port keeps the DS save layout byte for byte; see port/ds_layout.h.
+// The port keeps the DS save layout byte for byte; see port/assets/ds_layout.h.
 _Static_assert(sizeof(RecordMixedRNG) * RECORD_MIXED_RNG_MAX == 264, "RecordMixedRNG must keep its DS save size");
 #endif
 

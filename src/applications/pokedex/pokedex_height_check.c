@@ -24,7 +24,7 @@
 #include "pokedex_heightweight.h"
 #include "pokemon_sprite.h"
 #ifdef SDK_PORT
-#include "port/bw_mon_sprites.h"
+#include "port/visuals/bw_mon_sprites.h"
 #endif
 #include "sprite.h"
 #include "sprite_resource.h"

@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
-#include "port/sim_config_prj.h"
+#include "port/config/sim_config_prj.h"
 #include "constants/field/map_load.h"
 
 #include "../../src/overlay005/field_control.c"

@@ -31,8 +31,8 @@
 #include "sys_task_manager.h"
 #include "unk_02054884.h"
 #ifdef SDK_PORT
-#include "port/follower_assets.h"
-#include "port/sim_config_prj.h"
+#include "port/assets/follower_assets.h"
+#include "port/visuals/frame_rate.h"
 #endif
 
 #define RENDERER_MIN_Y_OFFSET     FX32_ONE
@@ -583,7 +583,7 @@ static void SurfMountRenderer_AnimTick(OverworldAnimManager *animMan, void *cont
     if (!ov5_021ECD38(playerMapObj)) {
         fx32 delta = renderer->yDelta;
 #ifdef SDK_PORT
-        if (SIM_Config_prj_GetConfig()->enable60fps) {
+        if (FrameRate_Is60Fps()) {
             delta /= 2;
         }
 #endif

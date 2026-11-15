@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 #include "field/field_system.h"
-#include "port/sim_config_prj.h"
+#include "port/config/sim_config_prj.h"
 
 // Benchmark preload: warps to NIGHT_MAP/NIGHT_X/NIGHT_Z, then runs each phase
 // of NIGHT_MODES ("preview:mask,preview:mask,...") for 90 warm-up and 90

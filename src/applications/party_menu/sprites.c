@@ -20,7 +20,7 @@
 #include "pokemon.h"
 #include "pokemon_icon.h"
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/visuals/frame_rate.h"
 #endif
 #include "sprite.h"
 #include "sprite_system.h"
@@ -559,7 +559,7 @@ void PartyMenu_UpdateMemberIcons(PartyMenuApplication *application)
 
 #ifdef SDK_PORT
     // Keep icon animation and the selected member's bounce at their 30 Hz speed.
-    if (SIM_Config_prj_GetConfig()->enable60fps) {
+    if (FrameRate_Is60Fps()) {
         animFrames /= 2;
     }
 #endif

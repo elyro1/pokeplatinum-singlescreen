@@ -27,8 +27,8 @@
 #include "unk_020655F4.h"
 #include "vars_flags.h"
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
-#include "port/follower_assets.h"
+#include "port/gameplay/port_options.h"
+#include "port/visuals/frame_rate.h"
 #endif
 
 #define FOLLOW_TRAIL_LENGTH       32
@@ -95,7 +95,7 @@ static PokemonActor *FindActor(FieldSystem *fieldSystem, OverworldPokemonHandle 
 static int EffectDuration(void)
 {
 #ifdef SDK_PORT
-    return SIM_Config_prj_GetConfig()->enable60fps ? 16 : 8;
+    return FrameRate_Is60Fps() ? 16 : 8;
 #else
     return 8;
 #endif
@@ -399,7 +399,7 @@ void FollowingPokemon_LeaveLift(FieldSystem *fieldSystem)
 static BOOL FollowerAllowed(FieldSystem *fieldSystem)
 {
 #ifdef SDK_PORT
-    if (!SIM_Config_prj_GetConfig()->pokemonFollower || !FollowerAssets_Ready()) return FALSE;
+    if (!PortOptions_FollowersEnabled()) return FALSE;
 #endif
     MapObject *player = PlayerAvatar_GetMapObject(fieldSystem->playerAvatar);
     BOOL sliding = TileBehavior_IsIce(MapObject_GetCurrTileBehavior(player))

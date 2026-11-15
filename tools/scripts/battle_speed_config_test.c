@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../../src/port/sim_config_prj.c"
-#include "../../src/port/battle_timing.c"
+#include "../../src/port/config/sim_config_prj.c"
+#include "../../src/port/gameplay/battle_timing.c"
 
 static void Load(const char *text)
 {

@@ -47,7 +47,7 @@
 
 #include "res/text/bank/following_pokemon.h"
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/visuals/frame_rate.h"
 #endif
 
 static BOOL HasType(const FollowingPokemonSituation *situation, int type)
@@ -623,7 +623,7 @@ static BOOL RunInteraction(FieldTask *task)
     // HG data uses 30 Hz timings. Only rendering runs at the port's optional
     // 60 Hz rate, keeping reaction duration and displacement platform neutral.
 #ifdef SDK_PORT
-    if (SIM_Config_prj_GetConfig()->enable60fps && (env->clock++ & 1)
+    if (FrameRate_Is60Fps() && (env->clock++ & 1)
         && (env->state == REACTION_ANIMATION || env->state == REACTION_EMOTE || env->state == REACTION_WAIT)) {
         return FALSE;
     }

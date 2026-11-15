@@ -56,7 +56,7 @@
 #include "pokemon.h"
 #include "pokemon_icon.h"
 #include "pokemon_sprite.h"
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 #include "render_window.h"
 #include "screen_fade.h"
 #include "sound_chatot.h"
@@ -76,9 +76,9 @@
 #include "unk_0208C098.h"
 
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/gameplay/port_options.h"
 #include "bwbattle/bw_adapter.h"
-#include "port/gameplay_config.h"
+#include "port/gameplay/gameplay_config.h"
 #endif
 
 #include "res/battle/scripts/sub_seq.naix"
@@ -10438,7 +10438,7 @@ enum CatchMonTaskDataIndex {
 // window, or caught-mon sprite. The shared completion path still stores the mon.
 static BOOL BattleScript_SkipNicknameScreen(BattleScriptTaskData *data, PokemonSpriteManager *monSpriteMan, BOOL fromPokedex)
 {
-    if (SIM_Config_prj_GetConfig()->nicknameMode != NICKNAME_MODE_NEVER) {
+    if (PortOptions_NicknameMode() != NICKNAME_MODE_NEVER) {
         return FALSE;
     }
 
@@ -10456,7 +10456,7 @@ static BOOL BattleScript_SkipNicknameScreen(BattleScriptTaskData *data, PokemonS
 // Fade only the bottom screen, then open the keyboard without rebuilding the prompt.
 static BOOL BattleScript_StartDirectNaming(BattleScriptTaskData *data, PaletteData *paletteData)
 {
-    if (SIM_Config_prj_GetConfig()->nicknameMode != NICKNAME_MODE_ALWAYS) {
+    if (PortOptions_NicknameMode() != NICKNAME_MODE_ALWAYS) {
         return FALSE;
     }
     PaletteData_StartFade(paletteData, PLTTBUF_SUB_BG_F | PLTTBUF_SUB_OBJ_F, 0xFFFF, 1, 0, 16, 0);
@@ -10780,7 +10780,7 @@ static void BattleScript_CatchMonTask(SysTask *task, void *inData)
 
             if (data->seqNum == SEQ_CATCH_MON_MOVE_FOR_ASK_NICKNAME) {
 #ifdef SDK_PORT
-                if (SIM_Config_prj_GetConfig()->nicknameMode != NICKNAME_MODE_ASK) {
+                if (PortOptions_NicknameMode() != NICKNAME_MODE_ASK) {
                     data->seqNum = SEQ_CATCH_MON_CLOSE_POKEDEX;
                 }
 #endif
@@ -10862,11 +10862,11 @@ static void BattleScript_CatchMonTask(SysTask *task, void *inData)
         break;
     case SEQ_CATCH_MON_PRINT_YES_NO_GIVE_NICKNAME:
 #ifdef SDK_PORT
-        if (SIM_Config_prj_GetConfig()->nicknameMode == NICKNAME_MODE_NEVER) {
+        if (PortOptions_NicknameMode() == NICKNAME_MODE_NEVER) {
             data->seqNum = SEQ_CATCH_MON_DIDNT_GIVE_NICKNAME;
             break;
         }
-        if (SIM_Config_prj_GetConfig()->nicknameMode == NICKNAME_MODE_ALWAYS) {
+        if (PortOptions_NicknameMode() == NICKNAME_MODE_ALWAYS) {
             sub_02015738(BattleSystem_GetPaletteAnimator(data->battleSys), 1);
             PaletteData_StartFade(paletteData, PLTTBUF_MAIN_BG_F | PLTTBUF_SUB_BG_F | PLTTBUF_MAIN_OBJ_F | PLTTBUF_SUB_OBJ_F, 0xFFFF, 1, 0, 16, 0);
             PokemonSpriteManager_StartFadeAll(monSpriteMan, 0, 16, 0, 0);

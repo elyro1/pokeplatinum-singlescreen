@@ -46,7 +46,7 @@
 #include "unk_020655F4.h"
 
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/visuals/frame_rate.h"
 #endif
 
 static int CommPlayerMan_GetSlideMovementSpeed(int param0, int param1);
@@ -683,8 +683,7 @@ static int CommPlayer_ScaleMovementDuration(int duration)
 #ifdef SDK_PORT
     // Match MovementAction_InitWalk: otherwise the server advances tiles
     // faster than the avatars can animate them at corrected 60 FPS.
-    SIM_Config_prj_type *config = SIM_Config_prj_GetConfig();
-    if (config->enable60fps) {
+    if (FrameRate_Is60Fps()) {
         duration *= 2;
     }
 #endif

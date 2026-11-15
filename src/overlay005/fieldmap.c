@@ -8,10 +8,9 @@
 #include <simulator/g3_draw.h>
 #include <simulator/sim.h>
 #include "bwbattle/bw_adapter.h"
-#include "port/field_visuals.h"
+#include "port/visuals/field_visuals.h"
 #include "overlay005/model_attributes.h"
-#include "port/field_visual_effects.h"
-#include "port/sim_config_prj.h"
+#include "port/visuals/field_visual_effects.h"
 #include "constants/overworld_weather.h"
 #include "rtc.h"
 #endif
@@ -733,7 +732,6 @@ static void FieldMap_ApplyVisualEnhancements(FieldSystem *fieldSystem)
 {
     FieldGrade grade;
     float fog[3] = { 0, 0, 0 }, strength = 0;
-    SIM_Config_prj_type *config = SIM_Config_prj_GetConfig();
     enum MapHeaderID map = fieldSystem->location->mapHeaderID;
     int weather = FieldOverworldState_GetWeather(SaveData_GetFieldOverworldState(fieldSystem->saveData));
     int seconds = FieldVisuals_GetTime(GetSecondsSinceMidnight());
@@ -790,7 +788,7 @@ static void FieldMap_ApplyVisualEnhancements(FieldSystem *fieldSystem)
     ordinaryWeather |= region == FIELD_ATMOSPHERE_FOREST && weather == OVERWORLD_WEATHER_23;
     BOOL exterior = outdoors || region == FIELD_ATMOSPHERE_FOREST
         || region == FIELD_ATMOSPHERE_COAST || region == FIELD_ATMOSPHERE_SNOW;
-    if (ordinaryScene && exterior && ordinaryWeather && config->correctLighting) {
+    if (ordinaryScene && exterior && ordinaryWeather && FieldVisuals_CorrectLightingEnabled()) {
         // Map ground shadows are authored for a northwest key light. Keep the
         // outdoor sun/moon consistent with those fixed shadows at every time.
         VecFx16 direction = FieldVisuals_OutdoorKeyLight();
@@ -799,21 +797,21 @@ static void FieldMap_ApplyVisualEnhancements(FieldSystem *fieldSystem)
     }
     // One grade shapes the archived light palettes over the day; it replaces
     // separate tint, ambient and key-light multipliers.
-    if (ordinaryScene && exterior && config->enhancedDayNight && ordinaryWeather) {
+    if (ordinaryScene && exterior && FieldVisuals_EnhancedDayNightEnabled() && ordinaryWeather) {
         FieldVisuals_Grade(seconds, region, weather, &grade);
     } else {
         FieldVisuals_IdentityGrade(&grade);
     }
-    if (ordinaryScene && (outdoors || cave) && config->regionalAtmosphere && ordinaryWeather
+    if (ordinaryScene && (outdoors || cave) && FieldVisuals_RegionalAtmosphereEnabled() && ordinaryWeather
         && !FogManager_IsEnabled(fieldSystem->fogMan)
         && fieldSystem->camera->projection == CAMERA_PROJECTION_PERSPECTIVE) {
-        FieldVisuals_Atmosphere(region, weather, seconds, config->enhancedDayNight, fog, &strength);
+        FieldVisuals_Atmosphere(region, weather, seconds, FieldVisuals_EnhancedDayNightEnabled(), fog, &strength);
     }
     // Falling ash keeps the game's own haze and colors, but the effects (lava
     // glow, shadows) still run in it.
     BOOL effectsWeather = ordinaryWeather || weather == OVERWORLD_WEATHER_SLOW_ASHFALL;
     SIM_SetFieldEmissionDebug(ordinaryScene && exterior && effectsWeather && FieldVisuals_IsEmissionDebug());
-    if (ordinaryScene && exterior && effectsWeather && config->nightGlows && config->emissiveBloom) {
+    if (ordinaryScene && exterior && effectsWeather && FieldVisuals_EmissiveBloomEnabled()) {
         // Emission already fades with the sun; skip the passes in daylight
         // unless something glows by day there.
         FieldNightLighting night;

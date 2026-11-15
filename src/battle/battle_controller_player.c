@@ -50,7 +50,7 @@
 #include "res/battle/scripts/sub_seq.naix"
 
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/gameplay/cheats.h"
 #endif
 
 enum BattleControllerState {
@@ -624,8 +624,7 @@ static void BattleControllerPlayer_CommandSelectionInput(BattleSystem *battleSys
                     BattleSystem_IsRecordingStopped(battleSys, BattleSystem_GetBattleContext(battleSys));
                 } else {
                     #ifdef SDK_PORT
-                    SIM_Config_prj_type * myConfig = SIM_Config_prj_GetConfig();
-                    if(myConfig->runFromTrainerBattles) {
+                    if(Cheats_RunFromTrainerBattles()) {
                         battleCtx->curCommandState[i] = COMMAND_SELECTION_RUN_SELECT;
                     } else {
                     #endif

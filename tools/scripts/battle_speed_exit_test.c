@@ -7,7 +7,7 @@
 #include "../../src/palette.c"
 #undef PaletteData_StartFade
 #undef PaletteData_GetSelectedBuffersMask
-#include "../../src/port/battle_timing.c"
+#include "../../src/port/gameplay/battle_timing.c"
 
 static SIM_Config_prj_type sConfig;
 static u32 sBattleType;

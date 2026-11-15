@@ -43,7 +43,7 @@
 #include "overlay_manager.h"
 #include "party.h"
 #include "pc_boxes.h"
-#include "port/autoplay_test.h"
+#include "port/debug/autoplay_test.h"
 #include "pokemon.h"
 #include "ribbon_save_data.h"
 #include "save_player.h"

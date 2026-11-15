@@ -6,7 +6,7 @@
 #ifdef SDK_PORT
 #include <simulator/sim.h>
 
-#include "port/sim_config_prj.h"
+#include "port/visuals/widescreen.h"
 #endif
 
 #include "applications/pokemon_summary_screen/main.h"
@@ -122,7 +122,7 @@ void SummaryWide_Begin(void)
 #ifdef SDK_PORT
     sActive = FALSE;
 
-    if (SIM_Config_prj_GetConfig()->widescreenSummary == FALSE) {
+    if (Widescreen_SummaryEnabled() == FALSE) {
         return;
     }
 

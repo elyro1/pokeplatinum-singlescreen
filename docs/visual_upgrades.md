@@ -283,7 +283,7 @@ This runs once per native scene texel before presentation. The display-resolutio
 compositor retains its original shader, so repair cost does not scale with the
 window size.
 
-Game-side math is in `src/port/field_visuals.c`. Field rendering selects the
+Game-side math is in `src/port/visuals/field_visuals.c`. Field rendering selects the
 region, time and scene eligibility; the 3D shader applies tint/haze before the
 existing authored fog and background composition. Enhancements reset to neutral
 for each new frame until the field explicitly opts in. The Nintendo DS target

@@ -1,7 +1,7 @@
 #ifdef SDK_PORT
 #include <simulator/sim.h>
 
-#include "port/field_visual_effects.h"
+#include "port/visuals/field_visual_effects.h"
 #endif
 #include "overlay005/map_prop.h"
 

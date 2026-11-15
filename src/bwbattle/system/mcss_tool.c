@@ -131,7 +131,7 @@ static BOOL func_0201c198(const MCSSLoadInfo *info, MCSSLoad *load, u32 personal
     return TRUE;
 }
 
-// bwbattle: for Platinum's screens (port/bw_mon_anim.c)
+// bwbattle: for Platinum's screens (port/visuals/bw_mon_anim.c)
 void BwBattle_DrawMcssSpindaSpots(unsigned char *pixels, unsigned int personality) {
     MCSS_DrawSpindaSpots(pixels, personality);
 }

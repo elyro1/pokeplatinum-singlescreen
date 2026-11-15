@@ -1,4 +1,4 @@
-#include "port/gameplay_config_editor.hpp"
+#include "port/gui/gameplay_config_editor.hpp"
 
 #include <cassert>
 #include <cstdio>

@@ -3,9 +3,7 @@
 #include <nitro.h>
 #include <string.h>
 
-#ifndef SDK_BUILD_ARM
-#include <simulator/sim.h>
-#endif
+#include "port/visuals/widescreen.h"
 
 #include "constants/field/map.h"
 
@@ -187,7 +185,7 @@ static void TownMapAppVBlankCB(void *_appData)
     Bg_RunScheduledUpdates(appData->bgConfig);
 
 #ifndef SDK_BUILD_ARM
-    if (appData->mode == TOWN_MAP_MODE_ITEM && SIM_GetConfigPtr()->screenLayout == SIM_CONFIG_SCREEN_LAYOUT_TOP_ONLY) {
+    if (appData->mode == TOWN_MAP_MODE_ITEM && Widescreen_IsSingleScreen()) {
         GX_SetDispSelect(appData->graphicsMan->showingDetailsOnTop ? GX_DISP_SELECT_SUB_MAIN : GX_DISP_SELECT_MAIN_SUB);
     }
 #endif

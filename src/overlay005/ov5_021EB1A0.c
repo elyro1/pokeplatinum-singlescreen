@@ -27,7 +27,7 @@
 #include "overworld_pokemon_assets.h"
 #include "simple3d.h"
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/visuals/frame_rate.h"
 #endif
 
 #include "res/graphics/following_pokemon/ball_effects.inc"
@@ -178,7 +178,7 @@ static BOOL InitFollowerBall(OverworldAnimManager *manager, void *data)
     memset(v, 0, sizeof(*v));
     v->duration = 8;
 #ifdef SDK_PORT
-    if (SIM_Config_prj_GetConfig()->enable60fps) v->duration *= 2;
+    if (FrameRate_Is60Fps()) v->duration *= 2;
 #endif
     LoadFollowerModel(&v->ballModel, &v->ball, sFollowerBall, sizeof(sFollowerBall));
     LoadFollowerModel(&v->burstModel, &v->burst, sFollowerBurst, sizeof(sFollowerBurst));

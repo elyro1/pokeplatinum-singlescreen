@@ -21,7 +21,7 @@ def main():
     args = parser.parse_args()
     build = args.build.resolve()
     commands = json.loads((build / 'compile_commands.json').read_text())
-    entry = next(x for x in commands if x['file'].endswith('/port/field_visuals.c'))
+    entry = next(x for x in commands if x['file'].endswith('/port/visuals/field_visuals.c'))
     flags = shlex.split(entry['command'])
     # Reuse this build's generated headers, target defines, and PCH.
     flags = flags[:flags.index('-MD')]
@@ -49,9 +49,9 @@ def main():
                                 '-o', str(test_object)], cwd=build, check=True)
         executable = temp / 'lighting-test'
         subprocess.run([flags[0], str(test_object),
-                        str(build / 'main.p/src_port_field_visuals.c.o'),
-                        str(build / 'main.p/src_port_field_lights.c.o'),
-                        str(build / 'main.p/src_port_sim_config_prj.c.o'),
+                        str(build / 'main.p/src_port_visuals_field_visuals.c.o'),
+                        str(build / 'main.p/src_port_visuals_field_lights.c.o'),
+                        str(build / 'main.p/src_port_config_sim_config_prj.c.o'),
                         str(build / 'subprojects/libntr/libraries/sim/libsim.a.p/src_config_ini.c.o'),
                         str(build / 'subprojects/libntr/libraries/sim/libsim.a.p/src_config_config_check.c.o'),
                         '-lm', '-o', str(executable)], check=True)

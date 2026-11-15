@@ -33,7 +33,7 @@
 #include "battle/stop_recording_task_data.h"
 #include "battle/terrain.h"
 #include "battle_anim/battle_anim_system.h"
-#include "port/gameplay_config.h"
+#include "port/gameplay/gameplay_config.h"
 
 #include "bag.h"
 #include "bg_window.h"

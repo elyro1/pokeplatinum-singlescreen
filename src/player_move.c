@@ -32,7 +32,8 @@
 #include "terrain_collision_manager.h"
 
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/gameplay/cheats.h"
+#include "port/gameplay/port_options.h"
 #endif
 
 typedef BOOL (*TileBehaviorFunc)(u8);
@@ -1884,9 +1885,7 @@ static void PlayerAvatar_SetMovement(PlayerAvatar *playerAvatar, MapObject *mapO
 u32 PlayerAvatar_CheckCollision(PlayerAvatar *playerAvatar, MapObject *mapObj, int direction)
 {
     #ifdef SDK_PORT
-    SIM_Config_prj_type * myConfig = SIM_Config_prj_GetConfig();
-
-    if(myConfig->walkThroughWalls) {
+    if(Cheats_WalkThroughWalls()) {
         return 0;
     }
     #endif
@@ -2492,7 +2491,7 @@ BOOL PlayerAvatar_IsRunButtonHeld(PlayerAvatar *playerAvatar, u16 pad)
     BOOL held = (pad & PAD_BUTTON_B) != 0;
 
 #ifdef SDK_PORT
-    if (SIM_Config_prj_GetConfig()->runningShoes == RUNNING_SHOES_AUTO_RUN) {
+    if (PortOptions_RunningShoes() == RUNNING_SHOES_AUTO_RUN) {
         return !held;
     }
 #endif

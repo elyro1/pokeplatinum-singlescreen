@@ -9,7 +9,7 @@
 #include "pokemon.h"
 
 #ifdef SDK_PORT
-#include "port/bw_mon_sprites.h"
+#include "port/visuals/bw_mon_sprites.h"
 #endif
 
 #include "res/pokemon/pl_poke_icon.naix"

@@ -7,8 +7,8 @@
 #include <simulator/glad/glad.h>
 #include "imgui_internal.h"
 #include "gui_internal.hpp"
-#include "port/gameplay_config.h"
-#include "port/sim_config_prj.h"
+#include "port/gameplay/gameplay_config.h"
+#include "port/config/sim_config_prj.h"
 
 #include <cassert>
 #include <algorithm>

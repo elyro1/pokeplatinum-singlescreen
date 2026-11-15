@@ -106,7 +106,7 @@ normally. The bridge never returns fabricated menu results or battle commands.
 
 ## Controller and route
 
-`src/port/autoplay_test.c` provides read-only observations and an inherited local
+`src/port/debug/autoplay_test.c` provides read-only observations and an inherited local
 socket protocol. It exposes application identity, dialogue, menu choices,
 battle choices, party state, story variables, map coordinates, nearby objects,
 and loaded collision tiles, including the rotating Eterna gym clock collision. The game waits for one input response per logical

@@ -1,5 +1,5 @@
 #include "pokemon_sprite.h"
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 
 #include "constants/graphics.h"
 #include "generated/shadow_sizes.h"
@@ -15,7 +15,7 @@
 #ifdef SDK_PORT
 #include <stdlib.h>
 
-#include "port/bw_mon_sprites.h"
+#include "port/visuals/bw_mon_sprites.h"
 #endif
 
 #include "res/pokemon/pl_otherpoke.naix"

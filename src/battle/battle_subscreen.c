@@ -1,5 +1,5 @@
 #include "battle/battle_subscreen.h"
-#include "port/autoplay_test.h"
+#include "port/debug/autoplay_test.h"
 
 #ifdef SDK_PORT
 #include "bwbattle/bw_adapter.h"

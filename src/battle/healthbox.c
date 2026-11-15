@@ -27,9 +27,9 @@
 #include "string_template.h"
 #include "sys_task.h"
 #include "sys_task_manager.h"
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/gameplay/game_speed.h"
 #endif
 #include "text.h"
 #include "unk_0208C098.h"
@@ -1465,8 +1465,8 @@ static s32 HealthBox_DrawGauge(HealthBox *healthbox, enum HealthBoxGaugeType gau
     s32 *temp = gaugeType == HEALTHBOX_GAUGE_HP ? &healthbox->hpTemp : &healthbox->expTemp;
     BOOL *skipNext = gaugeType == HEALTHBOX_GAUGE_HP ? &healthbox->portHPSkipNext : &healthbox->portExpSkipNext;
     if (*temp == S32_MIN) *skipNext = FALSE;
-    BOOL skip = SIM_Config_prj_GetConfig()->battleBarSpeed == PORT_SPEED_NORMAL && *skipNext;
-    *skipNext = SIM_Config_prj_GetConfig()->battleBarSpeed == PORT_SPEED_NORMAL && !skip;
+    BOOL skip = GameSpeed_BattleBars() == PORT_SPEED_NORMAL && *skipNext;
+    *skipNext = GameSpeed_BattleBars() == PORT_SPEED_NORMAL && !skip;
     if (skip) {
         result = gaugeType == HEALTHBOX_GAUGE_HP ? healthbox->portShownHP : healthbox->portShownExp;
     } else
@@ -1619,7 +1619,7 @@ static s32 UpdateGauge(s32 max, s32 cur, s32 diff, s32 *temp, u8 size, u16 fillO
     s32 updated, final, ratio;
     s32 step = fillOffset;
 #ifdef SDK_PORT
-    PortSpeed speed = SIM_Config_prj_GetConfig()->battleBarSpeed;
+    PortSpeed speed = GameSpeed_BattleBars();
     if (speed == PORT_SPEED_FASTER) {
         // Four times the native step, capped at 30 updates for large changes.
         s32 minimum = (abs(diff) + 29) / 30;

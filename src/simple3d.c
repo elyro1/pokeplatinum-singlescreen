@@ -3,7 +3,7 @@
 #include <nitro.h>
 #include <string.h>
 
-#include "port/battle_timing.h"
+#include "port/gameplay/battle_timing.h"
 
 #include "easy3d.h"
 #include "fx_util.h"
@@ -14,7 +14,7 @@
 #include "sys_task_manager.h"
 
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/visuals/frame_rate.h"
 #endif
 
 enum Simple3DAnimationFlags {
@@ -224,8 +224,7 @@ BOOL Simple3D_UpdateAnim(Simple3DAnimation *anim, fx32 frameDelta, BOOL loop)
     fx32 animLength = NNS_G3dAnmObjGetNumFrame(anim->animObj);
 
     #ifdef SDK_PORT
-    SIM_Config_prj_type * myConfig = SIM_Config_prj_GetConfig();
-    if (!BattleTiming_IsActive() && myConfig->enable60fps) {
+    if (!BattleTiming_IsActive() && FrameRate_Is60Fps()) {
         anim->currFrame += (frameDelta >> 1);
     } else {
         anim->currFrame += frameDelta;

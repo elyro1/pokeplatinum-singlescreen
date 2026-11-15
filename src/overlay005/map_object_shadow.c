@@ -18,7 +18,7 @@
 #include "sys_task.h"
 #include "sys_task_manager.h"
 #ifdef SDK_PORT
-#include "port/field_visual_effects.h"
+#include "port/visuals/field_visual_effects.h"
 #endif
 
 enum ShadowAppearanceState {

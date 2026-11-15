@@ -1,7 +1,7 @@
 #include "overlay005/map_prop_animation.h"
 
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/visuals/frame_rate.h"
 #endif
 
 #include <nitro.h>
@@ -533,8 +533,7 @@ void MapPropAnimation_AdvanceFrame(MapPropAnimation *animation)
 #ifdef SDK_PORT
     // At 60 FPS the field updates twice per original frame. Half steps still
     // land exactly on the first, last and wrap-around frames checked here.
-    SIM_Config_prj_type *myConfig = SIM_Config_prj_GetConfig();
-    if (myConfig->enable60fps) {
+    if (FrameRate_Is60Fps()) {
         step = FX32_ONE / 2;
     }
 #endif

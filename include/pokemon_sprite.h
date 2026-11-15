@@ -4,7 +4,7 @@
 #include <nnsys.h>
 
 #ifdef SDK_PORT
-#include "port/battle_smoothing.h"
+#include "port/visuals/battle_smoothing.h"
 #endif
 
 #include "constants/heap.h"
@@ -163,7 +163,7 @@ void PokemonSpriteManager_UpdateWithoutDrawing(PokemonSpriteManager *monSpriteMa
 void PokemonSpriteManager_Free(PokemonSpriteManager *monSpriteMan);
 
 #ifdef SDK_PORT
-// Gives every sprite of a new manager the 256x128 room of BW2's animated art (port/bw_mon_sprites.h), or a single frame
+// Gives every sprite of a new manager the 256x128 room of BW2's animated art (port/visuals/bw_mon_sprites.h), or a single frame
 // of 96x96 for a sprite with no animation. Platinum's sprites can share it, as their first frame in the middle of the
 // 96x96. Shadows aren't available, and the manager's characters take twice the VRAM: read charSize after this
 void PokemonSpriteManager_SetLargeFrames(PokemonSpriteManager *monSpriteMan);

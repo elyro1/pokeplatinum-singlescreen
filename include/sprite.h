@@ -6,7 +6,7 @@
 #include <nnsys.h>
 
 #ifdef SDK_PORT
-#include "port/battle_smoothing.h"
+#include "port/visuals/battle_smoothing.h"
 #endif
 
 #include "constants/graphics.h"

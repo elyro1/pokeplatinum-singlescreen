@@ -7,7 +7,7 @@
 #include "error_message_reset.h"
 
 #ifdef SDK_PORT
-#include "port/sim_config_prj.h"
+#include "port/debug/asserts.h"
 #ifdef SDK_BUILD_LINUX
 #include <signal.h>
 #endif
@@ -18,11 +18,10 @@ void ErrorHandling_AssertFail(void);
 void ErrorHandling_AssertFail(void)
 {
 #ifdef SDK_PORT
-    SIM_Config_prj_type * myConfig = SIM_Config_prj_GetConfig();
-    if(!(myConfig->enableAsserts)) {
+    if (!PortAsserts_Enabled()) {
         return;
     }
-    if(myConfig->breakDebuggerOnGfAssert) {
+    if (PortAsserts_BreakDebugger()) {
 #ifdef SDK_BUILD_LINUX
         raise(SIGTRAP);
 #endif
