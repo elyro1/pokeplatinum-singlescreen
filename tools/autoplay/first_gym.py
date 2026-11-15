@@ -2,7 +2,8 @@
 """Play a fresh game through the Coal Badge using the opt-in Linux test bridge.
 
 The runner uses only the Python standard library. Runtime assets are copied;
-player saves and settings are never used. See docs/autoplay_testing.md.
+player saves are never used, and settings are imported only when requested.
+See docs/autoplay_testing.md.
 """
 import argparse
 import heapq
@@ -18,6 +19,9 @@ import time
 
 ROOT = Path(__file__).resolve().parents[2]
 A, B, START, RIGHT, LEFT, UP, DOWN, X = 1, 2, 8, 16, 32, 64, 128, 1024
+# Spawned followers and wild sprites use local IDs from 0xFF00 upward.
+POKEMON_ACTOR_LOCAL_ID = 0xFF00
+POKEMON_ACTOR_STEP_COST = 8
 DIRECTIONS = [(0, -1, UP), (0, 1, DOWN), (-1, 0, LEFT), (1, 0, RIGHT)]
 
 
@@ -247,7 +251,11 @@ class Controller:
 
     def path_step(self, f, goal):
         start = f['x'], f['z']
-        obstacles = {(o[1], o[2]) for o in f['objects'] if (o[1], o[2]) != start}
+        others = [o for o in f['objects'] if (o[1], o[2]) != start]
+        # The player walks through followers and wild sprites. A follower only
+        # moves after the player does, so it must not close a narrow corridor.
+        actors = {(o[1], o[2]) for o in others if o[0] >= POKEMON_ACTOR_LOCAL_ID}
+        obstacles = {(o[1], o[2]) for o in others if o[0] < POKEMON_ACTOR_LOCAL_ID}
         queue = [(0, 0, start, 0)]
         seen = set()
         frontier = None
@@ -274,6 +282,8 @@ class Controller:
                     continue
                 heuristic = abs(q[0] - goal[0]) + abs(q[1] - goal[1])
                 step_cost = 5 if attr & 0xff in (2, 3) else 1
+                # Prefer a short detour: touching a wild sprite starts a battle.
+                step_cost += POKEMON_ACTOR_STEP_COST if q in actors else 0
                 heapq.heappush(queue, (cost + step_cost + heuristic, cost + step_cost, q, first or key))
         if frontier:
             return frontier[1]
@@ -544,7 +554,7 @@ def file_hash(path):
     return digest.hexdigest()
 
 
-def prepare_runtime(build, output):
+def prepare_runtime(build, output, configs=None):
     runtime = output / 'game'
     source = build / 'pokeplatinum'
     def ignore(directory, names):
@@ -560,6 +570,8 @@ def prepare_runtime(build, output):
     (runtime / 'sim_config_prj.ini').write_text(
         '[General]\n60Fps=true\nBattlePacing=Smooth\nBattleUiSpeedFix=false\nBW2BattleVisuals=false\n'
         'EnableAsserts=true\nBreakDebuggerOnAssert=false\n')
+    for name, contents in (configs or {}).items():
+        (runtime / name).write_bytes(contents)
     return runtime
 
 
@@ -570,16 +582,32 @@ def main(controller_class=Controller):
     parser.add_argument('--max-frames', type=int, default=controller_class.max_frames)
     parser.add_argument('--timeout', type=int, default=controller_class.timeout, help='whole-run wall-clock watchdog in seconds')
     parser.add_argument('--visible', action='store_true')
+    parser.add_argument('--sim-config', type=Path, help='TAB display settings INI to copy into the isolated runtime')
+    parser.add_argument('--project-config', type=Path, help='TAB project settings INI (battle view, speed, etc.) to copy into the isolated runtime')
+    parser.add_argument('--gameplay-config', type=Path, help='TAB gameplay rules INI to copy into the isolated runtime')
     parser.add_argument('--checkpoint', type=Path, help='ordinary saved checkpoint for a focused diagnostic run')
     parser.add_argument('--start-after', choices=controller_class.checkpoints, help='chapter completed by the checkpoint')
     args = parser.parse_args()
     if bool(args.checkpoint) != bool(args.start_after):
         parser.error('--checkpoint and --start-after must be used together')
+    configs, config_sources = {}, {}
+    for option, name in (('sim_config', 'sim_config.ini'),
+                         ('project_config', 'sim_config_prj.ini'),
+                         ('gameplay_config', 'gameplay_config.ini')):
+        path = getattr(args, option)
+        if path is not None:
+            try:
+                path = path.resolve()
+                contents = path.read_bytes()
+            except OSError as error:
+                parser.error(f'--{option.replace("_", "-")}: {error}')
+            configs[name] = contents
+            config_sources[name] = dict(source=str(path), sha256=hashlib.sha256(contents).hexdigest())
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     build = args.build.resolve()
     names = symbols(build / 'main')
-    runtime = prepare_runtime(build, output)
+    runtime = prepare_runtime(build, output, configs)
     binary_hash = file_hash(runtime / 'main')
     if args.checkpoint:
         shutil.copy2(args.checkpoint.resolve(), runtime / 'save1.bin')
@@ -677,6 +705,7 @@ def main(controller_class=Controller):
     report = dict(status=status, reason=reason, fresh_start=args.checkpoint is None,
                   build=str(build), binary_sha256=binary_hash,
                   checkpoint_source=str(args.checkpoint) if args.checkpoint else None,
+                  custom_configs=config_sources,
                   objective=controller.objective, last_state=state, frames=total_frames,
                   battles=route_battles, fixture_installed=fixture_seen,
                   elapsed_seconds=round(time.monotonic() - start, 2))

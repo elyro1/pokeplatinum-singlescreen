@@ -45,6 +45,42 @@ For a normal build, configure `-Dautoplay_tests=false` and rebuild. The bridge
 source is excluded and its observation calls compile to no-ops. Even a test
 build behaves normally without the runner's private descriptor environment.
 
+## Custom TAB settings
+
+All gym runners and `interactions.py` accept these optional config files:
+
+| Option | TAB settings | Runtime filename |
+| --- | --- | --- |
+| `--sim-config PATH` | Display, resolution, frame cap, layout, and input settings | `sim_config.ini` |
+| `--project-config PATH` | Battle view, speed and text, graphics, and other project settings | `sim_config_prj.ini` |
+| `--gameplay-config PATH` | Gameplay rules | `gameplay_config.ini` |
+
+For example, reuse your saved battle view and speed settings:
+
+```sh
+python3 tools/autoplay/first_gym.py --build build_linux --visible \
+  --project-config build_linux/pokeplatinum/sim_config_prj.ini \
+  --output build_linux/autoplay-runs/custom-tab
+```
+
+Supply any combination of the three options. Each supplied file replaces the
+corresponding isolated runtime file in full before the game starts; it is not
+merged with the runner's settings. Missing keys follow the game's normal config
+loading behavior. Files you do not supply retain the runner's existing defaults.
+Paths are relative to the directory you run the command from. Missing or unreadable
+files fail before the output directory is created; INI syntax and values are
+handled by the game's normal loaders.
+
+The runner copies the supplied bytes, so changes during the run affect only the
+isolated copies under `OUTPUT/game/`. Those copies also remain in use for the
+save/reload verification. `report.json` records the original absolute paths and
+SHA-256 hashes under `custom_configs`. Your source settings and saves stay intact.
+`--visible` still controls whether the runner selects SDL's offscreen driver.
+
+These options change the settings used by the test; the controller still follows
+its authored route and does not exercise the TAB menu itself. Some settings, such
+as overworld encounters, can change behavior enough to require controller changes.
+
 ## Test fixture and allowed actions
 
 The bot completes naming and starter selection through ordinary controls. Once
@@ -60,7 +96,7 @@ The fixture has fixed IVs and personalities and uses the player's original
 trainer details for obedience. Its installation is the only direct gameplay
 state mutation. Badges, story flags, key items, collision, encounters, HP, PP,
 opponents, and battle results follow the game's ordinary rules. Existing
-gameplay configuration defaults remain in effect.
+gameplay configuration defaults remain in effect unless `--gameplay-config` is supplied.
 Normal story gifts may add party members later; checkpoint validation checks
 that the three original test Pokémon remain at the front of the party.
 
@@ -80,7 +116,10 @@ frame; rendering speed does not determine route timing.
 the opening rival encounter, starter battle, Lake Verity, Rowan's laboratory,
 the parcel, catching tutorial, Jubilife and Pokétch campaign, Route 203, the
 Oreburgh mine, healing, and Roark. A local A* search follows known collision
-tiles and avoids NPCs. Authored objectives select doors and story interactions;
+tiles and avoids NPCs. Party followers and wild overworld sprites do not block
+the player, so paths may cross them when no short detour exists; a follower
+standing behind the player must not seal a one-tile corridor. Authored objectives
+select doors and story interactions;
 blocked movement edges are learned with bounded retries. Collision knowledge
 follows the shared map matrix across town/route boundaries; unloaded tiles do
 not erase it. Clock-state observations invalidate the Eterna gym cache after

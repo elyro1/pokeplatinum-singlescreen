@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Focused checks for battle choices, navigation, and save isolation."""
 import tempfile
+import subprocess
+import sys
 from pathlib import Path
 import unittest
 
@@ -81,6 +83,22 @@ class ControllerTests(unittest.TestCase):
             self.bot.path_step(field, (4, 0))
         field['objects'] = [[255, 0, 0, 0]]
         self.assertEqual(self.bot.path_step(field, (4, 0)), DOWN)
+
+    def test_pokemon_actor_does_not_close_one_tile_corridor(self):
+        for z in range(4):
+            self.bot.tiles[1, 0, z] = 0
+            for x in (-1, 1):
+                self.bot.tiles[1, x, z] = 0x8000
+        follower = [0xFF00, 0, 1, 0]
+        field = dict(map=1, x=0, z=0, objects=[[255, 0, 0, 0], follower])
+        self.assertEqual(self.bot.path_step(field, (0, 3)), DOWN)
+
+    def test_route_prefers_short_detour_around_pokemon_actor(self):
+        for x in range(3):
+            for z in range(2):
+                self.bot.tiles[1, x, z] = 0
+        field = dict(map=1, x=0, z=0, objects=[[255, 0, 0, 0], [0xFF01, 1, 0, 0]])
+        self.assertEqual(self.bot.path_step(field, (2, 0)), DOWN)
 
     def test_discovered_directional_collision_is_not_retried(self):
         for x in range(3):
@@ -344,6 +362,56 @@ class ControllerTests(unittest.TestCase):
             self.assertEqual((source / 'save1.bin').read_text(), 'original')
             (runtime / 'header.bin').write_text('changed')
             self.assertEqual((source / 'header.bin').read_text(), 'original')
+
+    def test_custom_configs_are_copied_without_changing_sources(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            build, output = root / 'build', root / 'output'
+            source = build / 'pokeplatinum'
+            source.mkdir(parents=True)
+            (build / 'main').write_text('test binary')
+            configs = {
+                'sim_config.ini': b'[General]\r\nInternalResolutionScale=2\r\n',
+                'sim_config_prj.ini': b'[General]\nBW2BattleVisuals=true\nBattlePacing=Turbo\n',
+                'gameplay_config.ini': b'[Gameplay]\ninfiniteTMs=true\n',
+            }
+            for name in configs:
+                (source / name).write_text('player settings')
+            runtime = prepare_runtime(build, output, configs)
+            for name, contents in configs.items():
+                self.assertEqual((runtime / name).read_bytes(), contents)
+                (runtime / name).write_text('changed during run')
+                self.assertEqual((source / name).read_text(), 'player settings')
+
+    def test_partial_config_override_keeps_other_runner_defaults(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            build = root / 'build'
+            (build / 'pokeplatinum').mkdir(parents=True)
+            (build / 'main').write_text('test binary')
+            default = prepare_runtime(build, root / 'default')
+            custom = prepare_runtime(build, root / 'custom',
+                                     {'sim_config_prj.ini': b'[General]\nBW2BattleVisuals=true\n'})
+            self.assertEqual((custom / 'sim_config.ini').read_bytes(),
+                             (default / 'sim_config.ini').read_bytes())
+            self.assertIn('BattlePacing=Smooth', (default / 'sim_config_prj.ini').read_text())
+            self.assertFalse((custom / 'gameplay_config.ini').exists())
+            self.assertFalse((default / 'gameplay_config.ini').exists())
+
+    def test_unreadable_custom_config_fails_before_creating_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for option in ('--sim-config', '--project-config', '--gameplay-config'):
+                for path in (root / 'missing.ini', root):
+                    with self.subTest(option=option, path=path):
+                        output = root / 'output'
+                        result = subprocess.run(
+                            [sys.executable, str(Path(__file__).with_name('first_gym.py')),
+                             '--output', str(output), option, str(path)],
+                            capture_output=True, text=True)
+                        self.assertEqual(result.returncode, 2)
+                        self.assertIn(f'{option}:', result.stderr)
+                        self.assertFalse(output.exists())
 
 
 if __name__ == '__main__':
