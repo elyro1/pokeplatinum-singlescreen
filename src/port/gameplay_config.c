@@ -1,6 +1,7 @@
 #include "port/gameplay_config.h"
 
 #include <errno.h>
+#include <simulator/config/config_check.h>
 #include <simulator/config/ini.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -11,6 +12,12 @@
 
 static GameplayConfig sGameplayConfig;
 static BOOL sUsesFileOverrides;
+static SIM_ConfigCheck sCheck;
+
+typedef struct {
+    GameplayConfig *config;
+    SIM_ConfigCheck *check; // NULL: no warnings, e.g. for the settings editor's text
+} ParseContext;
 
 void GameplayConfig_LoadDefaults(GameplayConfig *config)
 {
@@ -205,8 +212,13 @@ BOOL GameplayConfig_UsesFileOverrides(void)
     return sUsesFileOverrides;
 }
 
-static int GameplayConfig_IniHandler(void *user, const char *section, const char *name, const char *value)
+static int GameplayConfig_IniHandler(void *user, const char *section, const char *name, const char *value, int line)
 {
+    ParseContext *context = user;
+
+    if (context->check != NULL && !SIM_ConfigCheck_Key(context->check, section, name, line)) {
+        return 1;
+    }
     if (strcmp(section, "Gameplay") != 0) {
         return 1;
     }
@@ -224,21 +236,29 @@ static int GameplayConfig_IniHandler(void *user, const char *section, const char
             } else if (strcmp(value, "false") == 0 || strcmp(value, "FALSE") == 0 || strcmp(value, "0") == 0) {
                 number = 0;
             } else {
-                return 1; // Ignore invalid values, retaining the default.
-            }
-        } else {
-            if (value[0] < '0' || value[0] > '9') {
+                // Ignore invalid values, retaining the default.
+                if (context->check != NULL) {
+                    SIM_ConfigCheck_BadValue(context->check, section, name, value, line, "true or false");
+                }
                 return 1;
             }
-            char *end;
+        } else {
+            char *end = NULL;
             errno = 0;
-            number = strtoul(value, &end, 10);
-            if (errno == ERANGE || *end != '\0' || number > field->maximum) {
+            if (value[0] >= '0' && value[0] <= '9') {
+                number = strtoul(value, &end, 10);
+            }
+            if (end == NULL || errno == ERANGE || *end != '\0' || number > field->maximum) {
+                if (context->check != NULL) {
+                    char expected[48];
+                    snprintf(expected, sizeof(expected), "a number from 0 to %u", field->maximum);
+                    SIM_ConfigCheck_BadValue(context->check, section, name, value, line, expected);
+                }
                 return 1;
             }
         }
 
-        char *destination = (char *)user + field->offset;
+        char *destination = (char *)context->config + field->offset;
         switch (field->type) {
         case CONFIG_BOOL:
             *(BOOL *)destination = number ? TRUE : FALSE;
@@ -260,7 +280,8 @@ BOOL GameplayConfig_ParseText(const char *text, GameplayConfig *config)
     if (text == NULL || config == NULL) return FALSE;
     GameplayConfig parsed;
     GameplayConfig_LoadDefaults(&parsed);
-    if (ini_parse_string(text, GameplayConfig_IniHandler, &parsed) != 0) return FALSE;
+    ParseContext context = { &parsed, NULL };
+    if (ini_parse_string(text, GameplayConfig_IniHandler, &context) != 0) return FALSE;
     *config = parsed;
     return TRUE;
 }
@@ -305,16 +326,55 @@ static BOOL GameplayConfig_GenerateFile(void)
     return success;
 }
 
+// Every key with its value, for SIM_ConfigCheck and --print-config
+static void GameplayConfig_WriteValues(SIM_ConfigText *text, const GameplayConfig *config)
+{
+    SIM_ConfigText_Printf(text, "[Gameplay]\n");
+    for (unsigned int i = 0; i < GameplayConfig_OptionCount(); i++) {
+        unsigned int value = GameplayConfig_GetOptionValue(config, i);
+        if (sConfigFields[i].type == CONFIG_BOOL) {
+            SIM_ConfigText_Printf(text, "%s=%s\n", sConfigFields[i].name, value ? "true" : "false");
+        } else {
+            SIM_ConfigText_Printf(text, "%s=%u\n", sConfigFields[i].name, value);
+        }
+    }
+}
+
 static void GameplayConfig_LoadFile(void)
 {
     sUsesFileOverrides = TRUE;
     // Create the defaults template on first start; existing files are never overwritten.
-    GameplayConfig_GenerateFile();
-    GameplayConfig overrides = sGameplayConfig;
-    // A malformed/unreadable file falls back to defaults, never a partially parsed config.
-    if (ini_parse(GAMEPLAY_CONFIG_FILE_PATH, GameplayConfig_IniHandler, &overrides) == 0) {
-        sGameplayConfig = overrides;
+    if (!SIM_ConfigCheck_PrintOnly()) {
+        GameplayConfig_GenerateFile();
     }
+    GameplayConfig overrides = sGameplayConfig;
+    SIM_ConfigText text = { 0 };
+    GameplayConfig_WriteValues(&text, &overrides);
+    SIM_ConfigCheck_Init(&sCheck, GAMEPLAY_CONFIG_FILE_PATH, SIM_ConfigText_Get(&text), NULL, 0);
+    SIM_ConfigText_Free(&text);
+
+    ParseContext context = { &overrides, &sCheck };
+    int result = ini_parse(GAMEPLAY_CONFIG_FILE_PATH, GameplayConfig_IniHandler, &context);
+    // A malformed/unreadable file falls back to defaults, never a partially parsed config.
+    SIM_ConfigCheck_ParseResult(&sCheck, result, "the whole file is ignored and every gameplay setting is at its default");
+    if (result == 0) {
+        sGameplayConfig = overrides;
+    } else {
+        for (int i = 0; i < sCheck.count; i++) {
+            sCheck.entries[i].line = 0;
+            sCheck.entries[i].rejectedLine = 0;
+        }
+    }
+}
+
+void GameplayConfig_PrintEffective(FILE *out)
+{
+    SIM_ConfigText text = { 0 };
+    GameplayConfig_WriteValues(&text, &sGameplayConfig);
+    fprintf(out, "; %s%s\n", GAMEPLAY_CONFIG_FILE_PATH + 2,
+        sUsesFileOverrides ? "" : " (not read: this build uses only its built-in defaults)");
+    SIM_ConfigCheck_Print(&sCheck, SIM_ConfigText_Get(&text), out);
+    SIM_ConfigText_Free(&text);
 }
 
 void GameplayConfig_Init(void)

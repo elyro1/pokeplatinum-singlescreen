@@ -29,3 +29,4 @@ For more detailed information about the project as a whole, please refer to its
 ## Utilities
 
 - [Logging](logging.md)
+- [Configuration and environment variables](environment_variables.md)
