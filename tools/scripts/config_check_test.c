@@ -52,7 +52,7 @@ static void CheckProjectConfig(void)
 {
     SIM_Config_prj_type config;
 
-    // The trap from CLAUDE.md: a key appended at the end lands in [Cheats]
+    // The trap from AGENTS.md: a key appended at the end lands in [Cheats]
     Write("sim_config_prj.ini",
         "[General]\n"
         "GridBag=false\n"
