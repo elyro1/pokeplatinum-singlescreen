@@ -53,6 +53,7 @@ def main():
                         str(build / 'main.p/src_port_field_lights.c.o'),
                         str(build / 'main.p/src_port_sim_config_prj.c.o'),
                         str(build / 'subprojects/libntr/libraries/sim/libsim.a.p/src_config_ini.c.o'),
+                        str(build / 'subprojects/libntr/libraries/sim/libsim.a.p/src_config_config_check.c.o'),
                         '-lm', '-o', str(executable)], check=True)
         subprocess.run([str(executable)], cwd=temp, check=True)
 

@@ -36,6 +36,7 @@ def main():
         executable = temp / 'gamepad-test'
         subprocess.run([cpp[0], str(test), str(config),
                        str(build / 'subprojects/libntr/libraries/sim/libsim.a.p/src_config_ini.c.o'),
+                       str(build / 'subprojects/libntr/libraries/sim/libsim.a.p/src_config_config_check.c.o'),
                        '-Wl,--gc-sections', *sdl, '-o', str(executable)], check=True)
         subprocess.run([str(executable)], cwd=temp, check=True)
 

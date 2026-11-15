@@ -2,6 +2,7 @@
 #define SIM_CONFIG_PRJ_H
 
 #include <nitro/types.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -85,6 +86,8 @@ typedef struct {
 void SIM_Config_prj_LoadDefaults(SIM_Config_prj_type * aConfig);
 BOOL SIM_Config_prj_LoadConfigFile(SIM_Config_prj_type * aConfig);
 void SIM_Config_prj_SaveConfigFile(SIM_Config_prj_type * aConfig);
+// Lists every setting with where its value came from (--print-config)
+void SIM_Config_prj_PrintEffective(FILE *out);
 void SIM_Config_prj_init();
 SIM_Config_prj_type * SIM_Config_prj_GetConfig();
 

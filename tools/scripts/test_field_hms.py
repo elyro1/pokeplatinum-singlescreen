@@ -28,6 +28,7 @@ def main():
                                str(ROOT / "src/item.c"),
                                str(ROOT / "src/port/gameplay_config.c"),
                                str(ROOT / "subprojects/libntr/libraries/sim/src/config/ini.c"),
+                               str(ROOT / "subprojects/libntr/libraries/sim/src/config/config_check.c"),
                                "-Wl,--gc-sections", "-o", str(executable)], cwd=build, check=True)
         subprocess.run([str(executable)], cwd=directory, check=True)
 

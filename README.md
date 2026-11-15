@@ -145,6 +145,8 @@ Works with both Platinum and BW2 visuals. More in [battle speed settings](docs/b
 - The `[Interface]` section of `sim_config.ini` stores `MenuScalePercent` (0 = Auto) and `PauseWhileOpen`.
 - Files without those values get Auto and no automatic pause.
 - Gameplay overrides use **Save changes** and load from `gameplay_config.ini` at startup.
+- Settings the game can't use (wrong section, misspelled, invalid value) are reported as `[config]` lines on the console.
+  `main --print-config` lists every effective setting and where it came from; see [configuration](docs/environment_variables.md).
 
 </details>
 

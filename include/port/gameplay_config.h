@@ -2,6 +2,7 @@
 #define POKEPLATINUM_PORT_GAMEPLAY_CONFIG_H
 
 #include <nitro/types.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,6 +44,8 @@ void GameplayConfig_LoadDefaults(GameplayConfig *config);
 // See GameplayConfig_Init's implementation to disable all file overrides for a ROM hack.
 void GameplayConfig_Init(void);
 GameplayConfig *GameplayConfig_Get(void);
+// Lists every gameplay setting with where its value came from (--print-config)
+void GameplayConfig_PrintEffective(FILE *out);
 u16 GameplayConfig_GetBPPrice(u16 item, u16 originalPrice);
 
 // Shared metadata and validated values for the settings editor.
