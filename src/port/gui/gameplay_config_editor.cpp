@@ -220,9 +220,21 @@ bool GameplayConfigEditor::NeedsRestart() const
     return loaded && !Equal(saved, *GameplayConfig_Get());
 }
 
-void GameplayConfigEditor::RestoreDefaults()
+bool GameplayConfigEditor::ApplyPreset(GameplayPreset preset)
 {
-    if (loaded) GameplayConfig_LoadDefaults(&values);
+    if (!loaded) return false;
+    GameplayConfig_LoadPreset(&values, preset);
+    return Save();
+}
+
+GameplayPreset GameplayConfigEditor::MatchingPreset() const
+{
+    for (int i = 0; i < GAMEPLAY_PRESET_COUNT; ++i) {
+        GameplayConfig preset;
+        GameplayConfig_LoadPreset(&preset, static_cast<GameplayPreset>(i));
+        if (Equal(values, preset)) return static_cast<GameplayPreset>(i);
+    }
+    return GAMEPLAY_PRESET_COUNT;
 }
 
 bool GameplayConfigEditor::Save()

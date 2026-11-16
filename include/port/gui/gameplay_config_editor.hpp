@@ -15,7 +15,10 @@ public:
     bool IsLoaded() const { return loaded; }
     bool IsDirty() const;
     bool NeedsRestart() const;
-    void RestoreDefaults();
+    // Replaces every value with the preset and saves.
+    bool ApplyPreset(GameplayPreset preset);
+    // The preset the values match, or GAMEPLAY_PRESET_COUNT for custom values.
+    GameplayPreset MatchingPreset() const;
 
 private:
     GameplayConfig saved{};

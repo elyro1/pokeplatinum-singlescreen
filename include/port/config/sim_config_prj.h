@@ -56,6 +56,7 @@ typedef struct {
     RunningShoesMode runningShoes;
     BOOL fastWildBattleIntro; // Shorten eligible BW2 wild battle intros.
     BOOL disableLowHPBeep; // Silences the low-HP warning in both battle presentations.
+    BOOL improvedPoketch; // Adds the wild Pokemon Poketch app after the retail apps; never saved.
     BOOL bwMonSprites; // BW2's art for the summary screen, the Pokédex and the icons, when its assets are extracted
     BOOL bw2BattleVisuals; // Show battles with Black 2 / White 2's view when its assets are extracted (docs/bwbattle.md)
     BOOL overworldEncounters;

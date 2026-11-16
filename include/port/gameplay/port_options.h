@@ -37,6 +37,12 @@ static inline BOOL PortOptions_FastWildBattleIntro(void)
     return SIM_Config_prj_GetConfig()->fastWildBattleIntro;
 }
 
+// The wild Pokemon Pokétch app. It is never saved, so turning this off removes it cleanly.
+static inline BOOL PortOptions_ImprovedPoketch(void)
+{
+    return SIM_Config_prj_GetConfig()->improvedPoketch;
+}
+
 // The setting alone. BwAdapter_IsEnabled also needs every BW2 battle archive; pieces such as
 // the nickname backdrop check for their own archive.
 static inline BOOL PortOptions_Bw2BattleVisuals(void)

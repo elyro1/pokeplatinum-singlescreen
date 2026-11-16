@@ -7,6 +7,43 @@
 #include <cstring>
 
 namespace SIM::GUI {
+namespace {
+void PresetButtons(GameplayConfigEditor &editor)
+{
+    static GameplayPreset pending = GAMEPLAY_PRESET_COUNT;
+    const GameplayPreset current = editor.MatchingPreset();
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("Preset:");
+    for (int i = 0; i < GAMEPLAY_PRESET_COUNT; ++i) {
+        const auto preset = static_cast<GameplayPreset>(i);
+        const char *name = GameplayConfig_PresetName(preset);
+        if (ImGui::GetContentRegionAvail().x > ImGui::CalcTextSize(name).x + ImGui::GetFontSize() * 2)
+            ImGui::SameLine();
+        ImGui::BeginDisabled(preset == current);
+        if (ImGui::Button(name)) {
+            // Only custom values can be lost, so only they need a confirmation.
+            if (current == GAMEPLAY_PRESET_COUNT) {
+                pending = preset;
+                ImGui::OpenPopup("Replace custom settings?");
+            } else {
+                editor.ApplyPreset(preset);
+            }
+        }
+        ImGui::EndDisabled();
+    }
+    if (ImGui::BeginPopupModal("Replace custom settings?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Replace your custom gameplay settings with %s?", GameplayConfig_PresetName(pending));
+        if (ImGui::Button("Replace")) {
+            editor.ApplyPreset(pending);
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
+}
+}
+
 void GameplayContents()
 {
     static GameplayConfigEditor editor;
@@ -16,24 +53,21 @@ void GameplayContents()
         attemptedLoad = true;
     }
 
-    const bool pending = editor.IsDirty() || editor.NeedsRestart();
-    if (pending) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.82f, 0.25f, 1.0f));
-    ImGui::TextWrapped("%s", editor.IsDirty() ? "Unsaved changes - save for next restart." :
-        editor.NeedsRestart() ? "Saved changes apply after restart." : "Changes apply after restart.");
-    if (pending) ImGui::PopStyleColor();
-    ImGui::BeginDisabled(!editor.IsDirty());
-    if (ImGui::Button("Save changes")) editor.Save();
-    ImGui::EndDisabled();
-    if (ImGui::GetContentRegionAvail().x > ImGui::GetFontSize() * 19) ImGui::SameLine();
-    if (ImGui::Button("Reload / discard")) editor.Load();
-    if (ImGui::GetContentRegionAvail().x > ImGui::GetFontSize() * 16) ImGui::SameLine();
-    ImGui::BeginDisabled(!editor.IsLoaded());
-    if (ImGui::Button("Defaults")) editor.RestoreDefaults();
-    ImGui::EndDisabled();
-    if (!editor.error.empty()) ImGui::TextWrapped("%s", editor.error.c_str());
+    if (!editor.error.empty()) {
+        ImGui::TextWrapped("%s", editor.error.c_str());
+        // Changes save immediately, so reloading only matters after an outside edit or a bad file.
+        if (ImGui::Button("Reload file")) editor.Load();
+    }
     if (!editor.IsLoaded()) return;
 
-    // Keep Save/Discard visible while the options scroll inside the page.
+    const bool restart = editor.NeedsRestart();
+    if (restart) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.82f, 0.25f, 1.0f));
+    ImGui::TextWrapped("%s", restart ? "Saved. Restart the game to apply the changes." :
+        "Changes save automatically and apply after a restart.");
+    if (restart) ImGui::PopStyleColor();
+    PresetButtons(editor);
+
+    // Keep the presets visible while the options scroll inside the page.
     ImGui::BeginChild("GameplayOptions");
     const char *groups[] = {"Battle rules", "Moves & tutors", "Evolution & eggs",
                             "Encounters & events", "Progression & prices"};
@@ -47,22 +81,22 @@ void GameplayContents()
             SettingsRow(option.label, option.description);
             ImGui::PushID(option.name);
             unsigned value = GameplayConfig_GetOptionValue(&editor.values, i);
+            bool changed = false;
             if (option.isBoolean) {
                 bool checked = value != 0;
                 if (ImGui::Checkbox("##Value", &checked))
-                    GameplayConfig_SetOptionValue(&editor.values, i, checked);
+                    changed = GameplayConfig_SetOptionValue(&editor.values, i, checked);
             } else {
                 int number = static_cast<int>(value);
                 const int maximum = static_cast<int>(option.maximum);
-                const bool changed = ImGui::SliderInt("##Value", &number, 0, maximum,
-                    "%d", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::SliderInt("##Value", &number, 0, maximum, "%d", ImGuiSliderFlags_AlwaysClamp);
                 if (ImGui::IsItemHovered())
-                    ImGui::SetTooltip("Ctrl+click to type an exact value.");
-                if (changed)
-                    GameplayConfig_SetOptionValue(&editor.values, i,
-                        std::clamp(number, 0, maximum));
-                ImGui::TextDisabled("Range: 0-%u", option.maximum);
+                    ImGui::SetTooltip("Range: 0-%u. Ctrl+click to type an exact value.", option.maximum);
+                GameplayConfig_SetOptionValue(&editor.values, i, std::clamp(number, 0, maximum));
+                // Save once the drag or typed value is finished, not on every step.
+                changed = ImGui::IsItemDeactivatedAfterEdit();
             }
+            if (changed && editor.IsDirty()) editor.Save();
             ImGui::PopID();
         }
         ImGui::EndTable();

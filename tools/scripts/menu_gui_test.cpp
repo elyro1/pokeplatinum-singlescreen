@@ -187,6 +187,12 @@ static void CheckBarSpeedControl() {
     SIM_Config_prj_LoadDefaults(projectConfig);
     assert(SIM_Config_prj_LoadConfigFile(projectConfig) && projectConfig->disableLowHPBeep);
     projectConfig->disableLowHPBeep = FALSE;
+    assert(projectConfig->improvedPoketch);
+    projectConfig->improvedPoketch = FALSE;
+    SIM_Config_prj_SaveConfigFile(projectConfig);
+    SIM_Config_prj_LoadDefaults(projectConfig);
+    assert(SIM_Config_prj_LoadConfigFile(projectConfig) && !projectConfig->improvedPoketch);
+    projectConfig->improvedPoketch = TRUE;
     SIM_Config_prj_SaveConfigFile(projectConfig);
 }
 
