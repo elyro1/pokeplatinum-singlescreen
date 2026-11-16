@@ -90,7 +90,7 @@ static void Capture(const char *name) {
     assert(file);
     std::fprintf(file, "P6\n%d %d\n255\n", width, height);
     for (int y = height - 1; y >= 0; --y)
-        assert(std::fwrite(pixels.data() + y * width * 3, 3, width, file) == width);
+        assert(std::fwrite(pixels.data() + y * width * 3, 3, width, file) == (size_t)width);
     assert(std::fclose(file) == 0);
 }
 

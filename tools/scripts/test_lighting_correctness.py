@@ -43,7 +43,7 @@ def main():
         subprocess.run([
             cpp_flags[0], *objects,
             str(build / 'subprojects/libntr/libraries/fx/libfx.a'),
-            str(build / 'subprojects/libntr/libraries/sim/libsim.a.p/src_glad.c.o'),
+            str(build / 'subprojects/libntr/libraries/sim/libsim_vendor.a.p/src_glad.c.o'),
             '-Wl,--gc-sections', '-lm', '-o', str(executable),
         ], check=True)
         subprocess.run([str(executable)], check=True)

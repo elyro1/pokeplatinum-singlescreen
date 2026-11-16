@@ -45,7 +45,7 @@ def main():
             executable = temp / f'{name}-test'
             subprocess.run([cpp[0], str(test), str(config),
                             str(editor),
-                            str(build / 'subprojects/libntr/libraries/sim/libsim.a.p/src_config_ini.c.o'),
+                            str(build / 'subprojects/libntr/libraries/sim/libsim_vendor.a.p/src_config_ini.c.o'),
                             str(build / 'subprojects/libntr/libraries/sim/libsim.a.p/src_config_config_check.c.o'),
                             '-o', str(executable)], check=True)
             run = temp / name

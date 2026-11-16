@@ -52,7 +52,7 @@ def main():
                         str(build / 'libport.a.p/src_port_visuals_field_visuals.c.o'),
                         str(build / 'libport.a.p/src_port_visuals_field_lights.c.o'),
                         str(build / 'libport.a.p/src_port_config_sim_config_prj.c.o'),
-                        str(build / 'subprojects/libntr/libraries/sim/libsim.a.p/src_config_ini.c.o'),
+                        str(build / 'subprojects/libntr/libraries/sim/libsim_vendor.a.p/src_config_ini.c.o'),
                         str(build / 'subprojects/libntr/libraries/sim/libsim.a.p/src_config_config_check.c.o'),
                         '-lm', '-o', str(executable)], check=True)
         subprocess.run([str(executable)], cwd=temp, check=True)
@@ -61,7 +61,7 @@ def main():
         sdl = shlex.split(subprocess.check_output(['pkg-config', '--cflags', '--libs', 'sdl2'], text=True))
         subprocess.run(['g++', '-std=c++11', f'-I{ROOT / "subprojects/libntr/include"}',
                         str(ROOT / 'tools/scripts/field_visuals_gpu_test.cpp'),
-                        str(build / 'subprojects/libntr/libraries/sim/libsim.a.p/src_glad.c.o'),
+                        str(build / 'subprojects/libntr/libraries/sim/libsim_vendor.a.p/src_glad.c.o'),
                         *sdl, '-ldl', '-o', str(gpu)], check=True)
         env = dict(os.environ, SDL_VIDEODRIVER=os.environ.get('SDL_VIDEODRIVER', 'offscreen'))
         subprocess.run([str(gpu), str(ROOT / 'subprojects/libntr/libraries/sim/src/shaders')],
