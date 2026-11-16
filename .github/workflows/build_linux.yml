@@ -59,3 +59,11 @@ jobs:
         with:
           name: release_linux
           path: build_linux/pokeplatinum/release_linux
+
+      # The AppImage's binary is stripped; crash reports from it are symbolized against this one
+      # (tools/scripts/symbolize_crash.py, docs/crash_reports.md).
+      - name: Upload symbols (linux)
+        uses: actions/upload-artifact@v6
+        with:
+          name: symbols_linux
+          path: build_linux/pokeplatinum/main

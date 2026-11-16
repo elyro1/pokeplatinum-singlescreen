@@ -150,6 +150,12 @@ Works with both Platinum and BW2 visuals. More in [battle speed settings](docs/b
 
 </details>
 
+## 🐞 If the game crashes or freezes
+
+Send `log.txt` from the game folder (and `log.prev.txt`, the previous run's log, if you've restarted since) with your bug
+report. When the game crashes or stops responding for 5 seconds, it writes what it was doing there: where in the code,
+which map and position, and your settings. More in [crash reports](docs/crash_reports.md).
+
 ## 💾 Saves
 
 - **Save in-game before you quit.** Slots are `save1.bin`, `save2.bin`, and `save3.bin` in the game folder.

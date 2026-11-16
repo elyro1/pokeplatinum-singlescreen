@@ -38,6 +38,9 @@
 #include "port/config/sim_config_prj.h"
 #include "port/visuals/frame_rate.h"
 #include "port/gameplay/gameplay_config.h"
+#ifdef SDK_PORT
+#include "port/debug/crash_context.h"
+#endif
 #include "port/config/config_report.h"
 #include <simulator/config/config_check.h>
 #include <simulator/sim.h>
@@ -98,6 +101,7 @@ void NitroMain(void)
         ConfigReport_Print(stdout);
         exit(0);
     }
+    CrashContext_Init();
     #ifdef SDK_BUILD_LINUX
     SetPokeplatinumAppIcon();
     #endif
@@ -182,6 +186,9 @@ void NitroMain(void)
         if (CommSys_Update()) {
             CheckHeapCanary();
             BattleTiming_BeginFrame();
+#ifdef SDK_PORT
+            CrashContext_Update(sApplication.currApplication);
+#endif
             RunApplication();
             SysTaskManager_ExecuteTasks(gSystem.mainTaskMgr);
             SysTaskManager_ExecuteTasks(gSystem.printTaskMgr);
