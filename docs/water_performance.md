@@ -4,7 +4,7 @@ Measured on 2026-10-13: Ryzen 7 5800X, NVIDIA RTX 2060 SUPER, NVIDIA driver 615.
 
 960×540 top-screen window; internal scales 2×, 3× and 10×; smooth edges enabled with its normal allocation fallback. VSync/frame cap disabled. Each fixed Lake Verity view alternates off/on twice, with 1,000 warm-up frames and 300 sample frames per phase (about 600 samples per setting). Tests use copied assets/save/config. Other added atmosphere/particle/night options are disabled.
 
-The before executable is game commit `66aef5817b`, SDK `91a0e7717e`. The after executable includes native batched water submission and the single-pass candidate scan. Shimmer coverage stays at 65 shoreline tiles or 337 open-water tiles. Raw measurements are in `water_benchmark_results.json`.
+The before executable is game commit `66aef5817b`, SDK `91a0e7717e`. The after executable includes native batched water submission and the single-pass candidate scan. Shimmer coverage stays at 65 shoreline tiles or 337 open-water tiles.
 
 ## Water-only timings
 
