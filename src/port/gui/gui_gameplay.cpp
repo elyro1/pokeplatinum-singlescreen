@@ -69,8 +69,8 @@ void GameplayContents()
 
     // Keep the presets visible while the options scroll inside the page.
     ImGui::BeginChild("GameplayOptions");
-    const char *groups[] = {"Battle rules", "Moves & tutors", "Evolution & eggs",
-                            "Encounters & events", "Progression & prices"};
+    const char *groups[] = {"Evolution & eggs", "Encounters & events", "Progression & prices",
+                            "Moves & tutors", "Battle rules"};
     for (const char *group : groups) {
         if (!ImGui::CollapsingHeader(group, ImGuiTreeNodeFlags_DefaultOpen)) continue;
         if (!BeginSettings(group)) continue;

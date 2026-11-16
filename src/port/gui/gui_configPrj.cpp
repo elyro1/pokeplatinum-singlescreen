@@ -41,6 +41,7 @@ void BattleSpeedContents() {
     bool configChanged = false;
 
     if (!BeginSettings("BattleSpeed")) return;
+    FastForwardRow();
     ConfigCheckBox("Fast wild battle intro", &myConfig->fastWildBattleIntro, configChanged);
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Shortens eligible wild battle openings with BW2 battle visuals. Applies to the next battle.");

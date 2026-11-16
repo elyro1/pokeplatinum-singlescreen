@@ -101,7 +101,7 @@ Works with both Platinum and BW2 visuals. More in [battle speed settings](docs/b
 
 **Bindings:** select one, press the new input. Escape cancels. The window stays responsive during capture.
 
-**Gameplay page** has battle rules, moves/tutors, evolution/eggs, encounters/events, and progression/prices.
+**Gameplay page** has evolution/eggs, encounters/events, progression/prices, moves/tutors, and battle rules.
 
 - Changes save automatically; restart the game to apply them.
 - **Classic Platinum** and **Single-screen mod** presets replace every option at once.

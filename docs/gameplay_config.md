@@ -4,7 +4,7 @@ The PC port creates `gameplay_config.ini` with its built-in defaults on first st
 
 ## Edit through the TAB menu
 
-Open **Tab → Gameplay** to change all 24 options. The page groups them into battle rules, moves and tutors, evolution and eggs, encounters and events, and progression and prices. Options whose label doesn't say everything have a short explanation below it. Numeric options use sliders; hover one for its range, drag to adjust, or Ctrl+click to type an exact value.
+Open **Tab → Gameplay** to change all 24 options. The page groups them into evolution and eggs, encounters and events, progression and prices, moves and tutors, and battle rules. Options whose label doesn't say everything have a short explanation below it. Numeric options use sliders; hover one for its range, drag to adjust, or Ctrl+click to type an exact value.
 
 Changes save to `gameplay_config.ini` immediately (a slider when you release it) and apply after you restart the game. The page shows a yellow reminder while the file differs from the running game.
 
