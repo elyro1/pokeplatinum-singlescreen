@@ -8,7 +8,6 @@
 	linux-asan    \
 	meson         \
 	mingw         \
-	nx            \
 	purge         \
 	target        \
 	update        \
@@ -27,12 +26,10 @@ BUILD ?= build
 BUILD_LINUX ?= $(BUILD)_linux
 BUILD_LINUX_ASAN ?= $(BUILD)_linux_asan
 BUILD_WIN64 ?= $(BUILD)_win64
-BUILD_NX ?= $(BUILD)_nx
-BUILD_DIRS := $(BUILD_LINUX) $(BUILD_LINUX_ASAN) $(BUILD_WIN64) $(BUILD_NX)
+BUILD_DIRS := $(BUILD_LINUX) $(BUILD_LINUX_ASAN) $(BUILD_WIN64)
 ROOT_INI_LINUX := $(BUILD_LINUX)/root.ini
 ROOT_INI_LINUX_ASAN := $(BUILD_LINUX_ASAN)/root.ini
 ROOT_INI_WIN64 := $(BUILD_WIN64)/root.ini
-ROOT_INI_NX := $(BUILD_NX)/root.ini
 
 UNAME_S := $(shell uname -s)
 
@@ -68,9 +65,6 @@ win64: $(BUILD_WIN64)/build.ninja
 # Cross-build on Linux; the MSYS2 win64 target above remains the CI entry point.
 mingw:
 	python3 tools/scripts/build_mingw.py --native-build $(BUILD_LINUX) --build $(BUILD_WIN64)
-
-nx: $(BUILD_NX)/build.ninja
-	$(MESON) compile -C $(BUILD_NX)
 
 clean:
 	for dir in $(BUILD_DIRS); do \
@@ -127,15 +121,6 @@ $(BUILD_WIN64)/build.ninja: $(ROOT_INI_WIN64) | $(BUILD_WIN64) meson
 		-- $(BUILD_WIN64)
 endif
 
-$(BUILD_NX)/build.ninja: $(ROOT_INI_NX) | $(BUILD_NX) meson
-	$(MESON) setup \
-		-Dbuild_target=nx \
-		--native-file=meson/$(NATIVE) \
-		--native-file=$(ROOT_INI_NX) \
-		--cross-file=meson/cross_nx.ini \
-		--cross-file=$(ROOT_INI_NX) \
-		-- $(BUILD_NX)
-
 $(ROOT_INI_LINUX): | $(BUILD_LINUX)
 	echo "[constants]" > $@
 	echo "root = '$$PWD'" >> $@
@@ -148,10 +133,6 @@ $(ROOT_INI_WIN64): | $(BUILD_WIN64)
 	echo "[constants]" > $@
 	echo "root = '$$PWD'" >> $@
 
-$(ROOT_INI_NX): | $(BUILD_NX)
-	echo "[constants]" > $@
-	echo "root = '$$PWD'" >> $@
-
 $(BUILD_LINUX):
 	mkdir -p -- $(BUILD_LINUX)
 
@@ -160,9 +141,6 @@ $(BUILD_LINUX_ASAN):
 
 $(BUILD_WIN64):
 	mkdir -p -- $(BUILD_WIN64)
-
-$(BUILD_NX):
-	mkdir -p -- $(BUILD_NX) 
 
 meson: $(MESON)
 

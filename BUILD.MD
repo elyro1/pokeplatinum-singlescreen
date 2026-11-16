@@ -63,16 +63,6 @@ make win64
 
 The game and its required DLLs are placed in `build_win64/pokeplatinum`.
 
-### Other build targets
-
-The inherited Nintendo Switch target requires DevKitA64 (included in the Docker environment):
-
-```bash
-./drun.sh make nx
-```
-
-This target is experimental and has poor performance; the changes in this fork primarily target PC play.
-
 ### Development notes
 
 - To update SDK subprojects, run `make update`.
@@ -82,5 +72,5 @@ This target is experimental and has poor performance; the changes in this fork p
   ./drun.sh ./subprojects/meson-1.12.0/meson.py configure -Dtracy_enable=true build_linux
   ```
 
-  Profiling is also available for the Win64 and NX build targets.
+  Profiling is also available for the Win64 build target.
 - `firmware.bin` is a placeholder for Wi-Fi configuration storage, not a dump of real DS firmware.

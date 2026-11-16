@@ -2,11 +2,9 @@
 BUILDDIR=$1
 OUTPUTDIR=$BUILDDIR/$3
 SKIP_ANIM_SCRIPTS=false
-NX=false
 for option in "${@:4}"; do
   case "$option" in
     --skip-anim-scripts) SKIP_ANIM_SCRIPTS=true ;;
-    -nx) NX=true ;;
     *) printf 'Unknown staging option: %s\n' "$option" >&2; exit 1 ;;
   esac
 done
@@ -54,9 +52,7 @@ fi
 cp "$BUILDDIR/$EXECUTABLE" "$OUTPUTDIR/$EXECUTABLE.tmp" || exit 1
 mv -f "$OUTPUTDIR/$EXECUTABLE.tmp" "$OUTPUTDIR/$EXECUTABLE" || exit 1
 
-if [[ "$NX" == true ]]; then
-  /opt/devkitpro/tools/bin/elf2nro $OUTPUTDIR/main $OUTPUTDIR/pokeplatinum.nro
-elif [[ "$(uname -s)" =~ ^MSYS_NT.* ]]; then
+if [[ "$(uname -s)" =~ ^MSYS_NT.* ]]; then
   cp -u /ucrt64/bin/SDL2.dll $OUTPUTDIR/SDL2.dll
   cp -u /ucrt64/bin/libwinpthread-1.dll $OUTPUTDIR/libwinpthread-1.dll
   cp -u /ucrt64/bin/libenet-7.dll $OUTPUTDIR/libenet-7.dll

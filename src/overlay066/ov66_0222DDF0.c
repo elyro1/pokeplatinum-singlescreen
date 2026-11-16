@@ -2060,9 +2060,7 @@ static void ov66_0222F4C8(PPW_LOBBY_TIME_EVENT param0, void *param1)
     {
         PPW_LobbyTimeInfo v3;
 
-        #ifndef SDK_BUILD_NX
         PPW_LobbyGetTimeInfo(&v3);
-        #endif
         ov66_02231428(&v0->unk_04.unk_D0, &v3.currentTime);
 
         v0->unk_04.unk_D4 = v3.currentTime;

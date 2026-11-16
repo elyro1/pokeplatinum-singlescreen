@@ -35,37 +35,15 @@ if get_option('tracy_enable')
     shared_args += '-DTRACY_ENABLE'
 endif
 
-if (build_target == 'nx')
-    shared_args += [ '-D__SWITCH__' ]
-
-    if(get_option('tracy_enable'))
-    add_global_arguments(['-D__SWITCH__', 
-                          '-DTRACY_ENABLE',        
-                          '-I/opt/devkitpro/portlibs/switch/include',
-                          '-I/opt/devkitpro/libnx/include'],
-        language: 'cpp',
-        native: false
-    )
-    else
-    add_global_arguments(['-D__SWITCH__',         
-                          '-I/opt/devkitpro/portlibs/switch/include',
-                          '-I/opt/devkitpro/libnx/include'],
-        language: 'cpp',
-        native: false
-    )
-    endif
-
-endif
-
 
 add_global_arguments(shared_args,
     language: 'c',
-    native: (build_target == 'linux' or build_target == 'win64')
+    native: true
 )
 
 add_global_arguments(shared_args,
     language: 'cpp',
-    native: (build_target == 'linux' or build_target == 'win64')
+    native: true
 )
 
 # Global so the SDK subprojects are instrumented too; -O1 keeps the game playable under ASan. The build tools get it
@@ -105,10 +83,6 @@ pokeplatinum_args += [
     '-D_POSIX_C_SOURCE=200809L'
 ]
 
-if(build_target == 'nx')
-    pokeplatinum_args += '-fPIC'
-endif
-
 if get_option('gdb_debugging')
     pokeplatinum_args += '-DGDB_DEBUGGING'
 endif
@@ -119,21 +93,8 @@ if get_option('logging_enabled')
     ]
 endif
 
-if (build_target == 'nx')
-link_args = [
-    '-specs=/opt/devkitpro/libnx/switch.specs',
-    '-g',
-    '-march=armv8-a+crc+crypto',
-    '-mtune=cortex-a56',
-    '-mtp=soft',
-    '-fPIE',
-    '--verbose',
-    '-Wl,-Map=main.map'
-]
-else
-link_args = [
-]
-endif
+
+link_args = []
 
 ############################################################
 ###                     DEPENDENCIES                     ###
@@ -175,26 +136,23 @@ libvct_dep = dependency('libvct')
 
 # The SDK dependencies pass -w, which no later -W flag can undo. Port code takes their flags without it and includes
 # the SDK headers as system headers, so warnings show for our own files only.
-port_warning_args = []
 port_sdk_deps = []
-if build_target == 'linux' or build_target == 'win64'
-    port_sdk_args = []
-    foreach arg : (subproject('libntr').get_variable('nitrosdk_args')
-            + subproject('libntrsystem').get_variable('nitrosystem_args')
-            + subproject('libntrwifi').get_variable('nitrowifi_args')
-            + subproject('libntrdwc').get_variable('nitrodwc_args'))
-        if arg != '-w' and arg not in port_sdk_args
-            port_sdk_args += arg
-        endif
-    endforeach
-    port_sdk_deps += declare_dependency(compile_args: port_sdk_args)
-    foreach dep : [nitrosdk_dep, nitrosystem_dep, nitrowifi_dep, nitrodwc_dep]
-        port_sdk_deps += dep.partial_dependency(includes: true, sources: true).as_system()
-    endforeach
-    port_warning_args = ['-Wall']
-    if get_option('port_werror')
-        port_warning_args += '-Werror'
+port_sdk_args = []
+foreach arg : (subproject('libntr').get_variable('nitrosdk_args')
+        + subproject('libntrsystem').get_variable('nitrosystem_args')
+        + subproject('libntrwifi').get_variable('nitrowifi_args')
+        + subproject('libntrdwc').get_variable('nitrodwc_args'))
+    if arg != '-w' and arg not in port_sdk_args
+        port_sdk_args += arg
     endif
+endforeach
+port_sdk_deps += declare_dependency(compile_args: port_sdk_args)
+foreach dep : [nitrosdk_dep, nitrosystem_dep, nitrowifi_dep, nitrodwc_dep]
+    port_sdk_deps += dep.partial_dependency(includes: true, sources: true).as_system()
+endforeach
+port_warning_args = ['-Wall']
+if get_option('port_werror')
+    port_warning_args += '-Werror'
 endif
 
 ############################################################
@@ -231,39 +189,6 @@ subdir('res')
 ############################################################
 subdir('src')
 
-if (build_target == 'nx')
-trainer_ai_ss = custom_target(
-    'trainer_ai_script.ss',
-    output: 'trainer_ai_script.ss',
-    input: files('src/battle/trainer_ai/script.s'),
-    command: [
-        'gcc',
-        '-D__ASSEMBLER__',
-        '-I', meson.global_source_root() / 'asm',
-        '-I', meson.global_build_root(),
-        '-I', meson.global_source_root() / 'include',
-        '-MD', '-MF', '@DEPFILE@',
-        '-E', '-nostdinc', '-'
-    ],
-    depfile: '@BASENAME@.d',
-    capture: true,
-    feed: true
-)
-
-trainer_ai_o = custom_target(
-    'trainer_ai_script.o',
-    output: 'trainer_ai_script.o',
-    input: trainer_ai_ss,
-    command: [
-        '/opt/devkitpro/devkitA64/bin/aarch64-none-elf-as',
-        '-I', meson.global_source_root() / 'asm',
-        '-I', meson.global_build_root(),
-        '-o', '@OUTPUT@',
-        '@INPUT@',
-    ],
-    depfile: '@BASENAME@.d'
-)
-else
 trainer_ai_ss = custom_target(
     'trainer_ai_script.ss',
     output: 'trainer_ai_script.ss',
@@ -295,9 +220,7 @@ trainer_ai_o = custom_target(
     ],
     depfile: '@BASENAME@.d'
 )
-endif
 
-if (build_target == 'linux' or build_target == 'win64')
 # Port code (src/port, the bwbattle adapter) with warnings on; linked into main as plain objects
 libport = static_library('port',
     sources: [
@@ -324,7 +247,7 @@ libport = static_library('port',
     dependencies: port_sdk_deps,
     native: true
 )
-endif
+
 if (build_target == 'linux')
 main = executable('main',
     sources: [
@@ -418,48 +341,6 @@ main = executable('main',
     native: true
 )
 endif
-if (build_target == 'nx')
-main = executable('main',
-    sources: [
-        pokeplatinum_c,
-        port_c,
-        port_generated,
-        c_consts_generators,
-        naix_headers,
-        h_headers,
-        embed_headers,
-    ],
-    objects: trainer_ai_o,
-    c_args: [
-        pokeplatinum_args,
-    ],
-    c_pch: 'include/pch/global_pch.h',
-    include_directories: [
-        public_includes,
-        libcrypto_public_includes,
-        libgds_public_includes,
-        libspl_public_includes,
-        ppwlobby_public_includes,
-    ],
-    dependencies: [
-        nitrosdk_dep,
-        nitrosystem_dep,
-        nitrowifi_dep,
-        nitrodwc_dep,
-        libvct_dep,
-    ],
-    link_with: [
-        libspl,
-        libcrypto_ov97,
-        libcrypto_static,
-        libgds,
-    ],
-    link_args: [
-        link_args,
-    ],
-    native: false
-)
-endif
 
 pc_copy_options = []
 if get_option('skip_anim_scripts')
@@ -470,26 +351,6 @@ endif
 ############################################################
 ###                     PC FILE COPY                     ###
 ############################################################
-if (build_target == 'nx')
-copy_files_script = files('tools/scripts/copy_pc_files.sh')
-
-pokeplatinum_nds = custom_target('pokeplatinum.us',
-    output: 'pokeplatinum.us',
-    input: [
-        main,
-        nitrofs_files,
-    ],
-    command : [
-        copy_files_script,
-        meson.global_build_root(),
-        filesys_csv,
-        'pokeplatinum',
-        '-nx',
-        pc_copy_options,
-    ],
-    build_by_default: true
-)
-else
 # Copy files into 'pc' folder
 copy_files_script = files('tools/scripts/copy_pc_files.sh')
 
@@ -508,7 +369,6 @@ pokeplatinum_nds = custom_target('pokeplatinum.us',
     ],
     build_by_default: true
 )
-endif
 
 
 ############################################################

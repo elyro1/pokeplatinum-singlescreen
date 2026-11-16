@@ -10,20 +10,18 @@ libcrypto_ov97_srcs = files(
     'src/util.c'
 )
 
-pc_native = (build_target == 'linux' or build_target == 'win64')
-
 libcrypto_static = static_library('crypto_static',
     sources: libcrypto_static_srcs,
-    pic: not pc_native,
+    pic: false,
     include_directories: libcrypto_public_includes,
     dependencies: nitrosdk_dep,
-    native: pc_native
+    native: true
 )
 
 libcrypto_ov97 = static_library('crypto_ov97',
     sources: libcrypto_ov97_srcs,
-    pic: not pc_native,
+    pic: false,
     include_directories: libcrypto_public_includes,
     dependencies: nitrosdk_dep,
-    native: pc_native
+    native: true
 )

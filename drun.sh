@@ -31,12 +31,7 @@ done
 if [ "$(docker images -q $IMAGENAME)" == "" ]
 then
     echo "Building container image $IMAGENAME"
-    if [ -z "${GITHUB_ACTIONS}" ]; then
-        docker build -t $IMAGENAME -f $DOCKERFILENAME .
-    else
-        # DevkitPro does not install in GitHub actions
-        docker build -t $IMAGENAME -f $DOCKERFILENAME --build-arg USE_DEVKITPRO=0 .
-    fi
+    docker build -t $IMAGENAME -f $DOCKERFILENAME .
 fi
 
 mkdir -p ./.fontconfig_cache
@@ -45,7 +40,6 @@ mkdir -p ./.fontconfig_cache
 if [ $INTERACTIVE -eq 1 ]; then
 docker run -it --user $(id -u):$(id -g) \
            --env DISPLAY=$DISPLAY \
-           --env DEVKITPRO=/opt/devkitpro \
            --env GITHUB_ACTIONS=$GITHUB_ACTIONS \
            -v /tmp/.X11-unix:/tmp/.X11-unix:ro \
            --privileged \
@@ -59,7 +53,6 @@ fi
 # Run command in container
 docker run --user $(id -u):$(id -g) \
            --env DISPLAY=$DISPLAY \
-           --env DEVKITPRO=/opt/devkitpro \
            --env GITHUB_ACTIONS=$GITHUB_ACTIONS \
            -v /tmp/.X11-unix:/tmp/.X11-unix:ro \
            --privileged \

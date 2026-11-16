@@ -194,9 +194,7 @@ UnkEnum_ov66_0223287C ov66_022325D8(void)
         return UnkEnum_ov66_0223287C_00;
     }
 
-    #ifndef SDK_BUILD_NX
     lobbyState = PPW_LobbyProcess();
-    #endif
 
     switch (lobbyState) {
     case PPW_LOBBY_STATE_NOTINITIALIZED:
@@ -224,16 +222,12 @@ UnkEnum_ov66_0223287C ov66_022325D8(void)
 
     if (Unk_ov66_0225B6C0->unk_12C == UnkEnum_ov66_0223287C_02) {
         ov66_022341F4(Unk_ov66_0225B6C0);
-        #ifndef SDK_BUILD_NX
         PPW_LobbyGetTimeInfo(&Unk_ov66_0225B6C0->timeInfo);
-        #endif
 
         {
             PPW_LOBBY_CHANNEL_STATE v1;
 
-            #ifndef SDK_BUILD_NX
             v1 = PPW_LobbyGetSubChannelState();
-            #endif
 
             switch (v1) {
             case PPW_LOBBY_CHANNEL_STATE_NONE:
@@ -263,27 +257,15 @@ PPW_LOBBY_ERROR ov66_022326DC(void)
     GF_ASSERT(Unk_ov66_0225B6C0 != NULL);
 
     if (Unk_ov66_0225B6C0->result == 0) {
-        #ifndef SDK_BUILD_NX
         return PPW_LobbyGetLastError();
-        #else
-        return 0;
-        #endif
     }
 
-    #ifndef SDK_BUILD_NX
     return ov66_02237134(Unk_ov66_0225B6C0->result);
-    #else
-    return 0;
-    #endif
 }
 
 s32 ov66_0223270C(PPW_LOBBY_ERROR lobbyError)
 {
-    #ifndef SDK_BUILD_NX
     return PPW_LobbyToErrorCode(lobbyError);
-    #else
-    return 0;
-    #endif
 }
 
 BOOL ov66_02232714(const void *param0)
@@ -319,9 +301,7 @@ BOOL ov66_02232720(const void *param0, u32 param1)
 
     {
         DWCUserData *userData = WiFiList_GetUserData(Unk_ov66_0225B6C0->wiFiList);
-        #ifndef SDK_BUILD_NX
         Unk_ov66_0225B6C0->result = PPW_LobbyInitializeAsync("pokemonplatds", "IIup73", param1, &v0, userData, param0, Unk_ov66_0225B6C0->unk_28);
-        #endif
     }
 
     return ov66_0223365C(Unk_ov66_0225B6C0->result);
@@ -344,11 +324,7 @@ void ov66_0223282C(void)
 
     ov66_0223369C();
 
-    #ifndef SDK_BUILD_NX
     PPW_LOBBY_RESULT lobbyResult = PPW_LobbyShutdownAsync();
-    #else
-    PPW_LOBBY_RESULT lobbyResult = 0;
-    #endif
     BOOL v1 = ov66_0223365C(lobbyResult);
 
     GF_ASSERT(v1);
@@ -398,21 +374,15 @@ BOOL ov66_022328CC(void)
 s32 ov66_022328F0(void)
 {
     GF_ASSERT(Unk_ov66_0225B6C0 != NULL);
-    #ifndef SDK_BUILD_NX
     return PPW_LobbyGetMyUserId();
-    #else
-    return 0;
-    #endif
 }
 
 void ov66_02232908(const void *param0)
 {
     GF_ASSERT(Unk_ov66_0225B6C0 != NULL);
-    #ifndef SDK_BUILD_NX
     ov66_0223379C(Unk_ov66_0225B6C0, PPW_LobbyGetMyUserId(), param0);
 
     PPW_LobbyUpdateMyProfile(param0, Unk_ov66_0225B6C0->unk_28, 0);
-    #endif
 }
 
 const void *ov66_0223293C(s32 param0)
@@ -491,11 +461,7 @@ BOOL ov66_02232A48(UnkEnum_ov66_022336B8 param0)
 {
     GF_ASSERT(Unk_ov66_0225B6C0 != NULL);
 
-    #ifndef SDK_BUILD_NX
     PPW_LOBBY_RESULT lobbyResult = PPW_LobbyJoinSubChannelAsync(ov66_022336C0(param0));
-    #else
-    PPW_LOBBY_RESULT lobbyResult = 0;
-    #endif
     BOOL v0 = ov66_0223365C(lobbyResult);
 
     if (v0 == 1) {
@@ -516,11 +482,7 @@ BOOL ov66_02232AA4(void)
 {
     GF_ASSERT(Unk_ov66_0225B6C0 != NULL);
 
-    #ifndef SDK_BUILD_NX
     PPW_LOBBY_RESULT lobbyResult = PPW_LobbyLeaveSubChannel();
-    #else
-    PPW_LOBBY_RESULT lobbyResult = 0;
-    #endif
     BOOL v1 = ov66_0223365C(lobbyResult);
 
     if (v1 == 1) {
@@ -707,11 +669,7 @@ void ov66_02232E00(u32 param0, const void *param1, u32 param2)
     GF_ASSERT(Unk_ov66_0225B6C0->unk_184[0].unk_04 > param0);
     GF_ASSERT(Unk_ov66_0225B6C0->unk_184[0].unk_00[param0].unk_04 == param2);
 
-    #ifndef SDK_BUILD_NX
     PPW_LOBBY_RESULT lobbyResult = PPW_LobbySendChannelBinaryMessage(PPW_LOBBY_CHANNEL_KIND_MAIN, param0, param1, param2);
-    #else
-    PPW_LOBBY_RESULT lobbyResult = 0;
-    #endif
     BOOL v1 = ov66_0223365C(lobbyResult);
 
     GF_ASSERT(v1 == 1);
@@ -723,11 +681,7 @@ void ov66_02232E5C(u32 param0, s32 param1, const void *param2, u32 param3)
     GF_ASSERT(Unk_ov66_0225B6C0->unk_184[0].unk_04 > param0);
     GF_ASSERT(Unk_ov66_0225B6C0->unk_184[0].unk_00[param0].unk_04 == param3);
 
-    #ifndef SDK_BUILD_NX
     PPW_LOBBY_RESULT lobbyResult = PPW_LobbySendPlayerBinaryMessage(param1, param0, param2, param3);
-    #else
-    PPW_LOBBY_RESULT lobbyResult = 0;
-    #endif
     BOOL v1 = ov66_0223365C(lobbyResult);
 
     GF_ASSERT(v1 == 1);
@@ -741,11 +695,7 @@ void ov66_02232EBC(u32 param0, const void *param1, u32 param2)
     GF_ASSERT(Unk_ov66_0225B6C0->unk_12D != UnkEnum_ov66_022336B8_04);
 
     u32 v2 = ov66_022336C0(Unk_ov66_0225B6C0->unk_12D);
-    #ifndef SDK_BUILD_NX
     PPW_LOBBY_RESULT lobbyResult = PPW_LobbySendChannelBinaryMessage(v2, param0, param1, param2);
-    #else
-    PPW_LOBBY_RESULT lobbyResult = 0;
-    #endif
     BOOL v1 = ov66_0223365C(lobbyResult);
 
     GF_ASSERT(v1 == 1);
@@ -770,19 +720,13 @@ BOOL ov66_02232F38(UnkEnum_ov66_02232F38 param0, u32 param1)
 
     ov66_02234288(&Unk_ov66_0225B6C0->unk_5B8[param0].lobbyRecruitInfo, &Unk_ov66_0225B6C0->timeInfo.currentTime);
 
-    #ifndef SDK_BUILD_NX
     PPW_LOBBY_RESULT lobbyResult = PPW_LobbyStartRecruit(&Unk_ov66_0225B6C0->unk_5B8[param0].lobbyRecruitInfo);
-    #else
-    PPW_LOBBY_RESULT lobbyResult = 0;
-    #endif
     BOOL v1 = ov66_0223365C(lobbyResult);
 
     GF_ASSERT(v1);
 
     Unk_ov66_0225B6C0->unk_5B8[param0].unk_44 = 1;
-    #ifndef SDK_BUILD_NX
     Unk_ov66_0225B6C0->unk_5B8[param0].unk_48 = PPW_LobbyGetMyUserId();
-    #endif
     Unk_ov66_0225B6C0->unk_5B8[param0].unk_46 = 60 * 30;
     Unk_ov66_0225B6C0->gameKind = param0;
     Unk_ov66_0225B6C0->unk_69E = 1;
@@ -810,17 +754,11 @@ void ov66_02233064(void)
         return;
     }
 
-    #ifndef SDK_BUILD_NX
     PPW_LOBBY_RESULT lobbyResult = PPW_LobbyStopRecruit();
-    #else
-    PPW_LOBBY_RESULT lobbyResult = 0;
-    #endif
     BOOL v1 = ov66_0223365C(lobbyResult);
     GF_ASSERT(v1);
 
-    #ifndef SDK_BUILD_NX
     v1 = ov66_022340F0(Unk_ov66_0225B6C0, Unk_ov66_0225B6C0->gameKind, PPW_LobbyGetMyUserId());
-    #endif
     GF_ASSERT(v1);
 
     Unk_ov66_0225B6C0->unk_69E = 0;
@@ -836,11 +774,7 @@ void ov66_022330CC(void)
 
     Unk_ov66_0225B6C0->unk_5B8[Unk_ov66_0225B6C0->gameKind].lobbyRecruitInfo.paramVal = 1;
 
-    #ifndef SDK_BUILD_NX
     PPW_LOBBY_RESULT lobbyResult = PPW_LobbyUpdateRecruitInfo(&Unk_ov66_0225B6C0->unk_5B8[Unk_ov66_0225B6C0->gameKind].lobbyRecruitInfo);
-    #else
-    PPW_LOBBY_RESULT lobbyResult = 0;
-    #endif
     BOOL v1 = ov66_0223365C(lobbyResult);
 
     GF_ASSERT(v1);
@@ -991,11 +925,7 @@ void ov66_022333E4(s32 param0)
     GF_ASSERT(param0 < PPW_LOBBY_QUESTIONNAIRE_ANSWER_NUM);
     GF_ASSERT(Unk_ov66_0225B6C0->unk_6A8.unk_2D8 != UnkEnum_ov66_02233434_01);
 
-    #ifndef SDK_BUILD_NX
     u32 v0 = PPW_LobbySubmitQuestionnaire(param0);
-    #else
-    u32 v0 = 0;
-    #endif
     BOOL v1 = ov66_0223365C(v0);
 
     GF_ASSERT(v1 == 1);
@@ -1215,11 +1145,7 @@ static BOOL ov66_022336C4(UnkStruct_ov66_022336C4 *param0)
     param0->unk_134[v2].region = region;
     param0->unk_134[v2].unk_03 = 1;
 
-    #ifndef SDK_BUILD_NX
     PPW_LOBBY_RESULT lobbyResult = PPW_LobbySetChannelData(PPW_LOBBY_INVALID_USER_ID, PPW_LOBBY_CHANNEL_KIND_MAIN, Unk_ov66_02258DF0[0], (const u8 *)param0->unk_134, sizeof(UnkStruct_ov66_022336C4_sub2) * 20);
-    #else
-    PPW_LOBBY_RESULT lobbyResult = 0;
-    #endif
 
     return ov66_0223365C(lobbyResult);
 }
@@ -1452,25 +1378,17 @@ static void ov66_02233B54(BOOL param0, PPW_LOBBY_CHANNEL_KIND lobbyChannelKind)
 {
     if (lobbyChannelKind == PPW_LOBBY_CHANNEL_KIND_MAIN) {
         Unk_ov66_0225B6C0->unk_5B4 = 1024;
-        #ifndef SDK_BUILD_NX
         PPW_LOBBY_RESULT lobbyResult = PPW_LobbyGetSchedule((PPW_LobbySchedule *)Unk_ov66_0225B6C0->unk_1B4, &Unk_ov66_0225B6C0->unk_5B4);
-        #else
-        PPW_LOBBY_RESULT lobbyResult = 0;
-        #endif
         GF_ASSERT(ov66_0223365C(lobbyResult));
 
-        #ifndef SDK_BUILD_NX
         PPW_LobbyGetChannelDataAsync(PPW_LOBBY_INVALID_USER_ID, PPW_LOBBY_CHANNEL_KIND_MAIN, Unk_ov66_02258DF0[0], NULL);
-        #endif
     } else {
         if (Unk_ov66_0225B6C0->unk_12D == ov66_022336B8(lobbyChannelKind)) {
             if (param0 == 1) {
                 Unk_ov66_0225B6C0->unk_12F = UnkEnum_ov66_02232A84_01;
 
                 ov66_02233A94(Unk_ov66_0225B6C0, Unk_ov66_0225B6C0->unk_12D);
-                #ifndef SDK_BUILD_NX
                 ov66_02233984(Unk_ov66_0225B6C0, PPW_LobbyGetMyUserId(), 1);
-                #endif
             } else {
                 Unk_ov66_0225B6C0->unk_12F = UnkEnum_ov66_02232A84_02;
             }
@@ -1485,7 +1403,6 @@ static void ov66_02233BF0(s32 userId, const PPW_LobbySystemProfile *param1, cons
 {
     BOOL v0;
 
-    #ifndef SDK_BUILD_NX
     if (userId == PPW_LobbyGetMyUserId()) {
         {
             PPW_LobbyGetTimeInfo(&Unk_ov66_0225B6C0->timeInfo);
@@ -1495,9 +1412,6 @@ static void ov66_02233BF0(s32 userId, const PPW_LobbySystemProfile *param1, cons
     } else {
         v0 = 0;
     }
-    #else
-    v0 = 0;
-    #endif
 
     ov66_02233984(Unk_ov66_0225B6C0, userId, 0);
     ov66_022337A8(Unk_ov66_0225B6C0, userId, param2, param3);
@@ -1808,9 +1722,7 @@ static void ov66_022341F4(UnkStruct_ov66_022336C4 *unused)
 
         if (v2->lobbyRecruitInfo.currentNum != numConnections) {
             v2->lobbyRecruitInfo.currentNum = numConnections;
-            #ifndef SDK_BUILD_NX
             PPW_LobbyUpdateRecruitInfo(&v2->lobbyRecruitInfo);
-            #endif
         }
     }
 

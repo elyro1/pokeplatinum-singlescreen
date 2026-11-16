@@ -16,5 +16,5 @@ libspl = static_library('spl',
     include_directories: [public_includes, libspl_public_includes],
     dependencies: [nitrosdk_dep, nitrosystem_dep],
     pic: true,
-    native: (build_target == 'linux' or build_target == 'win64')
+    native: true
 )

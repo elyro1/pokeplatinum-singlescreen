@@ -1095,45 +1095,41 @@ pokeplatinum_c += following_pokemon_data
 public_includes = [public_includes, include_directories('.')]
 
 # Embed resource deltas in desktop executables; the player's ROM supplies bases.
-if build_target == 'linux' or build_target == 'win64'
-    map_patches_header = custom_target('map_patches.inc',
-        output: 'map_patches.inc',
-        input: [map_data_narc, map_matrix_narc[0], text_banks, scr_seq_narc[0],
-            baseline_text_narc, baseline_scripts_narc, sub_seq_narc[0], baseline_subscripts_narc,
-            start_menu_narc[0],
-            events_narc[0], trainer_data, trfgra_narc[0], field_sprites_narc[0],
-            pl_otherpoke_narc[0], pl_sound_data_sdat[0]],
-        command: [find_program('python3', native: true),
-            files('../tools/scripts/make_map_patches.py'),
-            meson.project_build_root(), '@INPUT0@', '@INPUT1@', '@OUTPUT@',
-            '--text', '@INPUT2@', '--scripts', '@INPUT3@',
-            '--baseline-text', '@INPUT4@', '--baseline-scripts', '@INPUT5@',
-            '--subscripts', '@INPUT6@', '--baseline-subscripts', '@INPUT7@'],
-        depend_files: [files('../tools/scripts/make_map_patches.py'),
-            files('../tools/scripts/iris_patch_baselines.py'),
-            files('../res/field/maps/data/map_data.order'),
-            files('../res/field/matrices/map_matrices.order'),
-            files('../res/field/matrices/map_matrix_000.json'),
-            files('../tools/jsoncnv/map_matrix.py'), files('../tools/jsoncnv/convert.py'),
-            files('../res/port_patch_baselines/text/original.order'),
-            files('../res/port_patch_baselines/scripts/original.order'),
-            files('../res/port_patch_baselines/battle_subscripts/original.order'),
-            files('../res/battle/scripts/subscripts/sub_seq.order'),
-            files('../generated/text_banks.txt'), files('../res/field/scripts/scripts.order'),
-            files('../res/graphics/start_menu/start_menu.order')],
-        depends: py_consts_generators,
-    )
-    follower_bw2_data = custom_target('follower_bw2_data.inc',
-        output: 'follower_bw2_data.inc',
-        input: files('../res/graphics/following_pokemon/bw2_sprites.json'),
-        command: [find_program('python3', native: true), files('../tools/scripts/embed_follower_bw2.py'),
-            '@INPUT@', '@OUTPUT@'],
-    )
-    port_c += files('port/assets/map_patches.cpp', 'port/assets/rom_setup.cpp', 'port/assets/follower_assets.cpp')
-    port_generated += [map_patches_header, follower_bw2_data]
-    public_includes = [public_includes, include_directories('.')]
-endif
+map_patches_header = custom_target('map_patches.inc',
+    output: 'map_patches.inc',
+    input: [map_data_narc, map_matrix_narc[0], text_banks, scr_seq_narc[0],
+        baseline_text_narc, baseline_scripts_narc, sub_seq_narc[0], baseline_subscripts_narc,
+        start_menu_narc[0],
+        events_narc[0], trainer_data, trfgra_narc[0], field_sprites_narc[0],
+        pl_otherpoke_narc[0], pl_sound_data_sdat[0]],
+    command: [find_program('python3', native: true),
+        files('../tools/scripts/make_map_patches.py'),
+        meson.project_build_root(), '@INPUT0@', '@INPUT1@', '@OUTPUT@',
+        '--text', '@INPUT2@', '--scripts', '@INPUT3@',
+        '--baseline-text', '@INPUT4@', '--baseline-scripts', '@INPUT5@',
+        '--subscripts', '@INPUT6@', '--baseline-subscripts', '@INPUT7@'],
+    depend_files: [files('../tools/scripts/make_map_patches.py'),
+        files('../tools/scripts/iris_patch_baselines.py'),
+        files('../res/field/maps/data/map_data.order'),
+        files('../res/field/matrices/map_matrices.order'),
+        files('../res/field/matrices/map_matrix_000.json'),
+        files('../tools/jsoncnv/map_matrix.py'), files('../tools/jsoncnv/convert.py'),
+        files('../res/port_patch_baselines/text/original.order'),
+        files('../res/port_patch_baselines/scripts/original.order'),
+        files('../res/port_patch_baselines/battle_subscripts/original.order'),
+        files('../res/battle/scripts/subscripts/sub_seq.order'),
+        files('../generated/text_banks.txt'), files('../res/field/scripts/scripts.order'),
+        files('../res/graphics/start_menu/start_menu.order')],
+    depends: py_consts_generators,
+)
+follower_bw2_data = custom_target('follower_bw2_data.inc',
+    output: 'follower_bw2_data.inc',
+    input: files('../res/graphics/following_pokemon/bw2_sprites.json'),
+    command: [find_program('python3', native: true), files('../tools/scripts/embed_follower_bw2.py'),
+        '@INPUT@', '@OUTPUT@'],
+)
+port_c += files('port/assets/map_patches.cpp', 'port/assets/rom_setup.cpp', 'port/assets/follower_assets.cpp')
+port_generated += [map_patches_header, follower_bw2_data]
+public_includes = [public_includes, include_directories('.')]
 
-if build_target == 'linux' or build_target == 'win64'
-    subdir('bwbattle')
-endif
+subdir('bwbattle')
