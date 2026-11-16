@@ -30,6 +30,7 @@ static const char *const sEnvironmentVariables[] = {
     "PLATINUM_DEBUG_TRAINER",
     "PLATINUM_DEBUG_WILD",
     "PLATINUM_DEBUG_WILD_KIND",
+    "PLATINUM_FIXED_CLOCK",
     "PLATINUM_FRAME_TRACE",
     "PLATINUM_GPU_CACHE_MB",
     "PLATINUM_GPU_TRACE",

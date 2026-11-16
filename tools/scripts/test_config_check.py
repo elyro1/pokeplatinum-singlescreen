@@ -15,7 +15,7 @@ LIBNTR = ROOT / 'subprojects/libntr/libraries/sim/src'
 
 def check_environment_list():
     used = set()
-    for directory in (ROOT / 'src', LIBNTR):
+    for directory in (ROOT / 'src', LIBNTR, LIBNTR.parent.parent / 'rtc/src'):
         for path in directory.rglob('*'):
             if path.suffix in ('.c', '.cpp') and 'imgui' not in path.parts:
                 used |= set(re.findall(r'getenv\("(PLATINUM_[A-Z0-9_]+)"\)', path.read_text(errors='ignore')))

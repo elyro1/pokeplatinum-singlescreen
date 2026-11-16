@@ -90,8 +90,8 @@ dir that symlinks the build's entries but **copies** `main`, the `*.ini` files a
   - Screenshot runs need `CapFrameRate=true`; uncapped, the boot hits the frame guard before the field.
   - Widescreen-only bugs don't show in the default 4:3 window. Test wide layouts with e.g. `WindowWidth=2160`,
     `WindowHeight=1000` in `sim_config.ini`.
-- Time of day, lighting and shadow length follow the real clock, and water textures animate. Shots taken at
-  different times or frames differ for those reasons alone, so don't read that as a regression.
+- Time of day, lighting and shadow length follow the real clock unless `PLATINUM_FIXED_CLOCK=2026-06-01T14:00`
+  freezes it, and water textures animate. Pin the clock for comparisons; shots at different frames still differ.
 - Headless audio: `SDL_AUDIODRIVER=disk SDL_DISKAUDIOFILE=<file>`.
 - `gdb -p` is blocked (ptrace_scope); start the game under gdb instead (`gdb -batch -ex run -ex "bt 20" ./main`).
 - Scratch runs copy files; delete them when done, a full `/tmp` breaks builds.
