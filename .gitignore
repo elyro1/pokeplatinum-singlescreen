@@ -116,6 +116,8 @@ asm_old/
 uncrustify.cfg
 compare.sh
 diff/
+AGENTS.md
+CLAUDE.md
 
 sdk/
 
