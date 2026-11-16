@@ -42,10 +42,10 @@ def main():
         sdl = shlex.split(subprocess.check_output(['pkg-config', '--libs', 'sdl2'], text=True))
         executable = temp / 'menu-test'
         subprocess.run([cpp[0], str(test), str(config), str(graphics),
-                        str(build / 'main.p/src_port_config_sim_config_prj.c.o'),
-                        str(build / 'main.p/src_port_gameplay_gameplay_config.c.o'),
-                        str(build / 'main.p/src_port_gui_gameplay_config_editor.cpp.o'),
-                        str(build / 'main.p/src_port_gui_gui_gameplay.cpp.o'),
+                        str(build / 'libport.a.p/src_port_config_sim_config_prj.c.o'),
+                        str(build / 'libport.a.p/src_port_gameplay_gameplay_config.c.o'),
+                        str(build / 'libport.a.p/src_port_gui_gameplay_config_editor.cpp.o'),
+                        str(build / 'libport.a.p/src_port_gui_gui_gameplay.cpp.o'),
                         str(build / 'subprojects/libntr/libraries/sim/libsim.a'),
                         '-Wl,--gc-sections', *sdl, '-ldl', '-o', str(executable)], check=True)
         env = dict(os.environ, SDL_VIDEODRIVER='offscreen', SDL_AUDIODRIVER='dummy')

@@ -49,9 +49,9 @@ def main():
                                 '-o', str(test_object)], cwd=build, check=True)
         executable = temp / 'lighting-test'
         subprocess.run([flags[0], str(test_object),
-                        str(build / 'main.p/src_port_visuals_field_visuals.c.o'),
-                        str(build / 'main.p/src_port_visuals_field_lights.c.o'),
-                        str(build / 'main.p/src_port_config_sim_config_prj.c.o'),
+                        str(build / 'libport.a.p/src_port_visuals_field_visuals.c.o'),
+                        str(build / 'libport.a.p/src_port_visuals_field_lights.c.o'),
+                        str(build / 'libport.a.p/src_port_config_sim_config_prj.c.o'),
                         str(build / 'subprojects/libntr/libraries/sim/libsim.a.p/src_config_ini.c.o'),
                         str(build / 'subprojects/libntr/libraries/sim/libsim.a.p/src_config_config_check.c.o'),
                         '-lm', '-o', str(executable)], check=True)

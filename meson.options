@@ -5,3 +5,5 @@ option('autoplay_tests', type: 'boolean', value: false, description: 'Build the 
 option('build_target', type: 'combo', choices: ['arm', 'win64', 'linux', 'nx'], value: 'arm', description: 'Target build platform')
 option('tracy_enable' , type : 'boolean' , value : false, description : 'Enable profiling')
 option('skip_anim_scripts', type : 'boolean', value : false, description : 'True to skip building anim scripts' )
+option('sanitize', type: 'boolean', value: false, description: 'PC builds: AddressSanitizer + UBSan everywhere (make linux-asan)')
+option('port_werror', type: 'boolean', value: false, description: 'PC builds: treat warnings in src/port and src/bwbattle as errors')

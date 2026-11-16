@@ -194,20 +194,20 @@ static void DebugPokemonFrame(FieldSystem *fieldSystem)
             }
         }
         fprintf(stderr, "[overworld-pokemon] fixture=%d/%d follower=%u map=%d\n", active, count,
-            FollowingPokemon_GetHandle(fieldSystem), fieldSystem->location->mapHeaderID);
+            (unsigned)FollowingPokemon_GetHandle(fieldSystem), fieldSystem->location->mapHeaderID);
     }
     if (getenv("PLATINUM_DEBUG_FOLLOWER_TRACE") != NULL && sDebugPokemonFrame % 60 == 0) {
         MapObject *follower = OverworldPokemon_GetObject(fieldSystem, FollowingPokemon_GetHandle(fieldSystem));
         fprintf(stderr, "[overworld-pokemon] map=%d player=%d,%d follower=%d,%d gfx=%u\n", fieldSystem->location->mapHeaderID, MapObject_GetX(player), MapObject_GetZ(player),
             follower != NULL ? MapObject_GetX(follower) : -1, follower != NULL ? MapObject_GetZ(follower) : -1,
-            follower != NULL ? MapObject_GetGraphicsID(follower) : 0);
+            follower != NULL ? (unsigned)MapObject_GetGraphicsID(follower) : 0u);
     }
     const char *saveAfter = getenv("PLATINUM_DEBUG_FOLLOWER_SAVE");
     if (!sDebugPokemonSaved && saveAfter != NULL && sDebugPokemonFrame >= atoi(saveAfter)
         && sDebugPokemonFrame >= 180 && FollowingPokemon_GetHandle(fieldSystem) != 0 && !MapObject_IsMoving(player)) {
         sDebugPokemonSaved = TRUE;
         fprintf(stderr, "[overworld-pokemon] saved=%d map=%d follower=%u\n", FieldSystem_Save(fieldSystem),
-            fieldSystem->location->mapHeaderID, FollowingPokemon_GetHandle(fieldSystem));
+            fieldSystem->location->mapHeaderID, (unsigned)FollowingPokemon_GetHandle(fieldSystem));
     }
 }
 

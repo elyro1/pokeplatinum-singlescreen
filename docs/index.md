@@ -30,3 +30,4 @@ For more detailed information about the project as a whole, please refer to its
 
 - [Logging](logging.md)
 - [Configuration and environment variables](environment_variables.md)
+- [Sanitizer build and warnings](sanitizers.md)

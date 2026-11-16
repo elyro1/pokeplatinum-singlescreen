@@ -3281,7 +3281,12 @@ static void Task_ThrowTrainerBall(SysTask *task, void *data)
         if (trainerThrowBallData->battlerData->ballRotation) {
             animFrame = ManagedSprite_GetAnimationFrame(trainerThrowBallData->battlerData->managedSprite);
 
+#ifdef SDK_BUILD_ARM
             if (v5[trainerThrowBallData->backSpriteIdx][animFrame][0] != 0x7FFF) {
+#else
+            // Throw animations run past the table's 6 frames; treat those like its end marker.
+            if (animFrame < (int)NELEMS(v5[0]) && v5[trainerThrowBallData->backSpriteIdx][animFrame][0] != 0x7FFF) {
+#endif
                 ov12_02237E0C(trainerThrowBallData->battlerData->ballRotation, 1);
                 ov12_02237E18(trainerThrowBallData->battlerData->ballRotation, x + v5[trainerThrowBallData->backSpriteIdx][animFrame][0], y + v5[trainerThrowBallData->backSpriteIdx][animFrame][1]);
 

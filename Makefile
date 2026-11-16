@@ -7,6 +7,7 @@
 	distclean     \
 	debug         \
 	format        \
+	linux-asan    \
 	meson         \
 	mingw         \
 	purge         \
@@ -33,10 +34,12 @@ GIT ?= git
 
 BUILD ?= build
 BUILD_LINUX ?= $(BUILD)_linux
+BUILD_LINUX_ASAN ?= $(BUILD)_linux_asan
 BUILD_WIN64 ?= $(BUILD)_win64
 BUILD_NX ?= $(BUILD)_nx
 ROOT_INI := $(BUILD)/root.ini
 ROOT_INI_LINUX := $(BUILD_LINUX)/root.ini
+ROOT_INI_LINUX_ASAN := $(BUILD_LINUX_ASAN)/root.ini
 ROOT_INI_WIN64 := $(BUILD_WIN64)/root.ini
 ROOT_INI_NX := $(BUILD_NX)/root.ini
 
@@ -122,6 +125,10 @@ target: $(BUILD)/build.ninja
 linux: $(BUILD_LINUX)/build.ninja
 	$(MESON) compile -C $(BUILD_LINUX)
 
+# ASan + UBSan build in its own directory (docs/sanitizers.md)
+linux-asan: $(BUILD_LINUX_ASAN)/build.ninja
+	ASAN_OPTIONS=detect_leaks=0 $(MESON) compile -C $(BUILD_LINUX_ASAN)
+
 win64: $(BUILD_WIN64)/build.ninja
 	$(MESON) compile -C $(BUILD_WIN64)
 
@@ -175,6 +182,16 @@ $(BUILD_LINUX)/build.ninja: $(ROOT_INI_LINUX) | $(BUILD_LINUX) $(SKREW_EXE) meso
 		--cross-file=$(ROOT_INI_LINUX) \
 		-- $(BUILD_LINUX)
 
+$(BUILD_LINUX_ASAN)/build.ninja: $(ROOT_INI_LINUX_ASAN) | $(BUILD_LINUX_ASAN) $(SKREW_EXE) meson
+	$(MESON) setup \
+		-Dbuild_target=linux \
+		-Dsanitize=true \
+		--native-file=meson/$(NATIVE) \
+		--native-file=$(ROOT_INI_LINUX_ASAN) \
+		--cross-file=meson/cross_pcport_linux.ini \
+		--cross-file=$(ROOT_INI_LINUX_ASAN) \
+		-- $(BUILD_LINUX_ASAN)
+
 ifeq ($(GITHUB_CI),)
 $(BUILD_WIN64)/build.ninja: $(ROOT_INI_WIN64) | $(BUILD_WIN64) $(SKREW_EXE) meson
 	$(MESON) setup \
@@ -213,6 +230,10 @@ $(ROOT_INI_LINUX): | $(BUILD_LINUX)
 	echo "[constants]" > $@
 	echo "root = '$$PWD'" >> $@
 	
+$(ROOT_INI_LINUX_ASAN): | $(BUILD_LINUX_ASAN)
+	echo "[constants]" > $@
+	echo "root = '$$PWD'" >> $@
+
 $(ROOT_INI_WIN64): | $(BUILD_WIN64)
 	echo "[constants]" > $@
 	echo "root = '$$PWD'" >> $@
@@ -226,6 +247,9 @@ $(BUILD):
 
 $(BUILD_LINUX):
 	mkdir -p -- $(BUILD_LINUX)
+
+$(BUILD_LINUX_ASAN):
+	mkdir -p -- $(BUILD_LINUX_ASAN)
 
 $(BUILD_WIN64):
 	mkdir -p -- $(BUILD_WIN64)

@@ -1,6 +1,7 @@
 # Build directory
 /build/
 /build_linux/
+/build_linux_asan/
 /build_win64/
 /build_nx/
 /build_ds_follower/

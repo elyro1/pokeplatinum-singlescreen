@@ -2233,6 +2233,10 @@ static fx32 BtlvMcss_GetDefaultScaleImpl(BtlvMcss *work, int pos, BOOL flat) {
         case 13:
             return data_ov168_021f324c[pos - 8];
         }
+        // BUG: Other positions fall off the end without a return value
+#ifdef BUGFIX
+        return FX32_ONE;
+#endif
     } else if (pos < 8) {
         if (pos & 1) {
             return FX32_CONST(16);

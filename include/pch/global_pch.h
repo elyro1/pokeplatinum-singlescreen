@@ -6,7 +6,9 @@ typedef unsigned short wchar_t;
 #endif
 
 #include <nitro.h>
+#ifdef SDK_BUILD_ARM
 #pragma thumb on
+#endif
 #include <nnsys.h>
 #include <stddef.h>
 #include <string.h>

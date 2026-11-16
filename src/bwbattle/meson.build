@@ -69,19 +69,19 @@ libbwbattle = static_library('bwbattle',
         # outside arrays, a loop that never ends
         '-DBUGFIX',
         '-include', meson.current_source_dir() / '../../include/bwbattle/bwbattle_compat.h',
+        port_warning_args,
+        # NNS file signatures are multi-character constants
+        '-Wno-multichar',
     ],
     include_directories: [libbwbattle_includes, libspl_public_includes, include_directories('.')],
-    # Only the SDK's headers and flags: the game links the SDK itself
-    dependencies: [
-        nitrosdk_dep.partial_dependency(compile_args: true, includes: true),
-        nitrosystem_dep.partial_dependency(compile_args: true, includes: true),
-    ],
+    # Only the SDK's headers and flags (without -w): the game links the SDK itself
+    dependencies: port_sdk_deps,
     pic: true,
     native: true
 )
 
 # Platinum's side of the interface, built with the game's own files
-pokeplatinum_c += files(
+port_c += files(
     'adapter/bw_battle_view.c',
     'adapter/bw_services.c',
 )
