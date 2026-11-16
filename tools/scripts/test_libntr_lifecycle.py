@@ -44,7 +44,7 @@ def main():
         audio = temp / 'audio-test'
         audio_libs = shlex.split(subprocess.check_output(['pkg-config', '--libs', 'sdl2', 'soundtouch'], text=True))
         subprocess.run([flags_for('/sim_audio.cpp')[0], *audio_objects,
-                        str(build / 'subprojects/libntr/libraries/sim/libsim.a.p/src_blip-buf_blip_buf.c.o'),
+                        str(build / 'subprojects/libntr/libraries/sim/libsim_vendor.a.p/src_blip-buf_blip_buf.c.o'),
                         '-Wl,--gc-sections', '-Wl,--wrap=SDL_OpenAudio', '-Wl,--wrap=SDL_CloseAudio',
                         *audio_libs, '-o', str(audio)], check=True)
         for mode in [[], ['exit'], ['fail-open'], ['fail-open', 'exit']]:

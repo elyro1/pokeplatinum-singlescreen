@@ -21,7 +21,7 @@ def main():
         sdl = shlex.split(subprocess.check_output(['pkg-config', '--cflags', '--libs', 'sdl2'], text=True))
         subprocess.run(['g++', '-std=c++11', f'-I{ROOT / "subprojects/libntr/include"}',
                         str(ROOT / 'tools/scripts/terrain_coverage_gpu_test.cpp'),
-                        str(build / 'subprojects/libntr/libraries/sim/libsim.a.p/src_glad.c.o'),
+                        str(build / 'subprojects/libntr/libraries/sim/libsim_vendor.a.p/src_glad.c.o'),
                         *sdl, '-ldl', '-o', str(executable)], check=True)
         env = dict(os.environ, SDL_VIDEODRIVER=os.environ.get('SDL_VIDEODRIVER', 'offscreen'))
         command = [str(executable), str(ROOT / 'subprojects/libntr/libraries/sim/src/shaders')]

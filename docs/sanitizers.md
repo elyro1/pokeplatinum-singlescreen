@@ -50,3 +50,8 @@ meson configure build_linux -Dport_werror=true
 
 The port files build as the static library `libport`, whose objects are linked into `main`. Their objects are in
 `build_linux/libport.a.p/`, not `main.p/`.
+
+libntr's simulator (`subprojects/libntr/libraries/sim`) builds with `-Wall` too; `port_werror` doesn't reach it. Its
+vendored code (imgui, ImGuiFileDialog, glad, blip-buf, inih, fireflower) builds as `libsim_vendor` without warnings, so
+tests that link those objects find them in `libsim_vendor.a.p/`. `make mingw` compiles C++ with `-Werror`, so a warning
+that only Windows raises (`u32` is `unsigned long` there) breaks that build.
