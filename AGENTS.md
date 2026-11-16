@@ -115,6 +115,8 @@ dir that symlinks the build's entries but **copies** `main`, the `*.ini` files a
 
 ## Style
 
-- C follows pret's conventions (CONTRIBUTING.md): PascalCase types and `Module_Function` names, `.clang-format`.
+- C follows pret's conventions: PascalCase structs (tag + typedef) and enums (no typedef), UPPER_SNAKE_CASE enum
+  members, PascalCase functions with a `Module_` prefix when public, camelCase fields, parameters and locals.
+  Format with `.clang-format` (`make format`).
 - Keep comments short; explain why, not what.
 - Commit messages: imperative, one-line subject like the existing history ("Fix route 227 follower despawn").

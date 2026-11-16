@@ -14,6 +14,25 @@
 All files are read from the working directory. A missing `sim_config.ini` or `sim_config_prj.ini` is created with
 defaults; a missing `gameplay_config.ini` is created as a commented template.
 
+## The Tab menu
+
+Tab opens one panel with these categories: **General**, **Graphics**, **Speed & text**, **Controls**, **Gameplay**,
+**Cheats & tools**, **Multiplayer** and **Developer**. On small windows the sidebar becomes a picker. Tab closes it
+again; Escape first backs out of a subpage or cancels a key binding. While the menu is open it takes all input, so
+nothing reaches the game.
+
+The panel lives in libntr (`sim_gui.cpp`); the game fills its pages through `SIM::GUI::ProjectPage` in
+`src/port/gui/sim_gui_prj.cpp`. Two of its own settings are in `sim_config.ini` under `[Interface]`:
+
+- `MenuScalePercent`: `0` follows the display scale, otherwise 100–200 in steps of 25. Internal resolution doesn't
+  affect it.
+- `PauseWhileOpen`: pauses game logic while the menu is open (never during multiplayer). The separate **Manual pause**
+  under Developer stays on after the menu closes.
+
+Changes save at once, except the Gameplay page, which has its own Save button and applies after a restart (see
+[gameplay_config.md](gameplay_config.md)). After building, `test_menu_gui.py` checks every category at several window
+sizes and scales, plus input capture and pause; `test_gamepad_input.py` covers controllers.
+
 ## Mistakes are reported
 
 At startup the game prints a `[config]` line on stderr for each setting it ignores, naming the file and line:
