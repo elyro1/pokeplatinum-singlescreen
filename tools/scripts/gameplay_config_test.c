@@ -24,41 +24,37 @@ static void AssertConfigContents(const char *contents)
     assert(fclose(file) == 0);
 }
 
-static void AssertOriginalDefaults(void)
+static BOOL SameValues(const GameplayConfig *a, const GameplayConfig *b)
+{
+    for (unsigned int i = 0; i < GameplayConfig_OptionCount(); i++) {
+        if (GameplayConfig_GetOptionValue(a, i) != GameplayConfig_GetOptionValue(b, i)) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+// The built-in defaults are the Single-screen mod preset.
+static void AssertDefaults(void)
 {
     const GameplayConfig *config = GameplayConfig_Get();
-    assert(config->prohibitBattleItems == FALSE);
-    assert(config->forceSetBattleStyle == FALSE);
-    assert(config->unlimitedVitaminEVs == FALSE);
-    assert(config->bpPricePercent == 100);
-    assert(config->rareCandyBPPrice == 48);
-    assert(config->forgettableHMs == FALSE);
-    assert(config->unlearnedHMs == FALSE);
-    assert(config->freeMoveRelearning == FALSE);
-    assert(config->freeMoveTutors == FALSE);
-    assert(config->mainStoryMoveTutors == FALSE);
-    assert(config->unlimitedGreatMarshSteps == FALSE);
-    assert(config->zeroEggCycles == FALSE);
-    assert(config->instantHoneyTrees == FALSE);
-    assert(config->guaranteedFishing == FALSE);
-    assert(config->infiniteTMs == FALSE);
-    assert(config->levelUpHeldItemEvolutions == FALSE);
-    assert(config->instantSpiritomb == FALSE);
-    assert(config->feebasWaterStoneEvolution == FALSE);
-    assert(config->disableOverworldPoisonDamage == FALSE);
-    assert(config->tradeEvolutionLevel == 0);
-    assert(config->shinyRolls == 1);
-    assert(config->friendshipGainMultiplier == 1);
-    assert(config->eggHatchSpeedMultiplier == 1);
-    assert(config->catchRateMultiplier == 1);
-    assert(config->poketchRouteEncounters == FALSE);
+    GameplayConfig preset;
+    GameplayConfig_LoadPreset(&preset, GAMEPLAY_PRESET_SINGLE_SCREEN_MOD);
+    assert(SameValues(config, &preset));
+    assert(config->forgettableHMs && config->infiniteTMs && config->levelUpHeldItemEvolutions);
+    assert(config->feebasWaterStoneEvolution && config->instantHoneyTrees && config->guaranteedFishing);
+    assert(config->instantSpiritomb && config->unlimitedVitaminEVs);
+    assert(!config->unlearnedHMs && !config->freeMoveTutors && !config->prohibitBattleItems);
+    assert(config->tradeEvolutionLevel == 40 && config->eggHatchSpeedMultiplier == 5);
+    assert(config->shinyRolls == 16 && config->rareCandyBPPrice == 1 && config->bpPricePercent == 25);
+    assert(config->friendshipGainMultiplier == 1 && config->catchRateMultiplier == 1);
 }
 
 static void TestConfigFile(void)
 {
     // First start creates a template containing the built-in defaults.
     GameplayConfig_Init();
-    AssertOriginalDefaults();
+    AssertDefaults();
     FILE *file = fopen(GAMEPLAY_CONFIG_FILE_PATH, "r");
     assert(file != NULL);
     char template[8192];
@@ -69,40 +65,27 @@ static void TestConfigFile(void)
 
     assert(!strstr(template, "fastWildBattleIntro="));
     assert(!strstr(template, "fastTrainerBattleIntro="));
-    assert(strstr(template, "prohibitBattleItems=false\n"));
-    assert(strstr(template, "forceSetBattleStyle=false\n"));
-    assert(strstr(template, "unlimitedVitaminEVs=false\n"));
-    assert(strstr(template, "bpPricePercent=100\n"));
-    assert(strstr(template, "rareCandyBPPrice=48\n"));
-    assert(strstr(template, "forgettableHMs=false\n"));
-    assert(strstr(template, "unlearnedHMs=false\n"));
-    assert(strstr(template, "freeMoveRelearning=false\n"));
-    assert(strstr(template, "freeMoveTutors=false\n"));
-    assert(strstr(template, "mainStoryMoveTutors=false\n"));
-    assert(strstr(template, "unlimitedGreatMarshSteps=false\n"));
-    assert(strstr(template, "zeroEggCycles=false\n"));
-    assert(strstr(template, "instantHoneyTrees=false\n"));
-    assert(strstr(template, "guaranteedFishing=false\n"));
-    assert(strstr(template, "infiniteTMs=false\n"));
-    assert(strstr(template, "levelUpHeldItemEvolutions=false\n"));
-    assert(strstr(template, "instantSpiritomb=false\n"));
-    assert(strstr(template, "feebasWaterStoneEvolution=false\n"));
-    assert(strstr(template, "disableOverworldPoisonDamage=false\n"));
-    assert(strstr(template, "tradeEvolutionLevel=0\n"));
-    assert(strstr(template, "shinyRolls=1\n"));
-    assert(strstr(template, "friendshipGainMultiplier=1\n"));
-    assert(strstr(template, "eggHatchSpeedMultiplier=1\n"));
-    assert(strstr(template, "catchRateMultiplier=1\n"));
-    assert(strstr(template, "poketchRouteEncounters=false\n"));
+    for (unsigned int i = 0; i < GameplayConfig_OptionCount(); i++) {
+        GameplayConfigOption option;
+        char line[96];
+        assert(GameplayConfig_GetOption(i, &option));
+        unsigned int value = GameplayConfig_GetOptionValue(GameplayConfig_Get(), i);
+        if (option.isBoolean) {
+            snprintf(line, sizeof(line), "\n%s=%s\n", option.name, value ? "true" : "false");
+        } else {
+            snprintf(line, sizeof(line), "\n%s=%u\n", option.name, value);
+        }
+        assert(strstr(template, line));
+    }
     GameplayConfig_Init();
-    AssertOriginalDefaults();
+    AssertDefaults();
 
     // Every setting can be overridden, including numeric boundaries and all boolean forms.
     WriteConfig("[Gameplay]\n"
                 "prohibitBattleItems=true\n"
                 "forceSetBattleStyle=TRUE\n"
                 "unlimitedVitaminEVs=1\n"
-                "bpPricePercent=65535\n"
+                "bpPricePercent=200\n"
                 "rareCandyBPPrice=0\n"
                 "forgettableHMs=1\n"
                 "unlearnedHMs=true\n"
@@ -119,18 +102,17 @@ static void TestConfigFile(void)
                 "feebasWaterStoneEvolution=true\n"
                 "disableOverworldPoisonDamage=TRUE\n"
                 "tradeEvolutionLevel=100\n"
-                "shinyRolls=65535\n"
-                "friendshipGainMultiplier=255\n"
+                "shinyRolls=100\n"
+                "friendshipGainMultiplier=10\n"
                 "eggHatchSpeedMultiplier=0\n"
-                "catchRateMultiplier=255\n"
-                "poketchRouteEncounters=true\n");
+                "catchRateMultiplier=10\n");
     // Starting again must preserve the player's existing overrides.
     GameplayConfig_Init();
     GameplayConfig *config = GameplayConfig_Get();
     assert(config->prohibitBattleItems == TRUE);
     assert(config->forceSetBattleStyle == TRUE);
     assert(config->unlimitedVitaminEVs == TRUE);
-    assert(config->bpPricePercent == 65535);
+    assert(config->bpPricePercent == 200);
     assert(config->rareCandyBPPrice == 0);
     assert(config->forgettableHMs == TRUE);
     assert(config->unlearnedHMs == TRUE);
@@ -147,23 +129,22 @@ static void TestConfigFile(void)
     assert(config->feebasWaterStoneEvolution == TRUE);
     assert(config->disableOverworldPoisonDamage == TRUE);
     assert(config->tradeEvolutionLevel == 100);
-    assert(config->shinyRolls == 65535);
-    assert(config->friendshipGainMultiplier == 255);
+    assert(config->shinyRolls == 100);
+    assert(config->friendshipGainMultiplier == 10);
     assert(config->eggHatchSpeedMultiplier == 0);
-    assert(config->catchRateMultiplier == 255);
-    assert(config->poketchRouteEncounters == TRUE);
+    assert(config->catchRateMultiplier == 10);
 
     // Legacy trainer intro entries are ignored without affecting other defaults.
     WriteConfig("[Gameplay]\nfastTrainerBattleIntro=all\nfastTrainerBattleIntro=invalid\n");
     GameplayConfig_Init();
-    AssertOriginalDefaults();
+    AssertDefaults();
 
     // Partial files inherit defaults. Unknown names/sections and invalid values are ignored.
     WriteConfig("[Gameplay]\nprohibitBattleItems=1\nforceSetBattleStyle=TRUE\n"
                 "freeMoveTutors=true\nfreeMoveRelearning=not-a-bool\n"
-                "bpPricePercent=-1\nrareCandyBPPrice=65536\ntradeEvolutionLevel=101\n"
+                "bpPricePercent=201\nrareCandyBPPrice=101\ntradeEvolutionLevel=101\n"
                 "shinyRolls=999999999999999999999999999999999999\n"
-                "friendshipGainMultiplier=256\neggHatchSpeedMultiplier=2.5\n"
+                "friendshipGainMultiplier=11\neggHatchSpeedMultiplier=2.5\n"
                 "catchRateMultiplier=2oops\nunknownOption=false\n"
                 "[Other]\nprohibitBattleItems=false\n");
     GameplayConfig_Init();
@@ -171,12 +152,12 @@ static void TestConfigFile(void)
     assert(config->forceSetBattleStyle == TRUE);
     assert(config->freeMoveTutors == TRUE);
     assert(config->freeMoveRelearning == FALSE);
-    assert(config->bpPricePercent == 100);
-    assert(config->rareCandyBPPrice == 48);
-    assert(config->tradeEvolutionLevel == 0);
-    assert(config->shinyRolls == 1);
+    assert(config->bpPricePercent == 25);
+    assert(config->rareCandyBPPrice == 1);
+    assert(config->tradeEvolutionLevel == 40);
+    assert(config->shinyRolls == 16);
     assert(config->friendshipGainMultiplier == 1);
-    assert(config->eggHatchSpeedMultiplier == 1);
+    assert(config->eggHatchSpeedMultiplier == 5);
     assert(config->catchRateMultiplier == 1);
 
     WriteConfig("[Gameplay]\nprohibitBattleItems=true\n");
@@ -188,28 +169,47 @@ static void TestConfigFile(void)
     // A syntax error discards the entire override file.
     WriteConfig("[Gameplay]\nprohibitBattleItems=true\ninvalid line\n");
     GameplayConfig_Init();
-    AssertOriginalDefaults();
+    AssertDefaults();
     AssertConfigContents("[Gameplay]\nprohibitBattleItems=true\ninvalid line\n");
 
     assert(remove(GAMEPLAY_CONFIG_FILE_PATH) == 0);
     GameplayConfig_Init();
-    AssertOriginalDefaults();
+    AssertDefaults();
     file = fopen(GAMEPLAY_CONFIG_FILE_PATH, "r");
     assert(file != NULL);
     assert(fclose(file) == 0);
+}
+
+static void TestPresets(void)
+{
+    GameplayConfig preset, example;
+    GameplayConfig_LoadPreset(&preset, GAMEPLAY_PRESET_CLASSIC);
+    assert(!preset.infiniteTMs && preset.bpPricePercent == 100 && preset.rareCandyBPPrice == 48);
+    assert(preset.shinyRolls == 1 && preset.eggHatchSpeedMultiplier == 1 && preset.tradeEvolutionLevel == 0);
+
+    // The repository example is the Single-screen mod preset as a file.
+    FILE *file = fopen(GAMEPLAY_CONFIG_EXAMPLE_PATH, "rb");
+    assert(file != NULL);
+    static char text[16384];
+    size_t length = fread(text, 1, sizeof(text) - 1, file);
+    assert(length > 0 && length < sizeof(text) - 1 && fclose(file) == 0);
+    text[length] = '\0';
+    assert(GameplayConfig_ParseText(text, &example));
+    GameplayConfig_LoadPreset(&preset, GAMEPLAY_PRESET_SINGLE_SCREEN_MOD);
+    assert(SameValues(&example, &preset));
 }
 
 static void TestDefaultsOnly(void)
 {
     // Commenting out the file call must disable both creation and existing overrides.
     GameplayConfig_Init();
-    AssertOriginalDefaults();
+    AssertDefaults();
     assert(fopen(GAMEPLAY_CONFIG_FILE_PATH, "r") == NULL);
 
     const char *overrides = "[Gameplay]\nprohibitBattleItems=true\nbpPricePercent=0\n";
     WriteConfig(overrides);
     GameplayConfig_Init();
-    AssertOriginalDefaults();
+    AssertDefaults();
     AssertConfigContents(overrides);
     assert(remove(GAMEPLAY_CONFIG_FILE_PATH) == 0);
 }
@@ -217,6 +217,7 @@ static void TestDefaultsOnly(void)
 int main(void)
 {
 #ifdef GAMEPLAY_CONFIG_DEFAULTS_ONLY
+    TestPresets();
     TestDefaultsOnly();
 #else
     TestConfigFile();
@@ -224,7 +225,8 @@ int main(void)
 
     GameplayConfig_Init();
     GameplayConfig *config = GameplayConfig_Get();
-    AssertOriginalDefaults();
+    AssertDefaults();
+    GameplayConfig_LoadPreset(config, GAMEPLAY_PRESET_CLASSIC);
     assert(CalculateEVUpdate(95, 0, 10) == 100);
     assert(CalculateEVUpdate(100, 0, 10) == EV_UNCHANGED);
     assert(GameplayConfig_GetBPPrice(ITEM_RARE_CANDY, 48) == 48);

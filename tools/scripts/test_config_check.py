@@ -67,7 +67,7 @@ def main():
             'pokemonfollower is ignored: names are case-sensitive, did you mean [General] PokemonFollower?',
             './sim_config_prj.ini:6: [General] GridBag is also set on line 5; this later value wins',
             './sim_config.ini:9: WindowHeight is ignored: it is in [PAD] but belongs in [General]',
-            './gameplay_config.ini:3: [Gameplay] catchRateMultiplier=999 is ignored: expected a number from 0 to 255',
+            './gameplay_config.ini:3: [Gameplay] catchRateMultiplier=999 is ignored: expected a number from 0 to 10',
             './gameplay_config.ini:3: not a [section] or key=value line, so the whole file is ignored',
         ]:
             assert expected in warnings, f'missing warning: {expected}\n{warnings}'

@@ -34,15 +34,16 @@ int main()
     return 0;
 #else
     assert(GameplayConfig_UsesFileOverrides());
-    assert(GameplayConfig_OptionCount() == 25);
+    assert(GameplayConfig_OptionCount() == 24);
     GameplayConfig values;
     GameplayConfig_LoadDefaults(&values);
     for (unsigned i = 0; i < GameplayConfig_OptionCount(); ++i) {
         GameplayConfigOption option;
         assert(GameplayConfig_GetOption(i, &option));
-        assert(*option.name && *option.label && *option.group && *option.description);
+        assert(*option.name && *option.label && *option.group && (!option.description || *option.description));
         assert(std::string(option.name) != "fastTrainerBattleIntro");
         assert(std::string(option.name) != "disableLowHPBeep");
+        assert(std::string(option.name) != "poketchRouteEncounters");
         assert(GameplayConfig_SetOptionValue(&values, i, option.maximum));
         assert(GameplayConfig_GetOptionValue(&values, i) == option.maximum);
         assert(!GameplayConfig_SetOptionValue(&values, i, option.maximum + 1));
@@ -60,12 +61,13 @@ int main()
         "shinyRolls: 1 ; odds\r\nunknownOption=keep this too\r\n" + unrelated +
         "[Gameplay]\r\ninfiniteTMs=false\r\n";
     Write(original);
+    GameplayConfig_Init(); // The running rules match the file.
     assert(editor.Load() && !editor.IsDirty() && !editor.NeedsRestart());
     editor.values.infiniteTMs = TRUE;
     editor.values.guaranteedFishing = TRUE;
-    editor.values.shinyRolls = 65535;
+    editor.values.shinyRolls = 100;
     editor.values.tradeEvolutionLevel = 100;
-    editor.values.catchRateMultiplier = 255;
+    editor.values.catchRateMultiplier = 10;
     assert(editor.IsDirty() && editor.Save());
     assert(!editor.IsDirty() && editor.NeedsRestart());
     // Saved values never modify active rules before restart.
@@ -75,23 +77,26 @@ int main()
     assert(saved.find("infiniteTMs = true  ; keep this comment\r\n") != std::string::npos);
     assert(saved.find("infiniteTMs=true\r\n") != std::string::npos);
     assert(saved.find("guaranteedFishing=true\r\n") != std::string::npos);
-    assert(saved.find("shinyRolls: 65535 ; odds\r\n") != std::string::npos);
+    assert(saved.find("shinyRolls: 100 ; odds\r\n") != std::string::npos);
     assert(saved.find("fastTrainerBattleIntro=") == std::string::npos);
     assert(saved.find("unknownOption=keep this too\r\n") != std::string::npos);
     assert(saved.find(unrelated) != std::string::npos);
     for (size_t i = 0; i < saved.size(); ++i)
         if (saved[i] == '\n') assert(i > 0 && saved[i - 1] == '\r');
     GameplayConfig_Init();
-    assert(GameplayConfig_Get()->infiniteTMs && GameplayConfig_Get()->shinyRolls == 65535);
+    assert(GameplayConfig_Get()->infiniteTMs && GameplayConfig_Get()->shinyRolls == 100);
     assert(GameplayConfig_Get()->guaranteedFishing);
-    assert(GameplayConfig_Get()->tradeEvolutionLevel == 100 && GameplayConfig_Get()->catchRateMultiplier == 255);
+    assert(GameplayConfig_Get()->tradeEvolutionLevel == 100 && GameplayConfig_Get()->catchRateMultiplier == 10);
     assert(!editor.NeedsRestart());
     assert(editor.Save() && Read() == saved); // Saving again does not append duplicate blocks.
 
-    editor.RestoreDefaults();
-    assert(editor.IsDirty());
-    assert(GameplayConfig_Get()->infiniteTMs);
-    assert(editor.Load() && !editor.IsDirty() && editor.values.infiniteTMs); // Discard draft.
+    assert(editor.MatchingPreset() == GAMEPLAY_PRESET_COUNT);
+    assert(editor.ApplyPreset(GAMEPLAY_PRESET_SINGLE_SCREEN_MOD) && !editor.IsDirty());
+    assert(editor.MatchingPreset() == GAMEPLAY_PRESET_SINGLE_SCREEN_MOD && editor.NeedsRestart());
+    assert(editor.ApplyPreset(GAMEPLAY_PRESET_CLASSIC) && !editor.IsDirty());
+    assert(editor.MatchingPreset() == GAMEPLAY_PRESET_CLASSIC && !editor.values.infiniteTMs);
+    assert(GameplayConfig_Get()->infiniteTMs); // Presets also wait for a restart.
+    assert(editor.Load() && !editor.values.infiniteTMs);
 
     editor.values.infiniteTMs = FALSE;
     Write(saved + "; edited externally\r\n");
@@ -117,10 +122,10 @@ int main()
     assert(!editor.Load() && Read() == binary);
 
     // Indented INI continuations must never silently produce different rules.
-    const std::string continuation = "[Gameplay]\nunknown=hello\n infiniteTMs=false\n";
+    const std::string continuation = "[Gameplay]\nunknown=hello\n infiniteTMs=true\n";
     Write(continuation);
     assert(editor.Load());
-    editor.values.infiniteTMs = TRUE;
+    editor.values.infiniteTMs = !editor.values.infiniteTMs;
     assert(!editor.Save() && Read() == continuation);
 
     // Removed options load as unknown keys and do not reappear in the editor.
@@ -145,7 +150,7 @@ int main()
     assert(!editor.Save() && Read().empty());
     std::filesystem::remove(GAMEPLAY_CONFIG_FILE_PATH);
     assert(editor.Load() && editor.Save() && !editor.IsDirty());
-    assert(GameplayConfig_ParseText(Read().c_str(), &parsed) && !parsed.infiniteTMs);
+    assert(GameplayConfig_ParseText(Read().c_str(), &parsed) && parsed.infiniteTMs); // Defaults written out
 #ifndef _WIN32
     const auto mode = std::filesystem::perms::owner_read | std::filesystem::perms::owner_write |
         std::filesystem::perms::group_read;

@@ -119,6 +119,7 @@ static int IniHandler(void* user, const char* section, const char* name,
     }
     if (MATCH("General", "GridBag")) SET_BOOL(config->gridBag);
     if (MATCH("General", "DisableLowHPBeep")) SET_BOOL(config->disableLowHPBeep);
+    if (MATCH("General", "ImprovedPoketch")) SET_BOOL(config->improvedPoketch);
     if (MATCH("General", "BW2BattleVisuals")) {
         SET_BOOL(config->bw2BattleVisuals);
     }
@@ -233,6 +234,7 @@ void SIM_Config_prj_LoadDefaults(SIM_Config_prj_type * aConfig)
   aConfig->battleBarSpeed = PORT_SPEED_FAST;
   aConfig->fastWildBattleIntro = TRUE;
   aConfig->disableLowHPBeep = FALSE;
+  aConfig->improvedPoketch = TRUE;
   aConfig->bw2BattleVisuals = FALSE;
   aConfig->bwMonSprites = TRUE;
   aConfig->overworldEncounters = TRUE;
@@ -310,6 +312,7 @@ static void WriteConfig(SIM_ConfigText *configFile, const SIM_Config_prj_type *a
     SIM_ConfigText_Printf(configFile, "RunningShoes=%s\n", sRunningShoesNames[aConfig->runningShoes]);
     SIM_ConfigText_Printf(configFile, "FastWildBattleIntro=%s\n", BoolToString(aConfig->fastWildBattleIntro));
     SIM_ConfigText_Printf(configFile, "DisableLowHPBeep=%s\n", BoolToString(aConfig->disableLowHPBeep));
+    SIM_ConfigText_Printf(configFile, "ImprovedPoketch=%s\n", BoolToString(aConfig->improvedPoketch));
     SIM_ConfigText_Printf(configFile, "BW2BattleVisuals=%s\n", BoolToString(aConfig->bw2BattleVisuals));
     SIM_ConfigText_Printf(configFile, "BWMonSprites=%s\n", BoolToString(aConfig->bwMonSprites));
     SIM_ConfigText_Printf(configFile, "OverworldEncounters=%s\n", BoolToString(aConfig->overworldEncounters));

@@ -10,7 +10,7 @@
 #include "savedata.h"
 
 #ifdef SDK_PORT
-#include "port/gameplay/gameplay_config.h"
+#include "port/gameplay/port_options.h"
 #endif
 
 int Poketch_SaveSize(void)
@@ -91,7 +91,7 @@ static BOOL sRouteEncountersShown;
 
 static BOOL Poketch_RouteEncountersEnabled(void)
 {
-    return GameplayConfig_Get()->poketchRouteEncounters;
+    return PortOptions_ImprovedPoketch();
 }
 
 static BOOL Poketch_IsCycleSlotUsed(const Poketch *poketch, int slot)

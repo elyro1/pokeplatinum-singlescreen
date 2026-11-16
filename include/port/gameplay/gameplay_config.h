@@ -32,14 +32,23 @@ typedef struct {
     u16 shinyRolls; // Total rolls for new eligible Pokemon; 0 and 1 preserve original odds.
     u8 friendshipGainMultiplier; // Positive friendship gains only; 0 and 1 preserve original gains.
     u8 eggHatchSpeedMultiplier; // 1 = original speed; 0 also falls back to original speed.
-    u8 catchRateMultiplier; // Final catch rate: 2-255 boosts it; 0 and 1 preserve original rates.
-    BOOL poketchRouteEncounters; // Adds a Poketch app listing the current zone's wild Pokemon.
+    u8 catchRateMultiplier; // Final catch rate: 2-10 boosts it; 0 and 1 preserve original rates.
 } GameplayConfig;
 
 // Relative to the game working directory, like sim_config_prj.ini and the save files.
 #define GAMEPLAY_CONFIG_FILE_PATH "./gameplay_config.ini"
 
 void GameplayConfig_LoadDefaults(GameplayConfig *config);
+
+enum GameplayPreset {
+    GAMEPLAY_PRESET_CLASSIC, // Original Platinum rules
+    GAMEPLAY_PRESET_SINGLE_SCREEN_MOD, // The mod's quality-of-life rules
+    GAMEPLAY_PRESET_COUNT,
+};
+
+void GameplayConfig_LoadPreset(GameplayConfig *config, enum GameplayPreset preset);
+const char *GameplayConfig_PresetName(enum GameplayPreset preset);
+
 // Load defaults, create a missing config file, and apply file overrides.
 // See GameplayConfig_Init's implementation to disable all file overrides for a ROM hack.
 void GameplayConfig_Init(void);
@@ -53,7 +62,7 @@ typedef struct {
     const char *name;
     const char *label;
     const char *group;
-    const char *description;
+    const char *description; // NULL when the label says enough
     unsigned int maximum;
     BOOL isBoolean;
 } GameplayConfigOption;

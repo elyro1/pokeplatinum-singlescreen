@@ -35,7 +35,7 @@ def main():
             run_directory = Path(directory) / name
             run_directory.mkdir()
             executable = run_directory / "test"
-            subprocess.run(flags + defines + ["-UNDEBUG", "-ffunction-sections", "-fdata-sections",
+            subprocess.run(flags + defines + [f'-DGAMEPLAY_CONFIG_EXAMPLE_PATH="{ROOT / "gameplay_config.example.ini"}"', "-UNDEBUG", "-ffunction-sections", "-fdata-sections",
                                               str(ROOT / "tools/scripts/gameplay_config_test.c"),
                                               str(config_source),
                                               str(ROOT / "subprojects/libntr/libraries/sim/src/config/ini.c"),

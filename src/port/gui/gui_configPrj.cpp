@@ -93,6 +93,11 @@ void BattleSpeedContents() {
     ConfigCheckBox("Disable low-HP beep", &myConfig->disableLowHPBeep, configChanged);
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Silences the low-HP warning in Platinum and BW2 battles. Applies immediately.");
+    ConfigCheckBox("Improved Pok\xC3\xA9" "tch", &myConfig->improvedPoketch, configChanged);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Adds a Pok\xC3\xA9" "tch app listing the current area's wild Pok\xC3\xA9" "mon by method.\n"
+            "Unseen species show as a question mark. Never saved, so turning it off removes the app.");
+    }
     SettingsRow("Ask for a nickname", "Automatic naming offers for caught, hatched and received Pokemon.");
     const NicknameMode nicknameModes[] = { NICKNAME_MODE_ALWAYS, NICKNAME_MODE_NEVER, NICKNAME_MODE_ASK };
     int nicknameMode = myConfig->nicknameMode == NICKNAME_MODE_ASK ? 2 : static_cast<int>(myConfig->nicknameMode) - 1;

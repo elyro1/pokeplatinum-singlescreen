@@ -75,7 +75,7 @@ Out of the box: one screen, 60 FPS, Smooth battle pacing, Fast text, Fast HP/EXP
 | --- | --- |
 | **General** | Fullscreen, menu scale, master volume, ROM info, BW2 battle visuals |
 | **Graphics** | Internal resolution, VSync, frame cap, lighting, atmosphere, shadows, water, weather, bloom |
-| **Speed & text** | Fast-forward speed, fast wild intros (BW2), battle pacing, text speed, HP/EXP bar speed, low-HP beep toggle, single-screen bag |
+| **Speed & text** | Fast-forward speed, fast wild intros (BW2), battle pacing, text speed, HP/EXP bar speed, low-HP beep toggle, Improved Pokétch, single-screen bag |
 | **Controls** | Keyboard and controller mappings, directions, deadzone, PC shortcuts |
 | **Gameplay** | All gameplay overrides |
 | **Cheats & tools** | Cheats, Pokétch unlocks, Pokémon/item creation, map jumping |
@@ -103,9 +103,8 @@ Works with both Platinum and BW2 visuals. More in [battle speed settings](docs/b
 
 **Gameplay page** has battle rules, moves/tutors, evolution/eggs, encounters/events, and progression/prices.
 
-- Edit values, choose **Save changes**, restart the game.
-- **Reload / discard** reloads the file.
-- **Defaults** stages the built-in defaults until you save.
+- Changes save automatically; restart the game to apply them.
+- **Classic Platinum** and **Single-screen mod** presets replace every option at once.
 - More in [gameplay configuration](docs/gameplay_config.md).
 
 **Cheats & tools:** creation and travel need normal overworld control.
@@ -144,7 +143,7 @@ Works with both Platinum and BW2 visuals. More in [battle speed settings](docs/b
 - PC settings save automatically to `sim_config.ini` and `sim_config_prj.ini`.
 - The `[Interface]` section of `sim_config.ini` stores `MenuScalePercent` (0 = Auto) and `PauseWhileOpen`.
 - Files without those values get Auto and no automatic pause.
-- Gameplay overrides use **Save changes** and load from `gameplay_config.ini` at startup.
+- Gameplay overrides save automatically to `gameplay_config.ini` and load from it at startup.
 - Settings the game can't use (wrong section, misspelled, invalid value) are reported as `[config]` lines on the console.
   `main --print-config` lists every effective setting and where it came from; see [configuration](docs/environment_variables.md).
 

@@ -197,7 +197,7 @@ static void CheckGameplayConfig(void)
     GameplayConfig_Init();
     GameplayConfig *config = GameplayConfig_Get();
     assert(SIM_ConfigCheck_WarningCount() == warnings + 3);
-    assert(config->shinyRolls == 8 && config->catchRateMultiplier == 1 && !config->infiniteTMs);
+    assert(config->shinyRolls == 8 && config->catchRateMultiplier == 1 && config->infiniteTMs); // invalid: default
     assert(config->guaranteedFishing && !config->zeroEggCycles);
     FILE *out = fopen("printed.txt", "w");
     GameplayConfig_PrintEffective(out);
@@ -210,7 +210,7 @@ static void CheckGameplayConfig(void)
     Write(GAMEPLAY_CONFIG_FILE_PATH, "[Gameplay]\nshinyRolls=8\nnot ini\n");
     warnings = SIM_ConfigCheck_WarningCount();
     GameplayConfig_Init();
-    assert(SIM_ConfigCheck_WarningCount() == warnings + 1 && GameplayConfig_Get()->shinyRolls == 1);
+    assert(SIM_ConfigCheck_WarningCount() == warnings + 1 && GameplayConfig_Get()->shinyRolls == 16);
     out = fopen("printed.txt", "w");
     GameplayConfig_PrintEffective(out);
     fclose(out);
