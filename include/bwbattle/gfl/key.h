@@ -5,8 +5,9 @@
 #include "gfl/heap.h"
 #include "struct_decls.h"
 
-// The keys (key.c)
+// The keys (key.c); the same values as the SDK's pad.h, which may come first
 
+#ifndef PAD_BUTTON_A
 #define PAD_BUTTON_A 0x1
 #define PAD_BUTTON_B 0x2
 #define PAD_BUTTON_SELECT 0x4
@@ -20,6 +21,7 @@
 #define PAD_BUTTON_X 0x400
 #define PAD_BUTTON_Y 0x800
 #define PAD_PLUS_KEY_MASK 0xf0
+#endif
 
 KeypadManager *GFL_HIDCreateKeypadManager(HeapID heapId);
 void GCTX_HIDUpdateKeypad(void);

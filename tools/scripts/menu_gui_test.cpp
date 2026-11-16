@@ -157,9 +157,16 @@ static void CheckBarSpeedControl() {
     assert(page);
     auto *table = ImGui::GetCurrentContext()->Tables.GetByKey(page->GetID("BattleSpeed"));
     assert(table && table->ColumnsCount == 2);
-    // HP/EXP is the last row. Use the actual table geometry, not screen coordinates.
-    float x = table->Columns[1].WorkMinX + 20;
-    float y = table->RowPosY1 + ImGui::GetStyle().CellPadding.y + ImGui::GetFrameHeight() / 2;
+    // Find the HP/EXP combo by hovering down the value column, so added rows don't move the target.
+    const ImGuiID barSpeedId = ImHashStr("##BarSpeed", 0, table->ID);
+    const float x = table->Columns[1].WorkMinX + 20;
+    float y = page->Pos.y;
+    for (; y < page->Pos.y + page->Size.y; y += 4) {
+        Mouse(x, y, false);
+        if (ImGui::GetCurrentContext()->HoveredId == barSpeedId)
+            break;
+    }
+    assert(ImGui::GetCurrentContext()->HoveredId == barSpeedId);
     Mouse(x, y, true); Mouse(x, y, false);
     Key(SDLK_DOWN); Frame(); Key(SDLK_DOWN, false); Frame();
     Key(SDLK_DOWN); Frame(); Key(SDLK_DOWN, false); Frame();

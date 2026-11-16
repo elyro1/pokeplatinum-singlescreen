@@ -125,6 +125,8 @@ void GFL_BitmapConvFromCHAR(GFLBitmap *bitmap, NNSG2dCharacterData *chars, HeapI
     case GX_TEXFMT_PLTT256:
         bitmap->tileSize = 0x40;
         break;
+    default:
+        break;
     }
     MIi_CpuCopy32(chars->pRawData, bitmap->pixels, chars->szByte);
 }
@@ -579,7 +581,7 @@ static void GFL_BitmapFillArea_IDX4_VRAM(GFLBitmap *bitmap, s16 x, s16 y, u16 wi
                 if (!odd) {
                     *pixels = ((low & (0xf0 >> shift)) | (color << shift)) | (high << 8);
                 } else {
-                    *pixels = (((0xf0 >> shift) & high | (color << shift)) << 8) | low;
+                    *pixels = ((((0xf0 >> shift) & high) | (color << shift)) << 8) | low;
                 }
             }
         }

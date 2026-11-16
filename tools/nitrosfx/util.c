@@ -67,7 +67,8 @@ uint8_t *ReadWholeFile(const char *const path, uint32_t *const size)
 
     *size = ftell(fp);
 
-    uint8_t *buffer = malloc(*size);
+    // One byte more for a terminator: the JSON order file is parsed as a string
+    uint8_t *buffer = malloc(*size + 1);
 
     if (buffer == NULL)
         FATAL_ERROR("Failed to allocate memory for reading \"%s\".\n", path);
@@ -77,6 +78,7 @@ uint8_t *ReadWholeFile(const char *const path, uint32_t *const size)
     if (fread(buffer, *size, 1, fp) != 1)
         FATAL_ERROR("Failed to read \"%s\".\n", path);
 
+    buffer[*size] = 0;
     fclose(fp);
 
     return buffer;

@@ -221,7 +221,8 @@ PartyPkm *func_ov167_021bb064(const BattleMon *mon) {
 u32 PokeParty_GetParam(const PartyPkm *pkm, PkmField param, void *buffer) {
     const BwBattleMon *mon = MON(pkm);
 
-    switch (param) {
+    // The PKM_PARAM_* values are defines, not members of PkmField
+    switch ((u32)param) {
     case PKM_PARAM_PID:
         return mon->personality;
     case PKM_PARAM_SPECIES:

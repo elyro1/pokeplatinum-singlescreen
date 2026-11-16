@@ -3600,6 +3600,11 @@ static void BtlvEffvm_InitEmitter(SPLEmitter *emitter) {
         func_02050354(emitter, BtlvEffvm_MoveEmitterArc);
         wk->allocCount++;
         work->angle = 0;
+        // BUG: The second angle is never set, so motion types 5 and 6 start their arc at whatever the heap held
+#ifdef BUGFIX
+        work->angle2 = 0;
+        work->angle2Step = 0;
+#endif
         work->wait = 0;
         work->waitAccum = 0;
         work->waitStep = 0;
@@ -3983,6 +3988,10 @@ static u32 BtlvEffvm_GetVariable(BtlvEffvm *wk, int id) {
         }
         return FALSE;
     }
+    // BUG: Unknown variables fall off the end without a return value
+#ifdef BUGFIX
+    return 0;
+#endif
 }
 
 static void BtlvEffvm_AddEmitters(BtlvEffvm *wk, BtlvEffvmEmitParam *param, int index, int resourceId) {

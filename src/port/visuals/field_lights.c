@@ -36,7 +36,8 @@ typedef struct {
 
 static Table sTable;
 static BOOL sLoaded;
-static char sStatus[192];
+// Room for a full parse error (160) and the text around it
+static char sStatus[224];
 
 static const struct {
     const char *name;

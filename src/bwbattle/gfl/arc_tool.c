@@ -179,7 +179,8 @@ ArcTool *GFL_ArcSysCreateMemoryHandle(const void *data, u32 size, HeapID heapId)
     ArcTool *handle = GFL_HeapAllocate(heapId, sizeof(ArcTool), FALSE, "arc_tool.c", 543);
 
     FS_InitFile(&handle->file);
-    FS_CreateFileFromMemory(&handle->file, data, size);
+    // The SDK takes the buffer as non-const but only reads it
+    FS_CreateFileFromMemory(&handle->file, (void *)data, size);
     GFL_ArcToolInit(handle);
     return handle;
 }

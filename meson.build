@@ -115,6 +115,20 @@ add_global_arguments(cpp_args,
     native: (build_target == 'linux' or build_target == 'win64')
 )
 
+# Global so the SDK subprojects are instrumented too; -O1 keeps the game playable under ASan. The build tools get it
+# as well: UBSan makes GCC report bogus null format strings, which tools built with -Werror would fail on, and
+# `make linux-asan` turns off leak checks so the tools' exit-time leaks don't fail the build.
+if get_option('sanitize')
+    if build_target != 'linux'
+        error('sanitize is only set up for the Linux PC target')
+    endif
+    # Not shift: the DS code shifts negative values everywhere, which GCC defines
+    sanitize_args = ['-fsanitize=address,undefined', '-fno-sanitize=shift', '-fno-omit-frame-pointer', '-O1',
+        '-Wno-error=format-overflow']
+    add_global_arguments(sanitize_args, language: ['c', 'cpp'], native: true)
+    add_global_link_arguments('-fsanitize=address,undefined', language: ['c', 'cpp'], native: true)
+endif
+
 pokeplatinum_args = [
     '-DPM_KEEP_ASSERTS',
     '-DGAME_VERSION=VERSION_PLATINUM',
@@ -229,6 +243,30 @@ nitrodwc_dep = dependency('NitroDWC',
 libvct_dep = dependency('libvct')
 if (build_target == 'arm')
 libsyscall_dep = dependency('libsyscall')
+endif
+
+# The SDK dependencies pass -w, which no later -W flag can undo. Port code takes their flags without it and includes
+# the SDK headers as system headers, so warnings show for our own files only.
+port_warning_args = []
+port_sdk_deps = []
+if build_target == 'linux' or build_target == 'win64'
+    port_sdk_args = []
+    foreach arg : (subproject('libntr').get_variable('nitrosdk_args')
+            + subproject('libntrsystem').get_variable('nitrosystem_args')
+            + subproject('libntrwifi').get_variable('nitrowifi_args')
+            + subproject('libntrdwc').get_variable('nitrodwc_args'))
+        if arg != '-w' and arg not in port_sdk_args
+            port_sdk_args += arg
+        endif
+    endforeach
+    port_sdk_deps += declare_dependency(compile_args: port_sdk_args)
+    foreach dep : [nitrosdk_dep, nitrosystem_dep, nitrowifi_dep, nitrodwc_dep]
+        port_sdk_deps += dep.partial_dependency(includes: true, sources: true).as_system()
+    endforeach
+    port_warning_args = ['-Wall']
+    if get_option('port_werror')
+        port_warning_args += '-Werror'
+    endif
 endif
 
 ############################################################
@@ -400,6 +438,34 @@ main = executable('main',
     native: false
 )
 endif
+if (build_target == 'linux' or build_target == 'win64')
+# Port code (src/port, the bwbattle adapter) with warnings on; linked into main as plain objects
+libport = static_library('port',
+    sources: [
+        port_c,
+        port_generated,
+        c_consts_generators,
+        naix_headers,
+        h_headers,
+        embed_headers,
+    ],
+    c_args: [
+        pokeplatinum_args,
+        port_warning_args,
+    ],
+    cpp_args: port_warning_args,
+    c_pch: 'include/pch/global_pch.h',
+    include_directories: [
+        public_includes,
+        libcrypto_public_includes,
+        libgds_public_includes,
+        libspl_public_includes,
+        ppwlobby_public_includes,
+    ],
+    dependencies: port_sdk_deps,
+    native: true
+)
+endif
 if (build_target == 'linux')
 main = executable('main',
     sources: [
@@ -409,7 +475,7 @@ main = executable('main',
         h_headers,
         embed_headers,
     ],
-    objects: trainer_ai_o,
+    objects: [trainer_ai_o, libport.extract_all_objects(recursive: false)],
     c_args: [
         pokeplatinum_args,
     ],
@@ -458,7 +524,7 @@ main = executable('main',
         h_headers,
         embed_headers,
     ],
-    objects: trainer_ai_o,
+    objects: [trainer_ai_o, libport.extract_all_objects(recursive: false)],
     c_args: [
         pokeplatinum_args,
     ],
@@ -499,6 +565,8 @@ if (build_target == 'nx')
 main = executable('main',
     sources: [
         pokeplatinum_c,
+        port_c,
+        port_generated,
         c_consts_generators,
         naix_headers,
         h_headers,

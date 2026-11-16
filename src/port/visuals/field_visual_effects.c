@@ -459,7 +459,7 @@ static void DrawCast(Billboard *billboard, const CastShadow *cast, float offsetX
     position.x += Fixed((cast->elevation - feet) * offsetX);
     position.y += Fixed((cast->elevation - feet) * offsetY);
     position.z += Fixed((cast->elevation - feet) * offsetZ);
-    MtxFx33 shear = { FX32_ONE, Fixed(cast->slopeX), 0, Fixed(offsetX), Fixed(offsetY), Fixed(offsetZ), 0, Fixed(cast->slopeZ), FX32_ONE };
+    MtxFx33 shear = { { FX32_ONE, Fixed(cast->slopeX), 0, Fixed(offsetX), Fixed(offsetY), Fixed(offsetZ), 0, Fixed(cast->slopeZ), FX32_ONE } };
     NNSG3dRenderObj *model = &billboard->renderObj;
     NNSG3dSbcCallBackFunc init = model->cbInitFunc;
     model->cbInitFunc = CastCallbacks;

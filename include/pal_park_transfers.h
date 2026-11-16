@@ -1,13 +1,15 @@
 #ifndef POKEPLATINUM_PAL_PARK_TRANSFERS_H
 #define POKEPLATINUM_PAL_PARK_TRANSFERS_H
 
+#include "port/assets/ds_layout.h"
+
 #include "pokemon.h"
 
 typedef struct MigratedPokemon {
     Pokemon mons[CATCHING_SHOW_MONS];
     u32 gbaTrainerIds[MAX_GBA_TRANSFER_HISTORY];
-    s64 timeStamps[MAX_GBA_TRANSFER_HISTORY];
-    s64 rtcOffset;
+    s64_ds timeStamps[MAX_GBA_TRANSFER_HISTORY];
+    s64_ds rtcOffset;
     u8 macAddress[6];
 } MigratedPokemon;
 

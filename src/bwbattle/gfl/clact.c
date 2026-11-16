@@ -1187,15 +1187,6 @@ void func_0204c5c8(ClActor *actor, BOOL a1) {
     }
 }
 
-// The user extended attributes of the actor's animations and cells, which nothing calls
-static const NNSG2dUserExAnimSequenceAttr *ClActor_GetUserExAnimSequenceAttr(ClActor *actor, u32 sequence) {
-    return gClActAnimGetSeqAttrFuncs[actor->anim.type](&actor->anim, sequence);
-}
-
-static const NNSG2dUserExCellAttrBank *ClActor_GetUserExCellAttrBank(ClActor *actor) {
-    return gClActAnimGetCellAttrFuncs[actor->anim.type](&actor->anim);
-}
-
 void func_0204c5e4(ClActRenderer *renderer, const ClActSysSetup *setup, HeapID heapId) {
     sSurfaceSetups[0].x = setup->mainX;
     sSurfaceSetups[0].y = setup->mainY;

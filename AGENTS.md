@@ -49,9 +49,14 @@ Main branch: `pc_single_screen_mod`. User-facing docs: README.md, BUILD.MD, docs
 make win64                  # inside the MSYS2 shell (Launch_MSys2.ps1)
 make mingw                  # Windows build cross-compiled on Linux
 make                        # original DS ROM;
+make linux-asan             # ASan + UBSan build in build_linux_asan/ (docs/sanitizers.md)
 ```
 
 We can ignore the DS ROM build. PC-only code goes behind the platform guards or in `src/port/`.
+
+`src/port` and `src/bwbattle` build with `-Wall` (the decomp and SDK stay at `-w`); keep them warning-free.
+`-Dport_werror=true` makes the warnings errors. The port files are their own static library, so their objects are
+in `build_linux/libport.a.p/`, not `main.p/`.
 
 ## Tests
 

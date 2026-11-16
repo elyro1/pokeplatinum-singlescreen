@@ -1029,11 +1029,14 @@ pokeplatinum_c = files(
     'debug.c'
 )
 
+# Port code builds as its own target (meson.build) so it gets warnings while the decomp code stays at -w.
+port_c = []
+port_generated = []
 if(build_target != 'arm')
 if get_option('autoplay_tests')
-pokeplatinum_c += files('port/debug/autoplay_test.c')
+port_c += files('port/debug/autoplay_test.c')
 endif
-pokeplatinum_c += files(
+port_c += files(
     'port/config/sim_config_prj.c',
     'port/config/config_report.c',
     'port/gameplay/gameplay_config.c',
@@ -1067,7 +1070,7 @@ pokeplatinum_c += files(
 )
 
 if(build_target == 'linux')
-pokeplatinum_c += files(
+port_c += files(
     'port/gui/sim_icon.cpp'
 )
 endif
@@ -1079,7 +1082,7 @@ field_lights_header = custom_target('field_lights.inc',
     command: [find_program('python3', native: true),
         files('../tools/scripts/embed_text.py'), '@INPUT@', '@OUTPUT@', 'sEmbeddedFieldLights'],
 )
-pokeplatinum_c += field_lights_header
+port_generated += field_lights_header
 public_includes = [public_includes, include_directories('.')]
 endif
 
@@ -1127,8 +1130,8 @@ if build_target == 'linux' or build_target == 'win64'
         command: [find_program('python3', native: true), files('../tools/scripts/embed_follower_bw2.py'),
             '@INPUT@', '@OUTPUT@'],
     )
-    pokeplatinum_c += [files('port/assets/map_patches.cpp', 'port/assets/rom_setup.cpp', 'port/assets/follower_assets.cpp'),
-        map_patches_header, follower_bw2_data]
+    port_c += files('port/assets/map_patches.cpp', 'port/assets/rom_setup.cpp', 'port/assets/follower_assets.cpp')
+    port_generated += [map_patches_header, follower_bw2_data]
     public_includes = [public_includes, include_directories('.')]
 endif
 

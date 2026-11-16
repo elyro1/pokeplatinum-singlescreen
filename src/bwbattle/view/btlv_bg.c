@@ -57,7 +57,9 @@ static void BtlvBg_SetOffsetVBlank(TCB *tcb, void *data);
 static void BtlvBg_WaveTask(TCB *tcb, void *data);
 static void BtlvBg_WaveTaskEnd(TCB *tcb);
 static void BtlvBg_WaveVBlank(TCB *tcb, void *data);
+#ifndef BWBATTLE
 static void BtlvBg_WaveHBlank(TCB *tcb, void *data);
+#endif
 
 BtlvBg *BtlvBg_Create(TCBManager *tcbMgr, HeapID heapId) {
     BtlvBg *work = GFL_HeapAllocate(heapId, sizeof(BtlvBg), TRUE, "btlv_bg.c", 0x6f);
@@ -274,6 +276,7 @@ static void BtlvBg_WaveVBlank(TCB *tcb, void *data) {
     }
 }
 
+#ifndef BWBATTLE
 static void BtlvBg_WaveHBlank(TCB *tcb, void *data) {
     BtlvBgWave *wave = data;
     int x = GFL_BGSysGetBGOffsetX(3);
@@ -293,3 +296,4 @@ static void BtlvBg_WaveHBlank(TCB *tcb, void *data) {
         }
     }
 }
+#endif
