@@ -28,6 +28,7 @@ extern int fileno(FILE *stream);
 
 #include "bag.h"
 #include "dynamic_map_features.h"
+#include "heap.h"
 #include "map_header.h"
 #include "map_object.h"
 #include "party.h"
@@ -257,6 +258,15 @@ static void Snapshot(void)
 {
     FieldSystem *f = DEBUG_GetFieldSystem();
     fprintf(sWrite, "{\"protocol\":1,\"frame\":%u,\"app\":%lld,\"app_state\":%d,\"fixture\":%d,\"battles\":%d,\"losses\":%d,\"text_id\":%u,\"text\":\"%s\",\"menu\":%s,\"battle\":%s", sFrame, sApp, sAppState, sFixture, sBattles, sLosses, sTextSerial, sText, sMenuFrame + 1 >= sFrame && sMenu[0] ? sMenu : "null", sBattleFrame + 1 >= sFrame && sBattle[0] ? sBattle : "null");
+    // Live heaps as [id, size, free bytes], for scene.py's state dumps
+    fprintf(sWrite, ",\"heaps\":[");
+    for (u32 id = 0, first = 1, size, freeBytes; id < HEAP_ID_MAX; id++) {
+        if (Heap_GetUsage(id, &size, &freeBytes)) {
+            fprintf(sWrite, "%s[%u,%u,%u]", first ? "" : ",", id, size, freeBytes);
+            first = 0;
+        }
+    }
+    fprintf(sWrite, "]");
     if (f != NULL && f->saveData != NULL) {
         fprintf(sWrite, ",\"ui\":%s", sUIFrame + 1 >= sFrame && sUI[0] ? sUI : "null");
         fprintf(sWrite, ",\"battle_order\":%s", sPartyOrderFrame + 1 >= sFrame && sPartyOrder[0] ? sPartyOrder : "null");

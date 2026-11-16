@@ -330,6 +330,24 @@ u32 HeapExp_FndGetTotalFreeSize(u32 heapID)
     return 0;
 }
 
+// Size and free bytes of a heap that exists, for the test bridge's state snapshot
+BOOL Heap_GetUsage(u32 heapID, u32 *size, u32 *freeBytes)
+{
+    if (heapID >= sHeapInfo.totalNumHeaps) {
+        return FALSE;
+    }
+
+    u8 index = sHeapInfo.heapIdxs[heapID];
+    if (index == sHeapInfo.unallocatedHeapID || sHeapInfo.heapHandles[index] == NNS_FND_HEAP_INVALID_HANDLE) {
+        return FALSE;
+    }
+
+    NNSFndHeapHandle heap = sHeapInfo.heapHandles[index];
+    *size = (u32)((u8 *)NNS_FndGetHeapEndAddress(heap) - (u8 *)NNS_FndGetHeapStartAddress(heap));
+    *freeBytes = NNS_FndGetTotalFreeSizeForExpHeap(heap);
+    return TRUE;
+}
+
 void HeapExp_FndInitAllocator(NNSFndAllocator *pAllocator, u32 heapID, int alignment)
 {
     if ((u32)heapID < sHeapInfo.totalNumHeaps) {

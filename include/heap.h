@@ -19,6 +19,7 @@ void *Heap_AllocAtEnd(u32 heapID, u32 size);
 void Heap_Free(void *ptr);
 void Heap_FreeExplicit(u32 heapID, void *ptr);
 u32 HeapExp_FndGetTotalFreeSize(u32 heapID);
+BOOL Heap_GetUsage(u32 heapID, u32 *size, u32 *freeBytes);
 void HeapExp_FndInitAllocator(NNSFndAllocator *pAllocator, u32 heapID, int alignment);
 void Heap_Realloc(void *ptr, u32 newSize);
 BOOL GF_heap_c_dummy_return_true(u32 heapID);

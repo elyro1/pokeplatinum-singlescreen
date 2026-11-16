@@ -110,7 +110,8 @@ normally. The bridge never returns fabricated menu results or battle commands.
 socket protocol. It exposes application identity, dialogue, menu choices,
 battle choices, party state, story variables, map coordinates, nearby objects,
 and loaded collision tiles, including the rotating Eterna gym clock collision. The game waits for one input response per logical
-frame; rendering speed does not determine route timing.
+frame; rendering speed does not determine route timing. The snapshot also lists every live heap's size and free
+bytes. [scene.py](scene_runs.md) uses the same bridge for short event-driven screenshot runs.
 
 `tools/autoplay/first_gym.py` owns the story route and decisions. Its route covers
 the opening rival encounter, starter battle, Lake Verity, Rowan's laboratory,
