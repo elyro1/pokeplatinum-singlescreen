@@ -2,17 +2,13 @@ name: build_linux
 
 on:
   push:
-    branches: [ pc_port, pc_single_screen_mod ]
+    branches: [ pc_port, pc_single_screen_mod, singlescreen ]
     paths-ignore:
       - '**.md'
   pull_request:
     paths-ignore:
       - '**.md'
   workflow_dispatch:
-
-env:
-  LM_LICENSE_FILE: "${{ github.workspace }}/tools/cw/license.dat"
-  BUILD: /var/tmp/pokeplatinum
 
 jobs:
   build_linux:
@@ -32,9 +28,6 @@ jobs:
 
       - name: Audit release resources
         run: python3 tools/scripts/audit_release_resources.py --tree-only
-
-      - name: Install Metroskrew
-        run: ./drun.sh make skrew
 
       - name: Build (Linux)
         run: ./drun.sh make linux

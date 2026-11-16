@@ -13,10 +13,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 #RUN locale-gen en_US.UTF-8
 #RUN dpkg-reconfigure locales
 
-RUN dpkg --add-architecture i386
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential libsdl2-2.0-0 libsdl2-dev libenet7 libenet-dev libsoundtouch-dev pkg-config xvfb \
-    python3 gcc-arm-none-eabi wine wine32 wine64 libnss-unknown fuse file \
+    python3 gcc-arm-none-eabi libnss-unknown fuse file \
     ninja-build nasm flex bison wget ca-certificates git clangd libpng-dev libpng-tools patchelf
 
 # Install DevkitPro

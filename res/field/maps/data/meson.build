@@ -656,134 +656,116 @@ map_data_files = copy_gen.process(files(
 ))
 
 route_201_source = files('map_data_006.bin')
-if build_target != 'arm'
-    route_201_source = custom_target('route_201_widescreen',
-        input: route_201_source,
-        output: 'map_data_006.bin',
-        depend_files: files('../../../../tools/scripts/map_scenery.py'),
-        command: [
-            find_program('../../../../tools/scripts/extend_route_201.py', native: true),
-            '@INPUT@', '@OUTPUT@',
-        ],
-    )
-endif
+route_201_source = custom_target('route_201_widescreen',
+    input: route_201_source,
+    output: 'map_data_006.bin',
+    depend_files: files('../../../../tools/scripts/map_scenery.py'),
+    command: [
+        find_program('../../../../tools/scripts/extend_route_201.py', native: true),
+        '@INPUT@', '@OUTPUT@',
+    ],
+)
 map_data_files = [map_data_files, copy_gen.process(route_201_source)]
 
 twinleaf_source = files('map_data_000.bin')
-if build_target != 'arm'
-    twinleaf_source = custom_target('twinleaf_town_widescreen',
-        input: twinleaf_source,
-        output: 'map_data_000.bin',
-        depend_files: files('../../../../tools/scripts/map_scenery.py'),
-        command: [
-            find_program('../../../../tools/scripts/extend_twinleaf_town.py', native: true),
-            '@INPUT@', '@OUTPUT@',
-        ],
-    )
-endif
+twinleaf_source = custom_target('twinleaf_town_widescreen',
+    input: twinleaf_source,
+    output: 'map_data_000.bin',
+    depend_files: files('../../../../tools/scripts/map_scenery.py'),
+    command: [
+        find_program('../../../../tools/scripts/extend_twinleaf_town.py', native: true),
+        '@INPUT@', '@OUTPUT@',
+    ],
+)
 map_data_files = [map_data_files, copy_gen.process(twinleaf_source)]
 
 iron_island_source = files('map_data_054.bin')
 # Keep the original ROM asset; complete its decorative mesh for port builds.
-if build_target != 'arm'
-    iron_island_source = custom_target('iron_island_widescreen',
-        input: iron_island_source,
-        depend_files: files('../../../../tools/scripts/map_scenery.py'),
-        output: 'map_data_054.bin',
-        command: [
-            find_program('../../../../tools/scripts/extend_iron_island.py', native: true),
-            '@INPUT@', '@OUTPUT@',
-        ],
-    )
-endif
+iron_island_source = custom_target('iron_island_widescreen',
+    input: iron_island_source,
+    depend_files: files('../../../../tools/scripts/map_scenery.py'),
+    output: 'map_data_054.bin',
+    command: [
+        find_program('../../../../tools/scripts/extend_iron_island.py', native: true),
+        '@INPUT@', '@OUTPUT@',
+    ],
+)
 map_data_files = [map_data_files, copy_gen.process(iron_island_source)]
 
 route_219_source = files('map_data_008.bin')
-if build_target != 'arm'
-    route_219_source = custom_target('route_219_widescreen',
-        input: route_219_source,
-        output: 'map_data_008.bin',
-        depend_files: files('../../../../tools/scripts/map_scenery.py'),
-        command: [
-            find_program('../../../../tools/scripts/extend_route_219.py', native: true),
-            '@INPUT@', '@OUTPUT@',
-        ],
-    )
-endif
+route_219_source = custom_target('route_219_widescreen',
+    input: route_219_source,
+    output: 'map_data_008.bin',
+    depend_files: files('../../../../tools/scripts/map_scenery.py'),
+    command: [
+        find_program('../../../../tools/scripts/extend_route_219.py', native: true),
+        '@INPUT@', '@OUTPUT@',
+    ],
+)
 map_data_files = [map_data_files, copy_gen.process(route_219_source)]
 
 route_204_source = files('map_data_031.bin')
-if build_target != 'arm'
-    route_204_source = custom_target('route_204_widescreen',
-        input: route_204_source,
-        output: 'map_data_031.bin',
-        depend_files: files('../../../../tools/scripts/map_scenery.py'),
-        command: [
-            find_program('../../../../tools/scripts/extend_route_204.py', native: true),
-            '@INPUT@', '@OUTPUT@',
-        ],
-    )
-endif
+route_204_source = custom_target('route_204_widescreen',
+    input: route_204_source,
+    output: 'map_data_031.bin',
+    depend_files: files('../../../../tools/scripts/map_scenery.py'),
+    command: [
+        find_program('../../../../tools/scripts/extend_route_204.py', native: true),
+        '@INPUT@', '@OUTPUT@',
+    ],
+)
 map_data_files = [map_data_files, copy_gen.process(route_204_source)]
 
 route_207_source = files('map_data_025.bin')
-if build_target != 'arm'
-    route_207_source = custom_target('route_207_widescreen',
-        input: route_207_source,
-        output: 'map_data_025.bin',
-        depend_files: files('../../../../tools/scripts/map_scenery.py'),
-        command: [
-            find_program('../../../../tools/scripts/extend_route_207.py', native: true),
-            '@INPUT@', '@OUTPUT@',
-        ],
-    )
-endif
+route_207_source = custom_target('route_207_widescreen',
+    input: route_207_source,
+    output: 'map_data_025.bin',
+    depend_files: files('../../../../tools/scripts/map_scenery.py'),
+    command: [
+        find_program('../../../../tools/scripts/extend_route_207.py', native: true),
+        '@INPUT@', '@OUTPUT@',
+    ],
+)
 map_data_files = [map_data_files, copy_gen.process(route_207_source)]
 
-# Close all four cycling-road side profiles; ARM retains the original BINs.
+# Close all four cycling-road side profiles.
 foreach member : [27, 28, 29, 30]
     basename = 'map_data_0@0@.bin'.format(member)
     route_206_source = files(basename)
-    if build_target != 'arm'
-        route_206_source = custom_target('route_206_@0@_widescreen'.format(member),
-            input: route_206_source,
-            output: basename,
-            depend_files: files('../../../../tools/scripts/map_scenery.py'),
-            command: [
-                find_program('../../../../tools/scripts/extend_route_206.py', native: true),
-                member.to_string(), '@INPUT@', '@OUTPUT@',
-            ],
-        )
-    endif
+    route_206_source = custom_target('route_206_@0@_widescreen'.format(member),
+        input: route_206_source,
+        output: basename,
+        depend_files: files('../../../../tools/scripts/map_scenery.py'),
+        command: [
+            find_program('../../../../tools/scripts/extend_route_206.py', native: true),
+            member.to_string(), '@INPUT@', '@OUTPUT@',
+        ],
+    )
     map_data_files = [map_data_files, copy_gen.process(route_206_source)]
 endforeach
 
 route_214_source = files('map_data_154.bin')
-if build_target != 'arm'
-    route_214_source = custom_target('route_214_cliff_side',
-        input: route_214_source,
-        output: 'map_data_154.bin',
-        depend_files: files('../../../../tools/scripts/map_scenery.py'),
-        command: [
-            find_program('../../../../tools/scripts/remove_route_214_trees.py', native: true),
-            '--land', '@INPUT@', '@OUTPUT@',
-        ],
-    )
-endif
+route_214_source = custom_target('route_214_cliff_side',
+    input: route_214_source,
+    output: 'map_data_154.bin',
+    depend_files: files('../../../../tools/scripts/map_scenery.py'),
+    command: [
+        find_program('../../../../tools/scripts/remove_route_214_trees.py', native: true),
+        '--land', '@INPUT@', '@OUTPUT@',
+    ],
+)
 map_data_files = [map_data_files, copy_gen.process(route_214_source)]
 
 route_227_source = files('map_data_170.bin')
-if build_target != 'arm'
-    route_227_source = custom_target('route_227_cliff_corners',
-        input: route_227_source,
-        output: 'map_data_170.bin',
-        depend_files: files('../../../../tools/scripts/map_scenery.py'),
-        command: [
-            find_program('../../../../tools/scripts/extend_route_227.py', native: true),
-            '@INPUT@', '@OUTPUT@',
-        ],
-    )
-endif
+route_227_source = custom_target('route_227_cliff_corners',
+    input: route_227_source,
+    output: 'map_data_170.bin',
+    depend_files: files('../../../../tools/scripts/map_scenery.py'),
+    command: [
+        find_program('../../../../tools/scripts/extend_route_227.py', native: true),
+        '@INPUT@', '@OUTPUT@',
+    ],
+)
 map_data_files = [map_data_files, copy_gen.process(route_227_source)]
 
 map_data_narc = custom_target('land_data.narc',

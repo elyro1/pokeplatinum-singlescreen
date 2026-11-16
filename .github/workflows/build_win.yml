@@ -2,7 +2,7 @@ name: build_win
 
 on:
   push:
-    branches: [ pc_port, pc_single_screen_mod ]
+    branches: [ pc_port, pc_single_screen_mod, singlescreen ]
     paths-ignore:
       - '**.md'
   pull_request:

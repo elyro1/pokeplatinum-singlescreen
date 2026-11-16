@@ -1,1 +1,0 @@
-fixrom_exe = executable('fixrom', 'fixrom.c', native: true)

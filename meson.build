@@ -20,52 +20,15 @@ toplevel_includes = include_directories('.')
 ############################################################
 ###                    COMPILER FLAGS                    ###
 ############################################################
-if (build_target == 'arm')
-shared_args = [
-    '-proc', 'arm946e',
-    '-enum', 'int',
-    '-Cpp_exceptions', 'off',
-    '-gccext,on',
-    '-msgstyle', 'gcc',
-    '-ipa', 'file',
-    '-interworking',
-    '-inline', 'on,noauto',
-    '-char', 'signed',
-    '-nosyspath',
-    '-stdinc',
-    '-sym', 'on',
-    '-DPOKEPLATINUM_GENERATED_ENUM',
-    '-D_MSL_RESTRICT=',
-]
-else
 shared_args = ['-DPOKEPLATINUM_GENERATED_ENUM', '-g']
-endif
 
-if get_option('revision') == '0'
-    shared_args += [
-        '-DPOKEPLATINUM_REVISION=0'
-    ]
-else
-    shared_args += [
-        '-DPOKEPLATINUM_REVISION=1'
-    ]
-endif
+# The PC builds follow retail revision 1
+shared_args += '-DPOKEPLATINUM_REVISION=1'
 
 if (build_target == 'win64')
 	shared_args += [
 		'-w'
 	]
-endif
-
-if (build_target == 'arm')
-if get_option('gdb_debugging')
-    shared_args += [
-        '-O1,p',
-#        '-inline', 'off' todo: figure out why this makes the rom crash after the copyright screen
-    ]
-else
-    shared_args += '-O4,p'
-endif
 endif
 
 if get_option('tracy_enable')
@@ -95,22 +58,12 @@ if (build_target == 'nx')
 endif
 
 
-c_args = []
-cpp_args = []
-if (build_target == 'arm')
-    c_args = shared_args + ['-lang', 'c99']
-    cpp_args = shared_args + ['-RTTI', 'off']
-else
-    c_args = shared_args
-    cpp_args = shared_args
-endif
-
-add_global_arguments(c_args,
+add_global_arguments(shared_args,
     language: 'c',
     native: (build_target == 'linux' or build_target == 'win64')
 )
 
-add_global_arguments(cpp_args,
+add_global_arguments(shared_args,
     language: 'cpp',
     native: (build_target == 'linux' or build_target == 'win64')
 )
@@ -146,13 +99,11 @@ if get_option('autoplay_tests')
         suite: 'autoplay')
 endif
 
-if(build_target != 'arm')
-    pokeplatinum_args += [
-        '-std=c99',
-        # Autosave uses monotonic time and transactional filesystem operations.
-        '-D_POSIX_C_SOURCE=200809L'
-    ]
-endif
+pokeplatinum_args += [
+    '-std=c99',
+    # Autosave uses monotonic time and transactional filesystem operations.
+    '-D_POSIX_C_SOURCE=200809L'
+]
 
 if(build_target == 'nx')
     pokeplatinum_args += '-fPIC'
@@ -168,27 +119,7 @@ if get_option('logging_enabled')
     ]
 endif
 
-asm_args = [
-    '-proc', 'arm5TE',
-    '-16',
-    '-gccinc'
-]
-
-if (build_target == 'arm')
-link_args = [
-    '-w', 'off',
-    '-proc', 'arm946e',
-    '-nopic',
-    '-nopid',
-    '-interworking',
-    '-map', 'closure,unused',
-    '-symtab', 'sort',
-    '-msgstyle' ,'gcc',
-    '-m', '_start',
-    '-force_active', 'DGTi_hash2_arm4_small',
-    '-sym', 'on'
-]
-elif (build_target == 'nx')
+if (build_target == 'nx')
 link_args = [
     '-specs=/opt/devkitpro/libnx/switch.specs',
     '-g',
@@ -241,9 +172,6 @@ nitrodwc_dep = dependency('NitroDWC',
 )
 
 libvct_dep = dependency('libvct')
-if (build_target == 'arm')
-libsyscall_dep = dependency('libsyscall')
-endif
 
 # The SDK dependencies pass -w, which no later -W flag can undo. Port code takes their flags without it and includes
 # the SDK headers as system headers, so warnings show for our own files only.
@@ -303,24 +231,7 @@ subdir('res')
 ############################################################
 subdir('src')
 
-if (build_target == 'arm')
-trainer_ai_o = custom_target(
-    'trainer_ai_script.o',
-    output: 'trainer_ai_script.o',
-    input: files('src/battle/trainer_ai/script.s'),
-    command: [
-        arm_none_eabi_gcc_exe,
-        '-I', meson.global_source_root() / 'include',
-        '-I', meson.global_source_root() / 'asm',
-        '-I', meson.global_build_root(),
-        '-x', 'assembler-with-cpp',
-        '-MD', '-MF', '@DEPFILE@',
-        '-c', '-o', '@OUTPUT@',
-        '@INPUT@',
-    ],
-    depfile: '@BASENAME@.d',
-)
-elif(build_target == 'nx')
+if (build_target == 'nx')
 trainer_ai_ss = custom_target(
     'trainer_ai_script.ss',
     output: 'trainer_ai_script.ss',
@@ -386,58 +297,6 @@ trainer_ai_o = custom_target(
 )
 endif
 
-if (build_target == 'arm')
-libmslc = fs.copyfile('tools/metroskrew/lib/metroskrew/sdk/ds/2.0/sp2/msl/MSL_C/MSL_ARM/Lib/MSL_C_NITRO_Ai_LE.a')
-libmslcpp = fs.copyfile('tools/metroskrew/lib/metroskrew/sdk/ds/2.0/sp2/msl/MSL_C++/MSL_ARM/Lib/MSL_CPP_NITRO_Ai_LE.a')
-
-main = executable('main',
-    sources: [
-        pokeplatinum_c,
-        c_consts_generators,
-        naix_headers,
-        h_headers,
-        embed_headers,
-    ],
-    objects: trainer_ai_o,
-    c_args: [
-        pokeplatinum_args,
-        '-thumb'
-    ],
-    c_pch: 'include/pch/global_pch.h',
-    include_directories: [
-        public_includes,
-        libcrypto_public_includes,
-        libgds_public_includes,
-        libspl_public_includes,
-        ppwlobby_public_includes,
-    ],
-    dependencies: [
-        nitrosdk_dep,
-        nitrosystem_dep,
-        nitrowifi_dep,
-        nitrodwc_dep,
-        libvct_dep,
-        libsyscall_dep,
-    ],
-    link_with: [
-        libcrypto_ov97,
-        libcrypto_static,
-        libgds,
-        libspl,
-        libmslc,
-        libmslcpp,
-        libdwcenc,
-        libdwcppwlobby,
-        libdwcilobby
-    ],
-    link_args: [
-        link_args,
-        'platinum.us/main.lcf'
-    ],
-    link_depends: main_lcf,
-    native: false
-)
-endif
 if (build_target == 'linux' or build_target == 'win64')
 # Port code (src/port, the bwbattle adapter) with warnings on; linked into main as plain objects
 libport = static_library('port',
@@ -507,7 +366,6 @@ main = executable('main',
     link_args: [
         link_args,
     ],
-    link_depends: main_lcf,
     native: true
 )
 endif
@@ -557,7 +415,6 @@ main = executable('main',
     link_args: [
         link_args,
     ],
-    link_depends: main_lcf,
     native: true
 )
 endif
@@ -600,16 +457,9 @@ main = executable('main',
     link_args: [
         link_args,
     ],
-    link_depends: main_lcf,
     native: false
 )
 endif
-
-############################################################
-###                    ARM7 BINARIES                     ###
-############################################################
-ichneumon_sub = subproject('libntr').get_variable('ichneumon_sub')
-ichneumon_sub_defs = []
 
 pc_copy_options = []
 if get_option('skip_anim_scripts')
@@ -618,41 +468,15 @@ endif
 
 
 ############################################################
-###                        DS ROM                        ###
+###                     PC FILE COPY                     ###
 ############################################################
-if(build_target == 'arm')
-pokeplatinum_nds = custom_target('pokeplatinum.us.nds',
-    output: 'pokeplatinum.us.nds',
-    input: [
-        main,
-        rom_header_template,
-        icon_png,
-        ichneumon_sub,
-        nitrofs_files,
-    ],
-    command : [
-        nitrorom_exe,
-        'pack',
-        '-DHEADER_TEMPLATE=@INPUT1@', # rom_header_template
-        '-DICON_PNG=@INPUT2@',        # icon_png
-        '-DARM7_NEF=@INPUT3@',        # ichneumon_sub
-        '--output=@OUTPUT0@',         # pokeplatinum.us.nds
-        rom_ini,
-        filesys_csv,
-    ],
-    build_by_default: true
-)
-elif (build_target == 'nx')
+if (build_target == 'nx')
 copy_files_script = files('tools/scripts/copy_pc_files.sh')
 
 pokeplatinum_nds = custom_target('pokeplatinum.us',
     output: 'pokeplatinum.us',
     input: [
         main,
-        rom_header_template,
-        icon_png,
-        ichneumon_sub,
-        ichneumon_sub_defs,
         nitrofs_files,
     ],
     command : [
@@ -673,10 +497,6 @@ pokeplatinum_nds = custom_target('pokeplatinum.us',
     output: 'pokeplatinum.us',
     input: [
         main,
-        rom_header_template,
-        icon_png,
-        ichneumon_sub,
-        ichneumon_sub_defs,
         nitrofs_files,
     ],
     command : [
@@ -689,64 +509,6 @@ pokeplatinum_nds = custom_target('pokeplatinum.us',
     build_by_default: true
 )
 endif
-
-############################################################
-###                   GDB HELPERS                        ###
-############################################################
-nef_fixer = custom_target('debug.nef',
-    output: [
-        'debug.nef'
-    ],
-    input: [
-        main
-    ],
-    command : [
-        nef_fixer_py, '@INPUT@', '@OUTPUT@'
-    ]
-)
-
-ovly_mapper = custom_target('overlay.map',
-    output: [
-        'overlay.map'
-    ],
-    input: [
-        main_lsf
-    ],
-    command : [
-        overlay_mapper_py, '@INPUT@', '@OUTPUT@'
-    ]
-)
-
-
-############################################################
-###                        TESTS                         ###
-############################################################
-sha1sum = find_program(['sha1sum', 'shasum'], native: true)
-
-test('SBIN Checksums - Shared',
-    sha1sum,
-    args: ['-c', '--quiet', sbins_sha1]
-)
-
-test('SBIN Checksums - For Revision',
-    sha1sum,
-    args: ['-c', '--quiet', sbins_for_rev_sha1]
-)
-
-test('SBIN Checksums - ARM7',
-    sha1sum,
-    args: ['-c', '--quiet', sbins_arm7_sha1]
-)
-
-test('Filesystem Checksums',
-    sha1sum,
-    args: ['-c', '--quiet', filesys_sha1]
-)
-
-test('ROM Checksum',
-    sha1sum,
-    args: ['-c', '--quiet', rom_sha1]
-)
 
 
 ############################################################

@@ -1032,7 +1032,6 @@ pokeplatinum_c = files(
 # Port code builds as its own target (meson.build) so it gets warnings while the decomp code stays at -w.
 port_c = []
 port_generated = []
-if(build_target != 'arm')
 if get_option('autoplay_tests')
 port_c += files('port/debug/autoplay_test.c')
 endif
@@ -1085,7 +1084,6 @@ field_lights_header = custom_target('field_lights.inc',
 )
 port_generated += field_lights_header
 public_includes = [public_includes, include_directories('.')]
-endif
 
 following_pokemon_data = custom_target('overworld_pokemon_data.inc',
     output: 'overworld_pokemon_data.inc',

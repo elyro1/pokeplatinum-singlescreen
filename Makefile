@@ -1,27 +1,18 @@
 # Keep this list in alphabetical order for ease of reference.
 .PHONY:           \
 	all           \
-	check         \
 	clean         \
-	configure     \
 	distclean     \
-	debug         \
 	format        \
+	linux         \
 	linux-asan    \
 	meson         \
 	mingw         \
+	nx            \
 	purge         \
-	release       \
-	rom           \
-	setup_debug   \
-	setup_release \
-	skrew         \
-	skrewrm       \
-	skrewup       \
 	target        \
-	update
-
-ROM_REVISION ?= 1
+	update        \
+	win64
 
 SUBPROJ_DIR := subprojects
 
@@ -37,90 +28,32 @@ BUILD_LINUX ?= $(BUILD)_linux
 BUILD_LINUX_ASAN ?= $(BUILD)_linux_asan
 BUILD_WIN64 ?= $(BUILD)_win64
 BUILD_NX ?= $(BUILD)_nx
-ROOT_INI := $(BUILD)/root.ini
+BUILD_DIRS := $(BUILD_LINUX) $(BUILD_LINUX_ASAN) $(BUILD_WIN64) $(BUILD_NX)
 ROOT_INI_LINUX := $(BUILD_LINUX)/root.ini
 ROOT_INI_LINUX_ASAN := $(BUILD_LINUX_ASAN)/root.ini
 ROOT_INI_WIN64 := $(BUILD_WIN64)/root.ini
 ROOT_INI_NX := $(BUILD_NX)/root.ini
 
-UNAME_R := $(shell uname -r)
 UNAME_S := $(shell uname -s)
-CWD := $(shell pwd)
 
 GITHUB_CI = ${GITHUB_ACTIONS}
 
-# Check for Windows-drive access
-ifneq (,$(findstring Microsoft,$(UNAME_R)))
-  ifneq (,$(filter /mnt/%,$(realpath $(CWD))))
-    WSL_ACCESSING_WINDOWS := 0
-  else
-    WSL_ACCESSING_WINDOWS := 1
-  endif
+ifneq (,$(findstring Darwin,$(UNAME_S)))
+  NATIVE := native_macos.ini
 else
-  WSL_ACCESSING_WINDOWS := 1
-endif
-
-# Set up the compiler toolchain dependency
-SKREW_GET := tools/devtools/get_metroskrew.sh
-SKREW_VER := 0.1.3
-SKREW_DIR := tools/metroskrew
-
-ifneq (,$(findstring Linux,$(UNAME_S)))
-  ifeq (0,$(WSL_ACCESSING_WINDOWS))
-    NATIVE := native.ini
-    CROSS := cross.ini
-    SKREW_SYS := windows
-    SKREW_EXE := $(SKREW_DIR)/bin/skrewrap.exe
-  else
-    NATIVE := native.ini
-    CROSS := cross_unix.ini
-    SKREW_SYS := linux
-    SKREW_EXE := $(SKREW_DIR)/bin/skrewrap
-  endif
-else
-  ifneq (,$(findstring Darwin,$(UNAME_S)))
-    NATIVE := native_macos.ini
-    CROSS := cross_unix.ini
-    SKREW_SYS := wine
-    SKREW_EXE := $(SKREW_DIR)/bin/skrewrap
-  else
-    ifneq (,$(findstring BSD, $(UNAME_S)))
-      NATIVE := native.ini
-      CROSS := cross_unix.ini
-      SKREW_SYS := linux
-      SKREW_EXE := $(SKREW_DIR)/bin/skrewrap
-    else
-      NATIVE := native.ini
-      CROSS := cross.ini
-      SKREW_SYS := windows
-      SKREW_EXE := $(SKREW_DIR)/bin/skrewrap.exe
-    endif
-  endif
+  NATIVE := native.ini
 endif
 
 export NINJA_STATUS := [%p %f/%t] 
 
-# Modders can delete the `check` dependency here after their first build.
-all: release
+all: linux
 
-.NOTPARALLEL: release
-release: setup_release rom
+format: $(BUILD_LINUX)/build.ninja
+	$(NINJA) -C $(BUILD_LINUX) clang-format
 
-.NOTPARALLEL: debug
-debug: setup_debug rom
-	$(NINJA) -C $(BUILD) debug.nef overlay.map
-
-check: rom
-	$(MESON) test -C $(BUILD)
-
-rom: $(BUILD)/build.ninja
-	$(NINJA) -C $(BUILD) pokeplatinum.us.nds
-
-format: $(BUILD)/build.ninja
-	$(NINJA) -C $(BUILD) clang-format
-
-target: $(BUILD)/build.ninja
-	$(MESON) compile -C $(BUILD) $(MESON_TARGET)
+# make target MESON_TARGET=<name> builds one Meson target of the Linux build
+target: $(BUILD_LINUX)/build.ninja
+	$(MESON) compile -C $(BUILD_LINUX) $(MESON_TARGET)
 
 linux: $(BUILD_LINUX)/build.ninja
 	$(MESON) compile -C $(BUILD_LINUX)
@@ -139,41 +72,22 @@ mingw:
 nx: $(BUILD_NX)/build.ninja
 	$(MESON) compile -C $(BUILD_NX)
 
-clean: $(BUILD)/build.ninja
-	$(MESON) compile -C $(BUILD) --clean
-	rm -rf $(BUILD)/res
+clean:
+	for dir in $(BUILD_DIRS); do \
+		if [ -f "$$dir/build.ninja" ]; then $(MESON) compile -C "$$dir" --clean && rm -rf "$$dir/res"; fi; \
+	done
 
 distclean:
-	rm -rf $(BUILD)
+	rm -rf $(BUILD_DIRS)
 
 purge: distclean
-	rm -rf $(SKREW_DIR)
 	! test -f $(MESON) || $(MESON) subprojects purge --confirm
 	rm -rf $(MESON_DIR)
 
-update: meson skrewup
+update: meson
 	$(MESON) subprojects update || true
 
-setup_release: $(BUILD)/build.ninja
-	$(MESON) configure $(BUILD) -Dgdb_debugging=false -Dlogging_enabled=false
-
-setup_debug: $(BUILD)/build.ninja
-	$(MESON) configure $(BUILD) -Dgdb_debugging=true -Dlogging_enabled=true
-
-setup_linux: $(BUILD)_linux/build.ninja
-	$(MESON) configure $(BUILD)_linux -Dbuild_target=linux
-
-configure: $(BUILD)/build.ninja
-
-$(BUILD)/build.ninja: | $(BUILD) $(SKREW_EXE) meson
-	$(MESON) setup \
-		-Drevision=$(ROM_REVISION) \
-		--wrap-mode=nopromote \
-		--native-file=meson/$(NATIVE) \
-		--cross-file=meson/$(CROSS) \
-		-- $(BUILD)
-
-$(BUILD_LINUX)/build.ninja: $(ROOT_INI_LINUX) | $(BUILD_LINUX) $(SKREW_EXE) meson
+$(BUILD_LINUX)/build.ninja: $(ROOT_INI_LINUX) | $(BUILD_LINUX) meson
 	$(MESON) setup \
 		-Dbuild_target=linux \
 		--native-file=meson/$(NATIVE) \
@@ -182,7 +96,7 @@ $(BUILD_LINUX)/build.ninja: $(ROOT_INI_LINUX) | $(BUILD_LINUX) $(SKREW_EXE) meso
 		--cross-file=$(ROOT_INI_LINUX) \
 		-- $(BUILD_LINUX)
 
-$(BUILD_LINUX_ASAN)/build.ninja: $(ROOT_INI_LINUX_ASAN) | $(BUILD_LINUX_ASAN) $(SKREW_EXE) meson
+$(BUILD_LINUX_ASAN)/build.ninja: $(ROOT_INI_LINUX_ASAN) | $(BUILD_LINUX_ASAN) meson
 	$(MESON) setup \
 		-Dbuild_target=linux \
 		-Dsanitize=true \
@@ -193,7 +107,7 @@ $(BUILD_LINUX_ASAN)/build.ninja: $(ROOT_INI_LINUX_ASAN) | $(BUILD_LINUX_ASAN) $(
 		-- $(BUILD_LINUX_ASAN)
 
 ifeq ($(GITHUB_CI),)
-$(BUILD_WIN64)/build.ninja: $(ROOT_INI_WIN64) | $(BUILD_WIN64) $(SKREW_EXE) meson
+$(BUILD_WIN64)/build.ninja: $(ROOT_INI_WIN64) | $(BUILD_WIN64) meson
 	$(MESON) setup \
 		-Dbuild_target=win64 \
 		--native-file=meson/$(NATIVE) \
@@ -202,7 +116,7 @@ $(BUILD_WIN64)/build.ninja: $(ROOT_INI_WIN64) | $(BUILD_WIN64) $(SKREW_EXE) meso
 		--cross-file=$(ROOT_INI_WIN64) \
 		-- $(BUILD_WIN64)
 else
-$(BUILD_WIN64)/build.ninja: $(ROOT_INI_WIN64) | $(BUILD_WIN64) $(SKREW_EXE) meson
+$(BUILD_WIN64)/build.ninja: $(ROOT_INI_WIN64) | $(BUILD_WIN64) meson
 	$(MESON) setup \
 		-Dbuild_target=win64 \
 		-Dskip_anim_scripts=true \
@@ -213,7 +127,7 @@ $(BUILD_WIN64)/build.ninja: $(ROOT_INI_WIN64) | $(BUILD_WIN64) $(SKREW_EXE) meso
 		-- $(BUILD_WIN64)
 endif
 
-$(BUILD_NX)/build.ninja: $(ROOT_INI_NX) | $(BUILD_NX) $(SKREW_EXE) meson
+$(BUILD_NX)/build.ninja: $(ROOT_INI_NX) | $(BUILD_NX) meson
 	$(MESON) setup \
 		-Dbuild_target=nx \
 		--native-file=meson/$(NATIVE) \
@@ -221,10 +135,6 @@ $(BUILD_NX)/build.ninja: $(ROOT_INI_NX) | $(BUILD_NX) $(SKREW_EXE) meson
 		--cross-file=meson/cross_nx.ini \
 		--cross-file=$(ROOT_INI_NX) \
 		-- $(BUILD_NX)
-
-$(ROOT_INI): | $(BUILD)
-	echo "[constants]" > $@
-	echo "root = '$$PWD'" >> $@
 
 $(ROOT_INI_LINUX): | $(BUILD_LINUX)
 	echo "[constants]" > $@
@@ -242,9 +152,6 @@ $(ROOT_INI_NX): | $(BUILD_NX)
 	echo "[constants]" > $@
 	echo "root = '$$PWD'" >> $@
 
-$(BUILD):
-	mkdir -p -- $(BUILD)
-
 $(BUILD_LINUX):
 	mkdir -p -- $(BUILD_LINUX)
 
@@ -261,13 +168,3 @@ meson: $(MESON)
 
 $(MESON):
 	$(GIT) clone --depth=1 -b $(MESON_VER) https://github.com/mesonbuild/meson $(@D)
-
-skrew: $(SKREW_EXE)
-
-skrewrm:
-	rm -rf $(SKREW_DIR)
-
-skrewup: skrewrm skrew
-
-$(SKREW_EXE):
-	SKREW_SYS=$(SKREW_SYS) SKREW_VER=$(SKREW_VER) SKREW_DIR=$(SKREW_DIR) $(SKREW_GET)

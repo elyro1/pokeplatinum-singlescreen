@@ -297,50 +297,48 @@ matrix_data_srcs = files(
 )
 
 main_matrix_source = files('map_matrix_000.json')
-if build_target != 'arm'
-    main_matrix_source = custom_target('route_219_matrix_widescreen',
-        input: main_matrix_source,
-        output: 'map_matrix_000_route_219.json',
-        depend_files: files('../../../tools/scripts/map_scenery.py'),
-        command: [
-            find_program('../../../tools/scripts/extend_route_219.py', native: true),
-            '--matrix', '@INPUT@', '@OUTPUT@',
-        ],
-    )
-    main_matrix_source = custom_target('route_204_matrix_widescreen',
-        input: main_matrix_source,
-        output: 'map_matrix_000_route_204.json',
-        command: [
-            find_program('../../../tools/scripts/extend_route_204.py', native: true),
-            '--matrix', '@INPUT@', '@OUTPUT@',
-        ],
-    )
-    main_matrix_source = custom_target('hearthome_city_matrix_widescreen',
-        input: [main_matrix_source, files('../maps/data/map_data_175.bin', '../maps/data/map_data_176.bin')],
-        output: 'map_matrix_000_hearthome.json',
-        command: [
-            find_program('../../../tools/scripts/extend_hearthome_city.py', native: true),
-            '@INPUT0@', '@OUTPUT@', '@INPUT1@', '@INPUT2@',
-        ],
-    )
-    main_matrix_source = custom_target('route_207_matrix_widescreen',
-        input: [main_matrix_source, files('../maps/data/map_data_175.bin')],
-        output: 'map_matrix_000_route_207.json',
-        command: [
-            find_program('../../../tools/scripts/extend_route_207.py', native: true),
-            '--matrix', '@INPUT1@', '@INPUT0@', '@OUTPUT@',
-        ],
-    )
-    main_matrix_source = custom_target('route_214_remove_trees',
-        input: [main_matrix_source, files('../maps/data/map_data_175.bin', '../maps/data/map_data_176.bin')],
-        output: 'map_matrix_000.json',
-        command: [
-            find_program('../../../tools/scripts/remove_route_214_trees.py', native: true),
-            '@INPUT0@', '@OUTPUT@', '@INPUT1@', '@INPUT2@',
-        ],
-    )
+main_matrix_source = custom_target('route_219_matrix_widescreen',
+    input: main_matrix_source,
+    output: 'map_matrix_000_route_219.json',
+    depend_files: files('../../../tools/scripts/map_scenery.py'),
+    command: [
+        find_program('../../../tools/scripts/extend_route_219.py', native: true),
+        '--matrix', '@INPUT@', '@OUTPUT@',
+    ],
+)
+main_matrix_source = custom_target('route_204_matrix_widescreen',
+    input: main_matrix_source,
+    output: 'map_matrix_000_route_204.json',
+    command: [
+        find_program('../../../tools/scripts/extend_route_204.py', native: true),
+        '--matrix', '@INPUT@', '@OUTPUT@',
+    ],
+)
+main_matrix_source = custom_target('hearthome_city_matrix_widescreen',
+    input: [main_matrix_source, files('../maps/data/map_data_175.bin', '../maps/data/map_data_176.bin')],
+    output: 'map_matrix_000_hearthome.json',
+    command: [
+        find_program('../../../tools/scripts/extend_hearthome_city.py', native: true),
+        '@INPUT0@', '@OUTPUT@', '@INPUT1@', '@INPUT2@',
+    ],
+)
+main_matrix_source = custom_target('route_207_matrix_widescreen',
+    input: [main_matrix_source, files('../maps/data/map_data_175.bin')],
+    output: 'map_matrix_000_route_207.json',
+    command: [
+        find_program('../../../tools/scripts/extend_route_207.py', native: true),
+        '--matrix', '@INPUT1@', '@INPUT0@', '@OUTPUT@',
+    ],
+)
+main_matrix_source = custom_target('route_214_remove_trees',
+    input: [main_matrix_source, files('../maps/data/map_data_175.bin', '../maps/data/map_data_176.bin')],
+    output: 'map_matrix_000.json',
+    command: [
+        find_program('../../../tools/scripts/remove_route_214_trees.py', native: true),
+        '@INPUT0@', '@OUTPUT@', '@INPUT1@', '@INPUT2@',
+    ],
+)
 
-endif
 
 map_matrix_narc = custom_target('map_matrix.narc',
     output: [

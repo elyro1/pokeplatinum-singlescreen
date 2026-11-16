@@ -27,20 +27,19 @@ The script builds the container image on first use. Output is written to `build_
 
 ### Linux without Docker
 
-Use a 64-bit Linux environment. The build requires GCC/G++, Make, Python 3, Git, Ninja, NASM, Flex, Bison, pkg-config, the ARM GNU toolchain, libpng, SDL2, ENet, and SoundTouch development packages. Some build tools also require 32-bit compatibility libraries; AppImage packaging requires FUSE.
+Use a 64-bit Linux environment. The build requires GCC/G++, Make, Python 3, Git, Ninja, NASM, Flex, Bison, pkg-config, the ARM GNU toolchain, libpng, SDL2, ENet, and SoundTouch development packages. AppImage packaging requires FUSE.
 
 For Debian / Ubuntu, the core dependencies are:
 
 ```bash
-sudo dpkg --add-architecture i386
 sudo apt update
 sudo apt install build-essential python3 git ninja-build nasm flex bison \
     pkg-config gcc-arm-none-eabi libpng-dev libsdl2-dev libenet-dev \
-    libsoundtouch-dev libc6:i386 wget ca-certificates fuse file patchelf
+    libsoundtouch-dev wget ca-certificates fuse file patchelf
 make linux
 ```
 
-Refer to [the build container](tools/docker/Dockerfile) for the full container environment and [INSTALL.md](INSTALL.md) for additional setup information inherited from pret. Its ROM-build instructions are separate from the PC targets here.
+Refer to [the build container](tools/docker/Dockerfile) for the full container environment.
 
 ### Windows
 
@@ -73,14 +72,6 @@ The inherited Nintendo Switch target requires DevKitA64 (included in the Docker 
 ```
 
 This target is experimental and has poor performance; the changes in this fork primarily target PC play.
-
-The source tree also retains the Nintendo DS ROM target:
-
-```bash
-make
-```
-
-That output is `build/pokeplatinum.us.nds`. PC-specific features do not necessarily apply to the DS build. See [INSTALL.md](INSTALL.md) for ROM revisions and debugger setup.
 
 ### Development notes
 

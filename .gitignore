@@ -9,10 +9,6 @@
 # MSys2
 /msys2/
 
-# Metroskrew artifacts
-/metroskrew-*.tar.xz
-/metroskrew-*.7z
-
 # Subproject folders
 /subprojects/libvct/
 /subprojects/NitroDWC-*/
@@ -30,17 +26,9 @@
 /subprojects/metang/
 /subprojects/rapidjson-*/
 /subprojects/meson-*/
-/subprojects/nitrorom/
-/subprojects/metroskrew/
 /subprojects/yyjson-*/
 /subprojects/tracy/
 /subprojects/.wraplock
-
-# Metroskrew
-/tools/metroskrew/
-
-# Legacy mwrap compiler
-/tools/cw/mwrap
 
 # CLion folders
 .idea/
@@ -51,13 +39,6 @@ cmake-build-debug/
 *.lz
 *.gbapal
 
-# For asmdiff
-*/baserom.*
-*.dump
-
-# For decomp.me
-ctx.c
-
 # Working files
 overlays/*/module_*.s
 overlays/*/module_*.sbin
@@ -66,10 +47,6 @@ overlays/*/module_*.cfg
 *.bnr
 *.nbfp
 *.nbfc
-
-# Dism scripts
-dism.sh
-asmdiff.sh
 
 # Symbols CSV
 symbols.csv
@@ -111,8 +88,6 @@ diff.txt
 temp_asm/
 asm_old/
 
-!platinum.us/banner.bnr
-
 uncrustify.cfg
 compare.sh
 diff/
@@ -120,8 +95,6 @@ AGENTS.md
 CLAUDE.md
 
 sdk/
-
-!tools/asmdiff/asmdiff.sh
 
 __pycache__
 .cache
