@@ -1052,6 +1052,7 @@ port_c += files(
     'port/visuals/scripted_npc_scene.c',
     'port/assets/file_commit.c',
     'port/assets/save_migration.c',
+    'port/debug/crash_context.c',
     'port/debug/debug_field.c',
     'port/gui/sim_gui_prj.cpp',
     'port/gui/gui_cheats.cpp',
